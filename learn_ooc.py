@@ -122,7 +122,7 @@ def mux_bounded(sample_generator, containers, working_size=10, max_iter=1, shuff
             random.shuffle(idx)
             
         for i in range(0, len(idx), working_size):
-            generators = [sample_generator(ctr, **kwargs) for ctr in containers[idx[i:i+working_size]]]
+            generators = [sample_generator(containers[j], **kwargs) for j in idx[i:i+working_size]]
     
             for x in mux(generators):
                 yield x
