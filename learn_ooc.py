@@ -46,14 +46,15 @@ def fit(estimator, data_sequence, batch_size=100, max_steps=None):
             estimator.partial_fit(data_x, data_y)
         else:
             # Support sparsity here
-            estimator.partial_fit(np.asarray(data))
+            data = np.asarray(data)
+            estimator.partial_fit(data)
             
     buf = []
     for i, x_new in enumerate(data_sequence):
         buf.append(x_new)
         
         # We've run too far, stop
-        if max_steps is None and max_steps <= i:
+        if max_steps is not None and i > max_steps:
             break
         
         # Buffer is full, do an update
