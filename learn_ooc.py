@@ -51,22 +51,12 @@ def fit(estimator, data_sequence, batch_size=100, max_steps=None):
     def _run(data, supervised):
         """Wrapper function to partial_fit()"""
 
-        data_x = []
-        data_y = []
-
         if supervised:
-            for sample in data:
-                data_x.append(sample[0])
-                data_y.append(sample[-1])
-            
-            data_x = _matrixify(data_x)
-            data_y = _matrixify(data_y)
-            
-            estimator.partial_fit(data_x, data_y)
+            args = map(_matrixify, zip(*data))
         else:
-            data = _matrixify(data)
+            args = [_matrixify(data)]
 
-            estimator.partial_fit(data)
+        estimator.partial_fit(*args)
             
     buf = []
     for i, x_new in enumerate(data_sequence):
