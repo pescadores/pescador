@@ -2,6 +2,7 @@
 """Utilities to facilitate out-of-core learning in sklearn"""
 
 import numpy as np
+import scipy.sparse
 import sklearn
 import random
 
@@ -29,24 +30,42 @@ def fit(estimator, data_sequence, batch_size=100, max_steps=None):
     # Does the learner support partial fit?
     assert(hasattr(estimator, 'partial_fit'))
     
+    def _matrixify(data):
+        """Determine whether the data is sparse or not, act accordingly"""
+
+        if scipy.sparse.issparse(data[0]):
+            n = len(data)
+            d = np.prod(data[0].shape)
+    
+            data_s = scipy.sparse.lil_matrix((n, d), dtype=data[0].dtype)
+            print data_s.shape
+    
+            for i in range(len(data)):
+                idx = data[i].indices
+                data_s[i, idx] = data[i][:, idx]
+
+            return data_s.tocsr()
+        else:
+            return np.asarray(data)
+
     def _run(data, supervised):
         """Wrapper function to partial_fit()"""
 
         data_x = []
         data_y = []
+
         if supervised:
             for sample in data:
                 data_x.append(sample[0])
                 data_y.append(sample[-1])
             
-            # Support sparsity here
-            data_x = np.asarray(data_x)
-            data_y = np.asarray(data_y)
+            data_x = _matrixify(data_x)
+            data_y = _matrixify(data_y)
             
             estimator.partial_fit(data_x, data_y)
         else:
-            # Support sparsity here
-            data = np.asarray(data)
+            data = _matrixify(data)
+
             estimator.partial_fit(data)
             
     buf = []
