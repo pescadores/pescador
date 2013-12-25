@@ -38,7 +38,6 @@ def fit(estimator, data_sequence, batch_size=100, max_steps=None):
             d = np.prod(data[0].shape)
     
             data_s = scipy.sparse.lil_matrix((n, d), dtype=data[0].dtype)
-            print data_s.shape
     
             for i in range(len(data)):
                 idx = data[i].indices
