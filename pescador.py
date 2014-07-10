@@ -42,7 +42,7 @@ class Streamer(object):
 
         if not (hasattr(streamer, '__call__') or
                 isinstance(streamer, collections.Iterable)):
-            raise TypeError('`streamer` must be a generator function or Iterable')
+            raise TypeError('streamer must be a generator or Iterable')
 
         self.stream = streamer
         self.args = args
