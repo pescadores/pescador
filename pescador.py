@@ -1,12 +1,170 @@
 #!/usr/bin/python
 """Utilities to facilitate out-of-core learning in sklearn"""
 
+import collections
 import numpy as np
-import scipy.sparse
-import sklearn
-import random
+import scipy
 
-def fit(estimator, data_sequence, batch_size=100, max_steps=None):
+import sklearn.base
+
+class GeneratorSeed(object):
+    '''A wrapper class for reusable generators.
+    
+    :usage:
+        >>> # make a generator
+        >>> def my_generator(n):
+                for i in range(n):
+                    yield i
+        >>> GS = GeneratorSeed(my_generator, 5)
+        >>> for i in GS.generate():
+                print i
+                
+        >>> # Or with a maximum number of items
+        >>> for i in GS.generate(max_items=3):
+                print i
+    
+    :parameters:
+        - generator : function or iterable
+          Any generator function or iterable python object
+          
+        - *args, **kwargs
+          Additional positional arguments or keyword arguments to pass through to ``generator()``
+    '''
+    
+    def __init__(self, generator, *args, **kwargs):
+        
+        self.generator = generator
+        self.args = args
+        self.kwargs = kwargs
+        
+    
+    def generate(self, max_items=None):
+        '''Instantiate the generator
+        
+        :parameters:
+            - max_items : None or int > 0
+              Maximum number of items to yield.  If ``None``, exhaust the generator.
+        '''
+        
+        if max_items is None:
+            max_items = np.inf
+        
+        # If it's a function, create the stream.
+        # If it's iterable, use it directly.
+        
+        if hasattr(self.generator, '__call__'):
+            my_stream = self.generator(*(self.args), **(self.kwargs))
+        elif isinstance(self.generator, collections.Iterable):
+            my_stream = self.generator
+        else:
+            raise ValueError('generator is neither a generator nor iterable.')
+            
+        for i, x in enumerate(my_stream):
+            if i >= max_items:
+                break
+            yield x
+
+def categorical_sample(weights):
+    '''Sample from a categorical distribution.
+    
+    :parameters:
+        - weights : np.array, shape=(n,)
+          The distribution to sample from.  Must be non-negative and sum to 1.0.
+        
+    :returns:
+        - k : int in [0, n)
+          The sample
+    '''
+    
+    return np.flatnonzero(np.random.multinomial(1, weights))[0]
+
+
+def generator_mux(seed_pool, n_samples, k, lam=256.0, pool_weights=None, with_replacement=True):
+    
+    n_seeds = len(seed_pool)
+    
+    # Set up the sampling distribution over streams
+    seed_distribution = 1./n_seeds * np.ones(n_seeds)
+    
+    if pool_weights is None:
+        pool_weights = seed_distribution.copy()
+        
+    assert len(pool_weights) == len(seed_pool)
+    assert (pool_weights > 0.0).all()
+    pool_weights /= np.sum(pool_weights)
+    
+    # If lam is not set, make the samples effectively infinite
+    if lam is None:
+        lam = 1e10
+        
+    # Instantiate the pool
+    streams        = [None] * k
+    
+    stream_weights = np.zeros(k)
+    
+    for idx in range(k):
+        
+        if not (seed_distribution > 0).any():
+            break
+            
+        # how many samples for this stream?
+        # pick a stream
+        new_idx = categorical_sample(seed_distribution)
+        
+        # instantiate
+        streams[idx] = seed_pool[new_idx].generate(max_items=np.random.poisson(lam=lam))
+        stream_weights[idx] = pool_weights[new_idx]
+        
+        # If we're sampling without replacement, zero out this one's probability
+        if not with_replacement:
+            seed_distribution[new_idx] = 0.0
+            
+            if (seed_distribution > 0).any():
+                seed_distribution[:] /= np.sum(seed_distribution)
+        
+    Z = np.sum(stream_weights)
+    
+    
+    # Main sampling loop
+    n = 0
+    
+    while n < n_samples and Z > 0.0:
+        # Pick a stream
+        idx = categorical_sample(stream_weights / Z)
+        
+        # Can we sample from it?
+        try:
+            # Then yield the sample
+            yield streams[idx].next()
+            
+            # Increment the sample counter
+            n = n + 1
+            
+        except StopIteration:
+            # Oops, this one's exhausted.  Replace it and move on.
+            
+            # Are there still kids in the pool?  Okay.
+            if (seed_distribution > 0).any():
+            
+                new_idx = categorical_sample(pool_weights)
+            
+                streams[idx] = seed_pool[new_idx].generate(max_items=np.random.poisson(lam=lam))
+                stream_weights[idx] = pool_weights[new_idx]
+                
+                # If we're sampling without replacement, zero out this one's probability and renormalize
+                if not with_replacement:
+                    seed_distribution[new_idx] = 0.0
+                    
+                    if (seed_distribution > 0).any():
+                        seed_distribution[:] /= np.sum(seed_distribution)
+                
+            else:
+                # Otherwise, this one's exhausted.  Set its probability to 0 and keep going
+                stream_weights[idx] = 0.0
+                
+            Z = np.sum(stream_weights)
+
+def stream_fit(estimator, data_sequence, batch_size=100, max_steps=None, **kwargs):
     '''Fit a model to a generator stream.
     
     :parameters:
@@ -55,7 +213,7 @@ def fit(estimator, data_sequence, batch_size=100, max_steps=None):
         else:
             args = [_matrixify(data)]
 
-        estimator.partial_fit(*args)
+        estimator.partial_fit(*args, **kwargs)
             
     buf = []
     for i, x_new in enumerate(data_sequence):
@@ -73,66 +231,3 @@ def fit(estimator, data_sequence, batch_size=100, max_steps=None):
     # Update on whatever's left over
     if len(buf) > 0:
         _run(buf, supervised)
-
-def mux(generators):
-    '''Randomly multiplex over a list of generators until they are all exhausted.
-    
-    :parameters:
-      - generators : list
-        List of generators to randomly multiplex
-        
-    :yields:
-      - iterates from each of the input generators
-    '''
-    
-    # Loop until the generators list is empty
-    while len(generators) > 0:
-        # Pick a random generator
-        i = random.randint(0, len(generators) - 1)
-        
-        try:
-            # Pull from the i'th generator
-            yield generators[i].next()
-            
-        except StopIteration:
-            # This one's done.  Remove it from the list.
-            generators.pop(i)
-
-def mux_bounded(sample_generator, containers, working_size=10, max_iter=1, shuffle=True, **kwargs):
-    '''Generate a sequence by multiplexing a generator function over subsets of data.
-    
-    1. Select a subset of ``working_size`` from containers
-    2. Apply ``sample_generator`` to each item ``c`` in the subset: ``sample_generator(c, **kwargs)``
-    3. Multiplex the results of each generator
-    
-    :parameters:
-      - sample_generator : function
-        A generator which takes as input a container (see below), and yields samples
-      - containers: list-like
-        A list of container objects
-      - working_size : int > 0
-        The maximum number of working containers to keep active at any time
-      - max_iter : int > 0
-        How many passes through the container set to take
-      - shuffle : boolean
-        Permute the containers at each iterations
-      - kwargs : additional keyword arguments
-        Parameters to pass throuh to sample_generator
-      
-    :yields:
-      - sequence of items generated by multiplexing ``sample_generator()``
-    '''
-    
-    idx = range(len(containers))
-    
-    for _ in range(max_iter):
-        
-        if shuffle:
-            random.shuffle(idx)
-            
-        for i in range(0, len(idx), working_size):
-            generators = [sample_generator(containers[j], **kwargs) for j in idx[i:i+working_size]]
-    
-            for x in mux(generators):
-                yield x
-
