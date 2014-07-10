@@ -1,4 +1,7 @@
-learn_ooc
-=========
+pescador
+========
 
-Helper utilities for out-of-core learning
+A sampling and buffering module for iterative learning.
+
+Pescador allows you to stochastically multiplex a collection of generators, and buffer the results for use in
+`sklearn` model estimation.
