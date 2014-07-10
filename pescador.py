@@ -78,6 +78,36 @@ class Streamer(object):
             yield x
 
 
+def _buffer_data(data):
+    """Determine whether the data is sparse or not, and buffer it accordingly.
+
+    :parameters:
+        - data : list of scipy.sparse or np.ndarray
+            The data to buffer
+
+    :returns:
+        - buf : scipy.sparse.csr or np.ndarray
+            If the input data was sparse, a sparse matrix of the data
+            concatenated vertically.
+            Otherwise, the data stacked vertically as a dense ndarray.
+    """
+
+    if scipy.sparse.issparse(data[0]):
+        n = len(data)
+        dimension = np.prod(data[0].shape)
+
+        data_s = scipy.sparse.lil_matrix((n, dimension), dtype=data[0].dtype)
+
+        for i in range(len(data)):
+            idx = data[i].indices
+            data_s[i, idx] = data[i][:, idx]
+
+        return data_s.tocsr()
+
+    else:
+        return np.asarray(data)
+
+
 def categorical_sample(weights):
     '''Sample from a categorical distribution.
 
@@ -230,73 +260,92 @@ def mux(seed_pool, n_samples, k, lam=256.0, pool_weights=None,
             weight_norm = np.sum(stream_weights)
 
 
-def stream_fit(estimator, data_sequence, batch_size=100, max_steps=None,
-               **kwargs):
-    '''Fit a model to a generator stream.
+class StreamLearner(sklearn.base.BaseEstimator):
+    '''A class to facilitate iterative learning from a generator.
 
     :parameters:
-      - estimator : sklearn.base.BaseEstimator
-        The model object.  Must implement ``partial_fit()``
+        - estimator : sklearn estimator
+            The estimator to fit.  Must support the ``partial_fit`` method.
 
-      - data_sequence : generator
-        A generator that yields samples
+        - batch_size : int > 0
+            The size of batches to be passed to ``estimator.partial_fit``.
 
-      - batch_size : int
-        Maximum number of samples to buffer before updating the model
-
-      - max_steps : int or None
-        If ``None``, run until the stream is exhausted.
-        Otherwise, run until at most ``max_steps`` examples
-        have been processed.
+        - max_steps : None or int > 0
+            Maximum number of batch learning iterations.
+            If ``None``, the learner runs until the input stream is exhausted.
     '''
 
-    # Is this a supervised or unsupervised learner?
-    supervised = isinstance(estimator, sklearn.base.ClassifierMixin)
+    def __init__(self, estimator, batch_size=100, max_steps=None):
+        ''' '''
+        # Is this a supervised or unsupervised learner?
+        self.supervised = isinstance(estimator, sklearn.base.ClassifierMixin)
 
-    # Does the learner support partial fit?
-    assert hasattr(estimator, 'partial_fit')
+        # Does the learner support partial fit?
+        assert hasattr(estimator, 'partial_fit')
 
-    def _matrixify(data):
-        """Determine whether the data is sparse or not, act accordingly"""
+        # Is the batch size positive?
+        assert batch_size > 0
 
-        if scipy.sparse.issparse(data[0]):
-            n = len(data)
-            dimension = np.prod(data[0].shape)
+        # Is the iteration bound positive or infinite?
+        if max_steps is not None:
+            assert max_steps > 0
 
-            data_s = scipy.sparse.lil_matrix((n, dimension),
-                                             dtype=data[0].dtype)
+        self.estimator = estimator
+        self.batch_size = int(batch_size)
+        self.max_steps = max_steps
 
-            for i in range(len(data)):
-                idx = data[i].indices
-                data_s[i, idx] = data[i][:, idx]
+    def __partial_fit(self, data, **kwargs):
+        """Wrapper function to estimator.partial_fit()"""
 
-            return data_s.tocsr()
+        if self.supervised:
+            args = [_buffer_data(datum) for datum in zip(*data)]
         else:
-            return np.asarray(data)
+            args = [_buffer_data(data)]
 
-    def _run(data, supervised):
-        """Wrapper function to partial_fit()"""
+        self.estimator.partial_fit(*args, **kwargs)
 
-        if supervised:
-            args = [_matrixify(datum) for datum in zip(*data)]
-        else:
-            args = [_matrixify(data)]
+    def predict(self, X):
+        '''Wrapper for estimator.predict()'''
 
-        estimator.partial_fit(*args, **kwargs)
+        return self.estimator.predict(X)
 
-    buf = []
-    for i, x_new in enumerate(data_sequence):
-        buf.append(x_new)
+    def fit(self, stream, **kwargs):
+        '''Iterative learning.
 
-        # We've run too far, stop
-        if max_steps is not None and i > max_steps:
-            break
+        :parameters:
+            - stream : iterable of (x) or (x, y)
+              The data stream to fit.  Each element is assumed to be a
+              single example, or a tuple of (example, label).
 
-        # Buffer is full, do an update
-        if len(buf) == batch_size:
-            _run(buf, supervised)
-            buf = []
+              Examples are collected into a batch and passed to
+              ``estimator.partial_fit``.
 
-    # Update on whatever's left over
-    if len(buf) > 0:
-        _run(buf, supervised)
+            - kwargs
+              Additional keyword arguments to ``estimator.partial_fit``.
+              This is useful for things like the list of class labels for an
+              SGDClassifier.
+
+        :returns:
+            - self
+        '''
+
+        # Re-initialize the model, if necessary?
+
+        buf = []
+        for i, x_new in enumerate(stream):
+            buf.append(x_new)
+
+            # We've run too far, stop
+            if self.max_steps is not None and i > self.max_steps:
+                break
+
+            # Buffer is full, do an update
+            if len(buf) == self.batch_size:
+                self.__partial_fit(buf, **kwargs)
+                buf = []
+
+        # Update on whatever's left over
+        if len(buf) > 0:
+            self.__partial_fit(buf, **kwargs)
+
+        return self
