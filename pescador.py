@@ -58,7 +58,6 @@ class Streamer(object):
 
         :yields:
             - Items from the contained generator
-
         '''
 
         if max_items is None:
@@ -67,7 +66,7 @@ class Streamer(object):
         # If it's a function, create the stream.
         # If it's iterable, use it directly.
 
-        if hasattr(self.generator, '__call__'):
+        if hasattr(self.stream, '__call__'):
             my_stream = self.stream(*(self.args), **(self.kwargs))
 
         else:
