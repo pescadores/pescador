@@ -8,7 +8,7 @@ import scipy
 import sklearn.base
 
 
-class GeneratorSeed(object):
+class Streamer(object):
     '''A wrapper class for reusable generators.
 
     :usage:
@@ -16,7 +16,7 @@ class GeneratorSeed(object):
         >>> def my_generator(n):
                 for i in range(n):
                     yield i
-        >>> GS = GeneratorSeed(my_generator, 5)
+        >>> GS = Streamer(my_generator, 5)
         >>> for i in GS.generate():
                 print i
 
@@ -25,17 +25,26 @@ class GeneratorSeed(object):
                 print i
 
     :parameters:
-        - generator : function or iterable
+        - streamer : function or iterable
           Any generator function or iterable python object
 
         - *args, **kwargs
           Additional positional arguments or keyword arguments to pass
           through to ``generator()``
+
+    :raises:
+        - TypeError
+          If ``streamer`` is not a function or an Iterable object.
     '''
 
-    def __init__(self, generator, *args, **kwargs):
+    def __init__(self, streamer, *args, **kwargs):
         '''Initializer'''
-        self.generator = generator
+
+        if not (hasattr(streamer, '__call__') or
+                isinstance(streamer, collections.Iterable)):
+            raise TypeError('`streamer` must be a generator function or Iterable')
+
+        self.stream = streamer
         self.args = args
         self.kwargs = kwargs
 
@@ -46,6 +55,10 @@ class GeneratorSeed(object):
             - max_items : None or int > 0
               Maximum number of items to yield.
               If ``None``, exhaust the generator.
+
+        :yields:
+            - Items from the contained generator
+
         '''
 
         if max_items is None:
@@ -55,11 +68,10 @@ class GeneratorSeed(object):
         # If it's iterable, use it directly.
 
         if hasattr(self.generator, '__call__'):
-            my_stream = self.generator(*(self.args), **(self.kwargs))
-        elif isinstance(self.generator, collections.Iterable):
-            my_stream = self.generator
+            my_stream = self.stream(*(self.args), **(self.kwargs))
+
         else:
-            raise ValueError('generator is neither a generator nor iterable.')
+            my_stream = self.stream
 
         for i, x in enumerate(my_stream):
             if i >= max_items:
@@ -85,7 +97,47 @@ def categorical_sample(weights):
 
 def mux(seed_pool, n_samples, k, lam=256.0, pool_weights=None,
         with_replacement=True):
+    '''Stochastic multiplexor for generator seeds.
 
+    Given an array of Streamer objects, do the following:
+
+        1. Select ``k`` seeds at random to activate
+        2. Assign each activated seed a sample count ~ Poisson(lam)
+        3. Yield samples from the streams by randomly multiplexing
+           from the active set.
+        4. When a stream is exhausted, select a new one from the pool.
+
+    :parameters:
+        - seed_pool : iterable of Streamer
+          The collection of Streamer objects
+
+        - n_samples : int > 0 or None
+          The number of samples to generate.
+          If ``None``, sample indefinitely.
+
+        - k : int > 0
+          The number of streams to keep active at any time.
+
+        - lam : float > 0 or None
+          Rate parameter for the Poisson distribution governing sample counts
+          for individual streams.
+          If ``None``, sample infinitely from each stream.
+
+        - pool_weights : np.ndarray or None
+          Optional weighting for ``seed_pool``.
+          If ``None``, then weights are assumed to be uniform.
+          Otherwise, ``pool_weights[i]`` defines the sampling proportion
+          of ``seed_pool[i]``.
+
+          Must have the same length as ``seed_pool``.
+
+        - with_replacement : bool
+          Sample Streamers with replacement.  This allows a single stream to be
+          used multiple times (even simultaneously).
+          If ``False``, then each Streamer is consumed at most once and never
+          revisited.
+
+    '''
     n_seeds = len(seed_pool)
 
     # Set up the sampling distribution over streams
@@ -114,11 +166,11 @@ def mux(seed_pool, n_samples, k, lam=256.0, pool_weights=None,
 
         # instantiate
         if lam is not None:
-            n_stream_samples = np.random.poisson(lam=lam)
+            n_stream = np.random.poisson(lam=lam)
         else:
-            n_stream_samples = None
+            n_stream = None
 
-        streams[idx] = seed_pool[new_idx].generate(max_items=n_stream_samples)
+        streams[idx] = seed_pool[new_idx].generate(max_items=n_stream)
         stream_weights[idx] = pool_weights[new_idx]
 
         # If we're sampling without replacement, zero this one out
@@ -132,6 +184,9 @@ def mux(seed_pool, n_samples, k, lam=256.0, pool_weights=None,
 
     # Main sampling loop
     n = 0
+
+    if n_samples is None:
+        n_samples = np.inf
 
     while n < n_samples and weight_norm > 0.0:
         # Pick a stream
@@ -154,11 +209,11 @@ def mux(seed_pool, n_samples, k, lam=256.0, pool_weights=None,
                 new_idx = categorical_sample(pool_weights)
 
                 if lam is not None:
-                    n_stream_samples = np.random.poisson(lam=lam)
+                    n_stream = np.random.poisson(lam=lam)
                 else:
-                    n_stream_samples = None
+                    n_stream = None
 
-                streams[idx] = seed_pool[new_idx].generate(max_items=n_stream_samples)
+                streams[idx] = seed_pool[new_idx].generate(max_items=n_stream)
 
                 stream_weights[idx] = pool_weights[new_idx]
 
