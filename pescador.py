@@ -260,6 +260,10 @@ def mux(seed_pool, n_samples, k, lam=256.0, pool_weights=None,
             weight_norm = np.sum(stream_weights)
 
 
+# TODO:   2014-07-10 16:38:27 by Brian McFee <brm2132@columbia.edu>
+# make existing functions wrap transparently (fit, predict, etc)
+# implement iterable versions on top: iter_fit, iter_predict, etc
+
 class StreamLearner(sklearn.base.BaseEstimator):
     '''A class to facilitate iterative learning from a generator.
 
@@ -304,12 +308,52 @@ class StreamLearner(sklearn.base.BaseEstimator):
 
         self.estimator.partial_fit(*args, **kwargs)
 
-    def predict(self, X):
+    def decision_function(self, *args, **kwargs):
         '''Wrapper for estimator.predict()'''
 
-        return self.estimator.predict(X)
+        return self.estimator.decision_function(*args, **kwargs)
 
-    def fit(self, stream, **kwargs):
+    def predict_proba(self, *args, **kwargs):
+        '''Wrapper for estimator.predict_proba()'''
+
+        return self.estimator.predict_proba(*args, **kwargs)
+
+    def predict_log_proba(self, *args, **kwargs):
+        '''Wrapper for estimator.predict_log_proba()'''
+
+        return self.estimator.predict(*args, **kwargs)
+
+    def predict(self, *args, **kwargs):
+        '''Wrapper for estimator.predict()'''
+
+        return self.estimator.predict(*args, **kwargs)
+
+    def inverse_transform(self, *args, **kwargs):
+        '''Wrapper for estimator.inverse_transform()'''
+
+        return self.estimator.inverse_transform(*args, **kwargs)
+
+    def transform(self, *args, **kwargs):
+        '''Wrapper for estimator.transform()'''
+
+        return self.estimator.transform(*args, **kwargs)
+
+    def fit_transform(self, *args, **kwargs):
+        '''Wrapper for estimator.fit_transform()'''
+
+        return self.estimator.fit_transform(*args, **kwargs)
+
+    def score(self, *args, **kwargs):
+        '''Wrapper for estimator.score()'''
+
+        return self.estimator.score(*args, **kwargs)
+
+    def fit(self, *args, **kwargs):
+        '''Wrapper for estimator.fit()'''
+
+        return self.estimator.fit(*args, **kwargs)
+
+    def iter_fit(self, stream, **kwargs):
         '''Iterative learning.
 
         :parameters:
