@@ -138,7 +138,7 @@ def buffer_stream(stream, buffer_size, max_iter=None):
             buff = []
         if counter >= max_iter:
             raise StopIteration
-    if counter < max_iter:
+    if counter < max_iter and len(buff) > 0:
         yield buff
 
 
