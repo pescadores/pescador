@@ -108,7 +108,7 @@ def _buffer_data(data):
         return np.asarray(data)
 
 
-def stream_buffer(stream, buffer_size, max_iter=None):
+def buffer_stream(stream, buffer_size, max_iter=None):
     '''Buffer a stream into chunks of data.
 
     :parameters:
@@ -359,7 +359,7 @@ class StreamLearner(sklearn.base.BaseEstimator):
         '''
 
         # Re-initialize the model, if necessary?
-        for batch in stream_buffer(stream, self.batch_size, self.max_steps):
+        for batch in buffer_stream(stream, self.batch_size, self.max_steps):
             self.__partial_fit(batch, **kwargs)
 
         return self
