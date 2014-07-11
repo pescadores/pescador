@@ -359,23 +359,8 @@ class StreamLearner(sklearn.base.BaseEstimator):
         '''
 
         # Re-initialize the model, if necessary?
-
-        buf = []
-        for i, x_new in enumerate(stream):
-            buf.append(x_new)
-
-            # We've run too far, stop
-            if self.max_steps is not None and i > self.max_steps:
-                break
-
-            # Buffer is full, do an update
-            if len(buf) == self.batch_size:
-                self.__partial_fit(buf, **kwargs)
-                buf = []
-
-        # Update on whatever's left over
-        if len(buf) > 0:
-            self.__partial_fit(buf, **kwargs)
+        for batch in stream_buffer(stream, self.batch_size, self.max_steps):
+            self.__partial_fit(batch, **kwargs)
 
         return self
 
