@@ -294,10 +294,6 @@ def mux(seed_pool, n_samples, k, lam=256.0, pool_weights=None,
             weight_norm = np.sum(stream_weights)
 
 
-# TODO:   2014-07-10 16:38:27 by Brian McFee <brm2132@columbia.edu>
-# make existing functions wrap transparently (fit, predict, etc)
-# implement iterable versions on top: iter_fit, iter_predict, etc
-
 class StreamLearner(sklearn.base.BaseEstimator):
     '''A class to facilitate iterative learning from a generator.
 
