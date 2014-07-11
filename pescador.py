@@ -338,6 +338,47 @@ class StreamLearner(sklearn.base.BaseEstimator):
 
         self.estimator.partial_fit(*args, **kwargs)
 
+    def iter_fit(self, stream, **kwargs):
+        '''Iterative learning.
+
+        :parameters:
+            - stream : iterable of (x) or (x, y)
+              The data stream to fit.  Each element is assumed to be a
+              single example, or a tuple of (example, label).
+
+              Examples are collected into a batch and passed to
+              ``estimator.partial_fit``.
+
+            - kwargs
+              Additional keyword arguments to ``estimator.partial_fit``.
+              This is useful for things like the list of class labels for an
+              SGDClassifier.
+
+        :returns:
+            - self
+        '''
+
+        # Re-initialize the model, if necessary?
+
+        buf = []
+        for i, x_new in enumerate(stream):
+            buf.append(x_new)
+
+            # We've run too far, stop
+            if self.max_steps is not None and i > self.max_steps:
+                break
+
+            # Buffer is full, do an update
+            if len(buf) == self.batch_size:
+                self.__partial_fit(buf, **kwargs)
+                buf = []
+
+        # Update on whatever's left over
+        if len(buf) > 0:
+            self.__partial_fit(buf, **kwargs)
+
+        return self
+
     def decision_function(self, *args, **kwargs):
         '''Wrapper for estimator.predict()'''
 
@@ -382,44 +423,3 @@ class StreamLearner(sklearn.base.BaseEstimator):
         '''Wrapper for estimator.fit()'''
 
         return self.estimator.fit(*args, **kwargs)
-
-    def iter_fit(self, stream, **kwargs):
-        '''Iterative learning.
-
-        :parameters:
-            - stream : iterable of (x) or (x, y)
-              The data stream to fit.  Each element is assumed to be a
-              single example, or a tuple of (example, label).
-
-              Examples are collected into a batch and passed to
-              ``estimator.partial_fit``.
-
-            - kwargs
-              Additional keyword arguments to ``estimator.partial_fit``.
-              This is useful for things like the list of class labels for an
-              SGDClassifier.
-
-        :returns:
-            - self
-        '''
-
-        # Re-initialize the model, if necessary?
-
-        buf = []
-        for i, x_new in enumerate(stream):
-            buf.append(x_new)
-
-            # We've run too far, stop
-            if self.max_steps is not None and i > self.max_steps:
-                break
-
-            # Buffer is full, do an update
-            if len(buf) == self.batch_size:
-                self.__partial_fit(buf, **kwargs)
-                buf = []
-
-        # Update on whatever's left over
-        if len(buf) > 0:
-            self.__partial_fit(buf, **kwargs)
-
-        return self
