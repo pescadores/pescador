@@ -108,6 +108,40 @@ def _buffer_data(data):
         return np.asarray(data)
 
 
+def stream_buffer(stream, buffer_size, max_iter=None):
+    '''Buffer a stream into chunks of data.
+
+    :parameters:
+        - stream : function or iterable
+            Any generator function or iterable python object
+        - buffer_size : int
+            Maximum size of each returned chunk.
+        - max_iter : None or int > 0
+            Maximum number of iterations.
+            If ``None``, the buffer runs until the input stream is exhausted.
+
+    :yields:
+        - buff : list, len(buff) <= buffer_size
+            A buffered chunk of data from the input stream.
+            When the stream is exhausted, the last chunk may contain a non-zero
+            number of items smaller than ``buffer_size``.
+
+    '''
+    max_iter = np.inf if max_iter is None else max_iter
+    counter = 0
+    buff = []
+    for x in stream:
+        buff.append(x)
+        if len(buff) == buffer_size:
+            yield buff
+            counter += 1
+            buff = []
+        if counter >= max_iter:
+            raise StopIteration
+    if counter < max_iter:
+        yield buff
+
+
 def categorical_sample(weights):
     '''Sample from a categorical distribution.
 
