@@ -158,7 +158,8 @@ def categorical_sample(weights):
     return np.flatnonzero(np.random.multinomial(1, weights))[0]
 
 
-def _generate_new_seed(pool, weights, distribution, lam, with_replacement):
+def _generate_new_seed(pool, weights, distribution, lam=256.0,
+                       with_replacement=True):
         '''Randomly select and create a stream from the pool.
 
         :parameters:
@@ -173,7 +174,10 @@ def _generate_new_seed(pool, weights, distribution, lam, with_replacement):
         - distribution : np.ndarray
           Defines the probability of selecting the item '`pool[i]``.
 
-          Must have the same length as ``pool``.
+          Notes:
+          1. Must have the same length as ``pool``.
+          2. ``distribution`` will be modified in-place when
+          with_replacement=False.
 
         - lam : float > 0 or None
           Rate parameter for the Poisson distribution governing sample counts
