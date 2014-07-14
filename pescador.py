@@ -201,6 +201,53 @@ def mux(seed_pool, n_samples, k, lam=256.0, pool_weights=None,
           revisited.
 
     '''
+    def generate_new_seed(pool, weights, distribution, lam, with_replacement):
+        '''Randomly select and create a stream from the pool.
+
+        :parameters:
+        - pool : iterable of Streamer
+          The collection of Streamer objects
+
+        - weights : np.ndarray or None
+          Defines the stream sample weight of each ``pool[i]``.
+
+          Must have the same length as ``pool``.
+
+        - distribution : np.ndarray
+          Defines the probability of selecting the item '`pool[i]``.
+
+          Must have the same length as ``pool``.
+
+        - lam : float > 0 or None
+          Rate parameter for the Poisson distribution governing sample counts
+          for individual streams.
+          If ``None``, sample infinitely from each stream.
+
+        - with_replacement : bool
+          Sample Streamers with replacement.  This allows a single stream to be
+          used multiple times (even simultaneously).
+          If ``False``, then each Streamer is consumed at most once and never
+          revisited.
+        '''
+        assert len(pool) == len(weights) == len(distribution)
+        idx = categorical_sample(distribution)
+        # instantiate
+        if lam is not None:
+            n_stream = 1 + np.random.poisson(lam=lam)
+        else:
+            n_stream = None
+
+        # If we're sampling without replacement, zero this one out
+        if not with_replacement:
+            distribution[idx] = 0.0
+
+            if (distribution > 0).any():
+                distribution[:] /= np.sum(distribution)
+
+        stream = pool[idx].generate(max_items=n_stream)
+        weight = weights[idx]
+        return stream, weight
+
     n_seeds = len(seed_pool)
 
     # Set up the sampling distribution over streams
@@ -223,25 +270,8 @@ def mux(seed_pool, n_samples, k, lam=256.0, pool_weights=None,
         if not (seed_distribution > 0).any():
             break
 
-        # how many samples for this stream?
-        # pick a stream
-        new_idx = categorical_sample(seed_distribution)
-
-        # instantiate
-        if lam is not None:
-            n_stream = 1 + np.random.poisson(lam=lam)
-        else:
-            n_stream = None
-
-        streams[idx] = seed_pool[new_idx].generate(max_items=n_stream)
-        stream_weights[idx] = pool_weights[new_idx]
-
-        # If we're sampling without replacement, zero this one out
-        if not with_replacement:
-            seed_distribution[new_idx] = 0.0
-
-            if (seed_distribution > 0).any():
-                seed_distribution[:] /= np.sum(seed_distribution)
+        streams[idx], stream_weights[idx] = generate_new_seed(
+            seed_pool, pool_weights, seed_distribution, lam, with_replacement)
 
     weight_norm = np.sum(stream_weights)
 
@@ -252,7 +282,7 @@ def mux(seed_pool, n_samples, k, lam=256.0, pool_weights=None,
         n_samples = np.inf
 
     while n < n_samples and weight_norm > 0.0:
-        # Pick a stream
+        # Pick a stream from the active set
         idx = categorical_sample(stream_weights / weight_norm)
 
         # Can we sample from it?
@@ -264,28 +294,12 @@ def mux(seed_pool, n_samples, k, lam=256.0, pool_weights=None,
             n = n + 1
 
         except StopIteration:
-            # Oops, this one's exhausted.  Replace it and move on.
-
-            # Are there still kids in the pool?  Okay.
+            # Oops, this one's exhausted.
+            # Replace it and move on if there are still kids in the pool.
             if (seed_distribution > 0).any():
-
-                new_idx = categorical_sample(pool_weights)
-
-                if lam is not None:
-                    n_stream = 1 + np.random.poisson(lam=lam)
-                else:
-                    n_stream = None
-
-                streams[idx] = seed_pool[new_idx].generate(max_items=n_stream)
-
-                stream_weights[idx] = pool_weights[new_idx]
-
-                # If we're sampling without replacement, zero out this one out
-                if not with_replacement:
-                    seed_distribution[new_idx] = 0.0
-
-                    if (seed_distribution > 0).any():
-                        seed_distribution[:] /= np.sum(seed_distribution)
+                streams[idx], stream_weights[idx] = generate_new_seed(
+                    seed_pool, pool_weights, seed_distribution, lam,
+                    with_replacement)
 
             else:
                 # Otherwise, this one's exhausted.  Set its probability to 0
