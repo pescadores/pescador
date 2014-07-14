@@ -229,7 +229,7 @@ def mux(seed_pool, n_samples, k, lam=256.0, pool_weights=None,
 
         # instantiate
         if lam is not None:
-            n_stream = np.random.poisson(lam=lam)
+            n_stream = 1 + np.random.poisson(lam=lam)
         else:
             n_stream = None
 
@@ -272,7 +272,7 @@ def mux(seed_pool, n_samples, k, lam=256.0, pool_weights=None,
                 new_idx = categorical_sample(pool_weights)
 
                 if lam is not None:
-                    n_stream = np.random.poisson(lam=lam)
+                    n_stream = 1 + np.random.poisson(lam=lam)
                 else:
                     n_stream = None
 
