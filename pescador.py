@@ -158,7 +158,7 @@ def categorical_sample(weights):
     return np.flatnonzero(np.random.multinomial(1, weights))[0]
 
 
-def _generate_new_seed(pool, weights, distribution, lam=256.0,
+def _generate_new_seed(idx, pool, weights, distribution, lam=256.0,
                        with_replacement=True):
         '''Randomly select and create a stream from the pool.
 
@@ -191,7 +191,6 @@ def _generate_new_seed(pool, weights, distribution, lam=256.0,
           revisited.
         '''
         assert len(pool) == len(weights) == len(distribution)
-        idx = categorical_sample(distribution)
         # instantiate
         if lam is not None:
             n_stream = 1 + np.random.poisson(lam=lam)
@@ -209,7 +208,7 @@ def _generate_new_seed(pool, weights, distribution, lam=256.0,
 
 
 def mux(seed_pool, n_samples, k, lam=256.0, pool_weights=None,
-        with_replacement=True):
+        with_replacement=True, prune_empty_seeds=True):
     '''Stochastic multiplexor for generator seeds.
 
     Given an array of Streamer objects, do the following:
@@ -250,6 +249,13 @@ def mux(seed_pool, n_samples, k, lam=256.0, pool_weights=None,
           If ``False``, then each Streamer is consumed at most once and never
           revisited.
 
+        - prune_empty_seeds : bool
+          Disable seeds from the pool that produced no data.
+          If ``True``, Streamers that previously produced no data are never
+          revisited.
+          Note that this may be undesireable for streams where past emptiness
+          may not imply future emptiness.
+
     '''
     n_seeds = len(seed_pool)
 
@@ -267,14 +273,16 @@ def mux(seed_pool, n_samples, k, lam=256.0, pool_weights=None,
     streams = [None] * k
 
     stream_weights = np.zeros(k)
-
+    stream_counts = np.zeros(k, dtype=int)
+    stream_idxs = np.zeros(k, dtype=int)
     for idx in range(k):
 
         if not (seed_distribution > 0).any():
             break
-
+        stream_idxs[idx] = categorical_sample(seed_distribution)
         streams[idx], stream_weights[idx] = _generate_new_seed(
-            seed_pool, pool_weights, seed_distribution, lam, with_replacement)
+            stream_idxs[idx], seed_pool, pool_weights, seed_distribution, lam,
+            with_replacement)
 
     weight_norm = np.sum(stream_weights)
 
@@ -284,6 +292,7 @@ def mux(seed_pool, n_samples, k, lam=256.0, pool_weights=None,
     if n_samples is None:
         n_samples = np.inf
 
+    print stream_idxs, seed_distribution, stream_weights
     while n < n_samples and weight_norm > 0.0:
         # Pick a stream from the active set
         idx = categorical_sample(stream_weights / weight_norm)
@@ -294,15 +303,23 @@ def mux(seed_pool, n_samples, k, lam=256.0, pool_weights=None,
             yield streams[idx].next()
 
             # Increment the sample counter
-            n = n + 1
+            n += 1
+            stream_counts[idx] += 1
 
         except StopIteration:
             # Oops, this one's exhausted.
+            # If we're disabling empty seeds, see if this stream produced data.
+            if prune_empty_seeds and stream_counts[idx] == 0:
+                seed_distribution[stream_idxs[idx]] = 0.0
+                if (seed_distribution > 0).any():
+                    seed_distribution[:] /= np.sum(seed_distribution)
             # Replace it and move on if there are still kids in the pool.
             if (seed_distribution > 0).any():
+                stream_idxs[idx] = categorical_sample(seed_distribution)
                 streams[idx], stream_weights[idx] = _generate_new_seed(
-                    seed_pool, pool_weights, seed_distribution, lam,
-                    with_replacement)
+                    stream_idxs[idx], seed_pool, pool_weights,
+                    seed_distribution, lam, with_replacement)
+                stream_counts[idx] = 0
 
             else:
                 # Otherwise, this one's exhausted.  Set its probability to 0
