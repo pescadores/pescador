@@ -292,7 +292,6 @@ def mux(seed_pool, n_samples, k, lam=256.0, pool_weights=None,
     if n_samples is None:
         n_samples = np.inf
 
-    print stream_idxs, seed_distribution, stream_weights
     while n < n_samples and weight_norm > 0.0:
         # Pick a stream from the active set
         idx = categorical_sample(stream_weights / weight_norm)
