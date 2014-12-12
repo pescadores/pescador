@@ -264,7 +264,7 @@ def mux(seed_pool, n_samples, k, lam=256.0, pool_weights=None,
         if not (seed_distribution > 0).any():
             break
 
-        stream_idxs[idx] = np.random.choice(n_seeds, seed_distribution)
+        stream_idxs[idx] = np.random.choice(n_seeds, p=seed_distribution)
         streams[idx], stream_weights[idx] = _generate_new_seed(
             stream_idxs[idx], seed_pool, pool_weights, seed_distribution, lam,
             with_replacement)
@@ -279,7 +279,7 @@ def mux(seed_pool, n_samples, k, lam=256.0, pool_weights=None,
 
     while n < n_samples and weight_norm > 0.0:
         # Pick a stream from the active set
-        idx = np.random.choice(k, stream_weights / weight_norm)
+        idx = np.random.choice(k, p=stream_weights / weight_norm)
 
         # Can we sample from it?
         try:
