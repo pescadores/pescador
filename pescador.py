@@ -4,6 +4,7 @@
 import collections
 import ctypes
 import multiprocessing as mp
+import traceback
 import numpy as np
 import scipy
 
@@ -211,16 +212,26 @@ def threaded_mux(q_size, *args, **kwargs):
         '''Wrapper function to iterate a mux stream and queue the results'''
 
         # Build the stream
-        mux_stream = mux(*kw['args'], **kw['kwargs'])
+        try:
+            mux_stream = mux(*kw['args'], **kw['kwargs'])
 
-        for item in mux_stream:
-            data_queue.put(item)
+            for item in mux_stream:
+                data_queue.put(item)
+
+        except Exception as exc:
+
+            print('Caught exception in worker thread (x={:s}): '.format(exc))
+
+            traceback.print_exc()
+
+            print()
+
+            raise exc
 
         with done.get_lock():
             done.value = True
 
         data_queue.close()
-
         data_queue.join_thread()
 
     # Construct a queue object
