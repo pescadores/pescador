@@ -4,9 +4,11 @@
 import collections
 import ctypes
 import multiprocessing as mp
-import traceback
 import numpy as np
 import scipy
+import Queue
+
+from joblib.parallel import SafeFunction
 
 import sklearn.base
 
@@ -208,38 +210,37 @@ def threaded_mux(q_size, *args, **kwargs):
           See: mux()
     '''
 
-    def __mux_worker(data_queue, done, **kw):
+    def __mux_worker(data_queue, done, exc_queue, **kw):
         '''Wrapper function to iterate a mux stream and queue the results'''
 
-        # Build the stream
         try:
+            # Build the stream
             mux_stream = mux(*kw['args'], **kw['kwargs'])
 
+            # Push into the queue, blocking if it's full
             for item in mux_stream:
                 data_queue.put(item)
 
         except Exception as exc:
+            exc_queue.put(exc)
 
-            print('Caught exception in worker thread (x={:s}): '.format(exc))
+        finally:
+            # Cleanup actions
+            # close the queue
 
-            traceback.print_exc()
-
-            print()
-
-            raise exc
-
-        with done.get_lock():
-            done.value = True
-
-        data_queue.close()
-        data_queue.join_thread()
+            with done.get_lock():
+                # Signal that we're done
+                done.value = True
+                data_queue.close()
+                exc_queue.close()
 
     # Construct a queue object
     data_queue = mp.Queue(maxsize=q_size)
+    exc_queue = mp.Queue(maxsize=1)
     done = mp.Value(ctypes.c_bool)
 
-    worker = mp.Process(target=__mux_worker,
-                        args=[data_queue, done],
+    worker = mp.Process(target=SafeFunction(__mux_worker),
+                        args=[data_queue, done, exc_queue],
                         kwargs={'args': args, 'kwargs': kwargs})
 
     worker.start()
@@ -252,7 +253,19 @@ def threaded_mux(q_size, *args, **kwargs):
         if my_done and data_queue.empty():
             break
 
-        yield data_queue.get()
+        try:
+            yield data_queue.get(block=False, timeout=1e-2)
+        except Queue.Empty:
+            pass
+
+        try:
+            exc = exc_queue.get_nowait()
+            raise exc
+        except Queue.Empty:
+            pass
+
+    exc_queue.close()
+    exc_queue.join_thread()
 
 
 def mux(seed_pool, n_samples, k, lam=256.0, pool_weights=None,
