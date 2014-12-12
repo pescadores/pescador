@@ -2,6 +2,8 @@
 """Utilities to facilitate out-of-core learning in sklearn"""
 
 import collections
+import ctypes
+import multiprocessing as mp
 import numpy as np
 import scipy
 
@@ -189,6 +191,57 @@ def _generate_new_seed(idx, pool, weights, distribution, lam=256.0,
             distribution[:] /= np.sum(distribution)
 
     return pool[idx].generate(max_items=n_stream), weights[idx]
+
+
+def threaded_mux(q_size, *args, **kwargs):
+    '''A threaded version of stream multiplexor.
+
+    :parameters:
+        - q_size : int >= 0
+          If positive-valued, the maximum number of items to allow in the
+          inter-process queue.  Otherwise, the queue is unboundedly large.
+
+          Probably 1000 is a good value for most scenarios.
+
+        - args, kwargs
+          See: mux()
+    '''
+
+    def __mux_worker(data_queue, done, **kw):
+        '''Wrapper function to iterate a mux stream and queue the results'''
+
+        # Build the stream
+        mux_stream = mux(*kw['args'], **kw['kwargs'])
+
+        for item in mux_stream:
+            data_queue.put(item)
+
+        with done.get_lock():
+            done.value = True
+
+        data_queue.close()
+
+        data_queue.join_thread()
+
+    # Construct a queue object
+    data_queue = mp.Queue(maxsize=q_size)
+    done = mp.Value(ctypes.c_bool)
+
+    worker = mp.Process(target=__mux_worker,
+                        args=[data_queue, done],
+                        kwargs={'args': args, 'kwargs': kwargs})
+
+    worker.start()
+
+    # Yield from the queue as long as it's open
+    while True:
+        with done.get_lock():
+            my_done = done.value
+
+        if my_done and data_queue.empty():
+            break
+
+        yield data_queue.get()
 
 
 def mux(seed_pool, n_samples, k, lam=256.0, pool_weights=None,
