@@ -327,7 +327,7 @@ def mux(seed_pool, n_samples, k, lam=256.0, pool_weights=None,
         pool_weights = seed_distribution.copy()
 
     assert len(pool_weights) == len(seed_pool)
-    assert (pool_weights > 0.0).all()
+    assert (pool_weights > 0.0).any()
     pool_weights /= np.sum(pool_weights)
 
     # Instantiate the pool
