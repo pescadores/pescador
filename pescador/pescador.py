@@ -2,6 +2,7 @@
 """Core classes"""
 
 import collections
+import inspect
 import sklearn.base
 import six
 
@@ -36,15 +37,15 @@ class Streamer(object):
 
     :raises:
         - TypeError
-          If ``streamer`` is not a function or an Iterable object.
+          If ``streamer`` is not a generator or an Iterable object.
     '''
 
     def __init__(self, streamer, *args, **kwargs):
         '''Initializer'''
 
-        if not (hasattr(streamer, '__call__') or
+        if not (inspect.isgeneratorfunction(streamer) or
                 isinstance(streamer, collections.Iterable)):
-            raise TypeError('streamer must be a generator or Iterable')
+            raise TypeError('streamer must be a generator or iterable')
 
         self.stream = streamer
         self.args = args
