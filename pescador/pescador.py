@@ -63,7 +63,7 @@ class Streamer(object):
             - Items from the contained generator
         '''
 
-        if isinstance(self.stream, six.callable):
+        if six.callable(self.stream):
             # If it's a function, create the stream.
             my_stream = self.stream(*(self.args), **(self.kwargs))
 
