@@ -1,5 +1,5 @@
 #!/usr/bin/python
-"""Utilities to facilitate out-of-core learning in sklearn"""
+"""Core classes"""
 
 import collections
 import sklearn.base
