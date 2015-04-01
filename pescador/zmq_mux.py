@@ -14,6 +14,8 @@ from joblib.parallel import SafeFunction
 
 from .util import mux
 
+__all__ = ['zmq_mux']
+
 
 def zmq_send_arrays(socket, array_payload, flags=0, copy=True, track=False):
     """send a numpy array with metadata"""
@@ -59,7 +61,7 @@ def zmq_recv_arrays(socket, flags=0, copy=True, track=False):
     return results
 
 
-def __zmq_mux_worker(port, **kw):
+def __mux_worker(port, **kw):
 
     context = zmq.Context()
     socket = context.socket(zmq.PAIR)
@@ -108,7 +110,7 @@ def zmq_mux(port, *args, **kwargs):
         The multiplexed data
     '''
     try:
-        worker = mp.Process(target=SafeFunction(__zmq_mux_worker),
+        worker = mp.Process(target=SafeFunction(__mux_worker),
                             args=[port],
                             kwargs={'args': args, 'kwargs': kwargs})
         worker.start()

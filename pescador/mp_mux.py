@@ -8,6 +8,8 @@ from joblib.parallel import SafeFunction
 
 from .util import mux
 
+__all__ = ['threaded_mux']
+
 
 def threaded_mux(q_size, *args, **kwargs):
     '''A threaded version of stream multiplexor.
@@ -22,30 +24,6 @@ def threaded_mux(q_size, *args, **kwargs):
         - args, kwargs
           See: mux()
     '''
-
-    def __mux_worker(data_queue, done, exc_queue, **kw):
-        '''Wrapper function to iterate a mux stream and queue the results'''
-
-        try:
-            # Build the stream
-            mux_stream = mux(*kw['args'], **kw['kwargs'])
-
-            # Push into the queue, blocking if it's full
-            for item in mux_stream:
-                data_queue.put(item)
-
-        except Exception as exc:
-            exc_queue.put(exc)
-
-        finally:
-            # Cleanup actions
-            # close the queue
-
-            with done.get_lock():
-                # Signal that we're done
-                done.value = True
-                data_queue.close()
-                exc_queue.close()
 
     # Construct a queue object
     data_queue = mp.Queue(maxsize=q_size)
@@ -79,3 +57,28 @@ def threaded_mux(q_size, *args, **kwargs):
 
     exc_queue.close()
     exc_queue.join_thread()
+
+
+def __mux_worker(data_queue, done, exc_queue, **kw):
+    '''Wrapper function to iterate a mux stream and queue the results'''
+
+    try:
+        # Build the stream
+        mux_stream = mux(*kw['args'], **kw['kwargs'])
+
+        # Push into the queue, blocking if it's full
+        for item in mux_stream:
+            data_queue.put(item)
+
+    except Exception as exc:
+        exc_queue.put(exc)
+
+    finally:
+        # Cleanup actions
+        # close the queue
+
+        with done.get_lock():
+            # Signal that we're done
+            done.value = True
+            data_queue.close()
+            exc_queue.close()
