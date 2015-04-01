@@ -4,7 +4,7 @@ import numpy as np
 import scipy.sparse
 
 
-__all__ = ['mux', 'buffer_data']
+__all__ = ['mux', 'buffer_data', 'buffer_stream']
 
 
 def mux(seed_pool, n_samples, k, lam=256.0, pool_weights=None,
@@ -157,6 +157,40 @@ def buffer_data(data):
 
     else:
         return np.asarray(data)
+
+
+def buffer_stream(stream, buffer_size, max_iter=None):
+    '''Buffer a stream into chunks of data.
+
+    :parameters:
+        - stream : function or iterable
+            Any generator function or iterable python object
+        - buffer_size : int
+            Maximum size of each returned chunk.
+        - max_iter : None or int > 0
+            Maximum number of iterations.
+            If ``None``, the buffer runs until the input stream is exhausted.
+
+    :yields:
+        - buff : list, len(buff) <= buffer_size
+            A buffered chunk of data from the input stream.
+            When the stream is exhausted, the last chunk may contain a non-zero
+            number of items smaller than ``buffer_size``.
+
+    '''
+    max_iter = np.inf if max_iter is None else max_iter
+    counter = 0
+    buff = []
+    for x in stream:
+        buff.append(x)
+        if len(buff) == buffer_size:
+            yield buff
+            counter += 1
+            buff = []
+        if counter >= max_iter:
+            raise StopIteration
+    if counter < max_iter and len(buff) > 0:
+        yield buff
 
 
 def generate_new_seed(idx, pool, weights, distribution, lam=256.0,

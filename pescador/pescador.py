@@ -2,11 +2,10 @@
 """Utilities to facilitate out-of-core learning in sklearn"""
 
 import collections
-import numpy as np
 import sklearn.base
 import six
 
-from .util import mux, buffer_data
+from . import util
 from .zmq_mux import zmq_mux
 from .mp_mux import threaded_mux
 
@@ -78,40 +77,6 @@ class Streamer(object):
                 break
 
 
-def buffer_stream(stream, buffer_size, max_iter=None):
-    '''Buffer a stream into chunks of data.
-
-    :parameters:
-        - stream : function or iterable
-            Any generator function or iterable python object
-        - buffer_size : int
-            Maximum size of each returned chunk.
-        - max_iter : None or int > 0
-            Maximum number of iterations.
-            If ``None``, the buffer runs until the input stream is exhausted.
-
-    :yields:
-        - buff : list, len(buff) <= buffer_size
-            A buffered chunk of data from the input stream.
-            When the stream is exhausted, the last chunk may contain a non-zero
-            number of items smaller than ``buffer_size``.
-
-    '''
-    max_iter = np.inf if max_iter is None else max_iter
-    counter = 0
-    buff = []
-    for x in stream:
-        buff.append(x)
-        if len(buff) == buffer_size:
-            yield buff
-            counter += 1
-            buff = []
-        if counter >= max_iter:
-            raise StopIteration
-    if counter < max_iter and len(buff) > 0:
-        yield buff
-
-
 class StreamLearner(sklearn.base.BaseEstimator):
     '''A class to facilitate iterative learning from a generator.
 
@@ -150,9 +115,9 @@ class StreamLearner(sklearn.base.BaseEstimator):
         """Wrapper function to estimator.partial_fit()"""
 
         if self.supervised:
-            args = [buffer_data(datum) for datum in zip(*data)]
+            args = [util.buffer_data(datum) for datum in zip(*data)]
         else:
-            args = [buffer_data(data)]
+            args = [util.buffer_data(data)]
 
         self.estimator.partial_fit(*args, **kwargs)
 
@@ -177,7 +142,7 @@ class StreamLearner(sklearn.base.BaseEstimator):
         '''
 
         # Re-initialize the model, if necessary?
-        for batch in buffer_stream(stream, self.batch_size, self.max_steps):
+        for batch in util.buffer_stream(stream, self.batch_size, self.max_steps):
             self.__partial_fit(batch, **kwargs)
 
         return self
