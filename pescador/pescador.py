@@ -6,38 +6,44 @@ import inspect
 import sklearn.base
 import six
 
+from sklearn.utils.metaestimators import if_delegate_has_method
+
 from . import util
-from .zmq_mux import zmq_mux
-from .mp_mux import threaded_mux
 
 
 class Streamer(object):
     '''A wrapper class for reusable generators.
 
-    :usage:
-        >>> # make a generator
-        >>> def my_generator(n):
-                for i in range(n):
-                    yield i
-        >>> GS = Streamer(my_generator, 5)
-        >>> for i in GS.generate():
-                print i
+    Examples
+    --------
+    Make a generator
 
-        >>> # Or with a maximum number of items
-        >>> for i in GS.generate(max_items=3):
-                print i
+    >>> def my_generator(n):
+    ...     for i in range(n):
+    ...             yield i
+    >>> GS = Streamer(my_generator, 5)
+    >>> for i in GS.generate():
+    ...     print i
 
-    :parameters:
-        - streamer : function or iterable
-          Any generator function or iterable python object
 
-        - *args, **kwargs
-          Additional positional arguments or keyword arguments to pass
-          through to ``generator()``
+    Or with a maximum number of items
+    >>> for i in GS.generate(max_items=3):
+    ...     print i
 
-    :raises:
-        - TypeError
-          If ``streamer`` is not a generator or an Iterable object.
+
+    Parameters
+    ----------
+    streamer : function or iterable
+        Any generator function or iterable python object
+
+    *args, **kwargs
+        Additional positional arguments or keyword arguments to pass
+        through to ``generator()``
+
+    Raises
+    ------
+    TypeError
+        If ``streamer`` is not a generator or an Iterable object.
     '''
 
     def __init__(self, streamer, *args, **kwargs):
@@ -54,13 +60,15 @@ class Streamer(object):
     def generate(self, max_items=None):
         '''Instantiate the generator
 
-        :parameters:
-            - max_items : None or int > 0
-              Maximum number of items to yield.
-              If ``None``, exhaust the generator.
+        Parameters
+        ----------
+        max_items : None or int > 0
+            Maximum number of items to yield.
+            If ``None``, exhaust the generator.
 
-        :yields:
-            - Items from the contained generator
+        Generates
+        ---------
+        Items from the contained generator
         '''
 
         if six.callable(self.stream):
@@ -72,122 +80,129 @@ class Streamer(object):
             my_stream = self.stream
 
         for i, x in enumerate(my_stream):
-            if max_items is None or i < max_items:
-                yield x
-            else:
+            if max_items is not None and i >= max_items:
                 break
+            yield x
 
 
 class StreamLearner(sklearn.base.BaseEstimator):
-    '''A class to facilitate iterative learning from a generator.
+    '''A class to facilitate iterative learning from a generator.'''
 
-    :parameters:
-        - estimator : sklearn estimator
+    def __init__(self, estimator, max_steps=None):
+        '''Learning on generators
+
+        Parameters
+        ----------
+        estimator : sklearn estimator
             The estimator to fit.  Must support the ``partial_fit`` method.
 
-        - batch_size : int > 0
-            The size of batches to be passed to ``estimator.partial_fit``.
-
-        - max_steps : None or int > 0
+        max_steps : None or int > 0
             Maximum number of batch learning iterations.
             If ``None``, the learner runs until the input stream is exhausted.
-    '''
-
-    def __init__(self, estimator, batch_size=100, max_steps=None):
-        ''' '''
-        # Is this a supervised or unsupervised learner?
-        self.supervised = isinstance(estimator, sklearn.base.ClassifierMixin)
-
+        '''
         # Does the learner support partial fit?
         assert hasattr(estimator, 'partial_fit')
 
-        # Is the batch size positive?
-        assert batch_size > 0
+        # Is this a supervised or unsupervised learner?
+        self.supervised = isinstance(estimator, sklearn.base.ClassifierMixin)
 
         # Is the iteration bound positive or infinite?
         if max_steps is not None:
             assert max_steps > 0
 
         self.estimator = estimator
-        self.batch_size = int(batch_size)
         self.max_steps = max_steps
-
-    def __partial_fit(self, data, **kwargs):
-        """Wrapper function to estimator.partial_fit()"""
-
-        if self.supervised:
-            args = [util.buffer_data(datum) for datum in zip(*data)]
-        else:
-            args = [util.buffer_data(data)]
-
-        self.estimator.partial_fit(*args, **kwargs)
 
     def iter_fit(self, stream, **kwargs):
         '''Iterative learning.
 
-        :parameters:
-            - stream : iterable of (x) or (x, y)
-              The data stream to fit.  Each element is assumed to be a
-              single example, or a tuple of (example, label).
+        Parameters
+        ----------
+        stream : iterable of (x) or (x, y)
+            The data stream to fit.  Each element is assumed to be a
+            single example, or a tuple of (example, label).
 
-              Examples are collected into a batch and passed to
-              ``estimator.partial_fit``.
+            Examples are collected into a batch and passed to
+            ``estimator.partial_fit``.
 
-            - kwargs
-              Additional keyword arguments to ``estimator.partial_fit``.
-              This is useful for things like the list of class labels for an
-              SGDClassifier.
-
-        :returns:
-            - self
+        kwargs
+            Additional keyword arguments to ``estimator.partial_fit``.
+            This is useful for things like the list of class labels for an
+            SGDClassifier.
         '''
 
-        # Re-initialize the model, if necessary?
-        for batch in util.buffer_stream(stream, self.batch_size, self.max_steps):
-            self.__partial_fit(batch, **kwargs)
+        for i, batch in enumerate(stream):
+            if self.max_steps and i >= self.max_steps:
+                break
 
-        return self
+            args = [batch['X']]
 
+            if self.supervised and 'Y' in batch:
+                args.append(batch['Y'])
+
+            elif self.supervised and 'Y' not in batch:
+                raise RuntimeError('No Y-values provided by stream')
+
+            elif 'Y' in batch:
+                raise RuntimeError('Y-values supplied for '
+                                   'unsupervised learner')
+
+            self.partial_fit(*args, **kwargs)
+
+    @if_delegate_has_method(delegate='estimator')
     def decision_function(self, *args, **kwargs):
         '''Wrapper for estimator.predict()'''
 
         return self.estimator.decision_function(*args, **kwargs)
 
+    @if_delegate_has_method(delegate='estimator')
     def predict_proba(self, *args, **kwargs):
         '''Wrapper for estimator.predict_proba()'''
 
         return self.estimator.predict_proba(*args, **kwargs)
 
+    @if_delegate_has_method(delegate='estimator')
     def predict_log_proba(self, *args, **kwargs):
         '''Wrapper for estimator.predict_log_proba()'''
 
         return self.estimator.predict(*args, **kwargs)
 
+    @if_delegate_has_method(delegate='estimator')
     def predict(self, *args, **kwargs):
         '''Wrapper for estimator.predict()'''
 
         return self.estimator.predict(*args, **kwargs)
 
+    @if_delegate_has_method(delegate='estimator')
     def inverse_transform(self, *args, **kwargs):
         '''Wrapper for estimator.inverse_transform()'''
 
         return self.estimator.inverse_transform(*args, **kwargs)
 
+    @if_delegate_has_method(delegate='estimator')
     def transform(self, *args, **kwargs):
         '''Wrapper for estimator.transform()'''
 
         return self.estimator.transform(*args, **kwargs)
 
+    @if_delegate_has_method(delegate='estimator')
     def fit_transform(self, *args, **kwargs):
         '''Wrapper for estimator.fit_transform()'''
 
         return self.estimator.fit_transform(*args, **kwargs)
 
+    @if_delegate_has_method(delegate='estimator')
     def score(self, *args, **kwargs):
         '''Wrapper for estimator.score()'''
 
         return self.estimator.score(*args, **kwargs)
 
+    @if_delegate_has_method(delegate='estimator')
+    def partial_fit(self, *args, **kwargs):
+        '''Wrapper for estimator.fit()'''
+        return self.estimator.partial_fit(*args, **kwargs)
+
+    @if_delegate_has_method(delegate='estimator')
     def fit(self, *args, **kwargs):
         '''Wrapper for estimator.fit()'''
 

@@ -61,7 +61,7 @@ def zmq_recv_arrays(socket, flags=0, copy=True, track=False):
     return results
 
 
-def __mux_worker(port, **kw):
+def __mux_worker(port, Stream=mux, **kw):
 
     context = zmq.Context()
     socket = context.socket(zmq.PAIR)
@@ -69,9 +69,7 @@ def __mux_worker(port, **kw):
 
     try:
         # Build the stream
-        mux_stream = mux(*kw['args'], **kw['kwargs'])
-
-        for item in mux_stream:
+        for item in Stream(*kw['args'], **kw['kwargs']):
             if isinstance(item, tuple) and len(item) == 2:
                 zmq_send_arrays(socket, {'X': item[0],
                                          'Y': item[1]})
@@ -109,13 +107,15 @@ def zmq_mux(port, *args, **kwargs):
     X, Y : ndarray, ndarray
         The multiplexed data
     '''
+    worker = mp.Process(target=SafeFunction(__mux_worker),
+                        args=[port],
+                        kwargs={'args': args,
+                                'kwargs': kwargs})
+    context = zmq.Context()
+
     try:
-        worker = mp.Process(target=SafeFunction(__mux_worker),
-                            args=[port],
-                            kwargs={'args': args, 'kwargs': kwargs})
         worker.start()
 
-        context = zmq.Context()
         socket = context.socket(zmq.PAIR)
         socket.bind('tcp://*:{:d}'.format(port))
 

@@ -1,10 +1,9 @@
 #!/usr/bin/env python
 '''Utilities'''
 import numpy as np
-import scipy.sparse
 
 
-__all__ = ['mux', 'buffer_data', 'buffer_stream']
+__all__ = ['mux', 'buffer_batch']
 
 
 def mux(seed_pool, n_samples, k, lam=256.0, pool_weights=None,
@@ -19,43 +18,43 @@ def mux(seed_pool, n_samples, k, lam=256.0, pool_weights=None,
            from the active set.
         4. When a stream is exhausted, select a new one from the pool.
 
-    :parameters:
-        - seed_pool : iterable of Streamer
-          The collection of Streamer objects
+    Parameters
+    ----------
+    seed_pool : iterable of Streamer
+        The collection of Streamer objects
 
-        - n_samples : int > 0 or None
-          The number of samples to generate.
-          If ``None``, sample indefinitely.
+    n_samples : int > 0 or None
+        The number of samples to generate.
+        If ``None``, sample indefinitely.
 
-        - k : int > 0
-          The number of streams to keep active at any time.
+    k : int > 0
+        The number of streams to keep active at any time.
 
-        - lam : float > 0 or None
-          Rate parameter for the Poisson distribution governing sample counts
-          for individual streams.
-          If ``None``, sample infinitely from each stream.
+    lam : float > 0 or None
+        Rate parameter for the Poisson distribution governing sample counts
+        for individual streams.
+        If ``None``, sample infinitely from each stream.
 
-        - pool_weights : np.ndarray or None
-          Optional weighting for ``seed_pool``.
-          If ``None``, then weights are assumed to be uniform.
-          Otherwise, ``pool_weights[i]`` defines the sampling proportion
-          of ``seed_pool[i]``.
+    pool_weights : np.ndarray or None
+        Optional weighting for ``seed_pool``.
+        If ``None``, then weights are assumed to be uniform.
+        Otherwise, ``pool_weights[i]`` defines the sampling proportion
+        of ``seed_pool[i]``.
 
-          Must have the same length as ``seed_pool``.
+        Must have the same length as ``seed_pool``.
 
-        - with_replacement : bool
-          Sample Streamers with replacement.  This allows a single stream to be
-          used multiple times (even simultaneously).
-          If ``False``, then each Streamer is consumed at most once and never
-          revisited.
+    with_replacement : bool
+        Sample Streamers with replacement.  This allows a single stream to be
+        used multiple times (even simultaneously).
+        If ``False``, then each Streamer is consumed at most once and never
+        revisited.
 
-        - prune_empty_seeds : bool
-          Disable seeds from the pool that produced no data.
-          If ``True``, Streamers that previously produced no data are never
-          revisited.
-          Note that this may be undesireable for streams where past emptiness
-          may not imply future emptiness.
-
+    prune_empty_seeds : bool
+        Disable seeds from the pool that produced no data.
+        If ``True``, Streamers that previously produced no data are never
+        revisited.
+        Note that this may be undesireable for streams where past emptiness
+        may not imply future emptiness.
     '''
     n_seeds = len(seed_pool)
 
@@ -129,72 +128,108 @@ def mux(seed_pool, n_samples, k, lam=256.0, pool_weights=None,
             weight_norm = np.sum(stream_weights)
 
 
-def buffer_data(data):
-    """Determine whether the data is sparse or not, and buffer it accordingly.
+def buffer_batch(stream, buffer_size):
+    '''Buffer a stream of batches into larger batches
 
-    :parameters:
-        - data : list of scipy.sparse or np.ndarray
-            The data to buffer
+    Parameters
+    ----------
+    stream : iterable
+        The stream to buffer
 
-    :returns:
-        - buf : scipy.sparse.csr or np.ndarray
-            If the input data was sparse, a sparse matrix of the data
-            concatenated vertically.
-            Otherwise, the data stacked vertically as a dense ndarray.
-    """
+    buffer_size : int > 0
+        The number of examples to retain per batch.
 
-    if scipy.sparse.issparse(data[0]):
-        n = len(data)
-        dimension = np.prod(data[0].shape)
+    Generates
+    ---------
+    batch
+        A batch of size at most `buffer_size`
+    '''
 
-        data_s = scipy.sparse.lil_matrix((n, dimension), dtype=data[0].dtype)
+    batches = []
+    n = 0
 
-        for i in range(len(data)):
-            idx = data[i].indices
-            data_s[i, idx] = data[i][:, idx]
+    for x in stream:
+        batches.append(x)
+        n += len(x.keys()[0])
 
-        return data_s.tocsr()
+        if n < buffer_size:
+            continue
 
-    else:
-        return np.asarray(data)
+        batch, batches = __split_batches(batches, buffer_size)
+
+        if batch is not None:
+            yield batch
+            batch = None
+            n = 0
+
+    # Run out the remaining samples
+    while batches:
+        batch, batches = __split_batches(batches, buffer_size)
+        if batch is not None:
+            yield batch
 
 
-def buffer_stream(stream, buffer_size, max_iter=None):
-    '''Buffer a stream into chunks of data.
+def __split_batches(batches, buffer_size):
+    '''Split at most one batch off of a collection of batches.
 
-    :parameters:
-        - stream : function or iterable
-            Any generator function or iterable python object
-        - buffer_size : int
-            Maximum size of each returned chunk.
-        - max_iter : None or int > 0
-            Maximum number of iterations.
-            If ``None``, the buffer runs until the input stream is exhausted.
+    Parameters
+    ----------
+    batches : list
+        List of batch objects
 
-    :yields:
-        - buff : list, len(buff) <= buffer_size
-            A buffered chunk of data from the input stream.
-            When the stream is exhausted, the last chunk may contain a non-zero
-            number of items smaller than ``buffer_size``.
+    buffer_size : int > 0 or None
+        Size of the desired buffer.
+        If None, the entire stream is exhausted.
+
+    Returns
+    -------
+    batch, remaining_batches
+        One batch of size up to buffer_size,
+        and all remaining batches.
 
     '''
-    max_iter = np.inf if max_iter is None else max_iter
-    counter = 0
-    buff = []
-    for x in stream:
-        buff.append(x)
-        if len(buff) == buffer_size:
-            yield buff
-            counter += 1
-            buff = []
-        if counter >= max_iter:
-            raise StopIteration
-    if counter < max_iter and len(buff) > 0:
-        yield buff
+
+    batch_size = 0
+    batch_data = []
+
+    # First, pull off all the candidate batches
+    while batches and (buffer_size is None or
+                       batch_size < buffer_size):
+        batch_data.append(batches.pop(0))
+        batch_size += len(batch_data[-1].keys()[0])
+
+    # Merge the batches
+    batch = dict()
+    residual = dict()
+
+    has_residual = False
+    has_data = False
+
+    for key in batch_data[0].keys():
+        batch[key] = np.concatenate([data[key] for data in batch_data])
+
+        residual[key] = batch[key][buffer_size:]
+
+        if len(residual[key]):
+            has_residual = True
+
+        # Clip to the appropriate size
+        batch[key] = batch[key][:buffer_size]
+
+        if len(batch[key]):
+            has_data = True
+
+    if has_residual:
+        batches.insert(0, residual)
+
+    if not has_data:
+        batch = None
+
+    return batch, batches
 
 
 def generate_new_seed(idx, pool, weights, distribution, lam=256.0,
-                       with_replacement=True):
+                      with_replacement=True):
     '''Randomly select and create a stream from the pool.
 
     :parameters:
