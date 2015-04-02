@@ -12,6 +12,20 @@ from sklearn.utils.metaestimators import if_delegate_has_method
 class Streamer(object):
     '''A wrapper class for reusable generators.
 
+    Parameters
+    ----------
+    streamer : function or iterable
+        Any generator function or iterable python object
+
+    *args, **kwargs
+        Additional positional arguments or keyword arguments to pass
+        through to ``generator()``
+
+    Raises
+    ------
+    TypeError
+        If ``streamer`` is not a generator or an Iterable object.
+
     Examples
     --------
     Make a generator
@@ -27,21 +41,6 @@ class Streamer(object):
     Or with a maximum number of items
     >>> for i in GS.generate(max_items=3):
     ...     print i
-
-
-    Parameters
-    ----------
-    streamer : function or iterable
-        Any generator function or iterable python object
-
-    *args, **kwargs
-        Additional positional arguments or keyword arguments to pass
-        through to ``generator()``
-
-    Raises
-    ------
-    TypeError
-        If ``streamer`` is not a generator or an Iterable object.
     '''
 
     def __init__(self, streamer, *args, **kwargs):

@@ -31,6 +31,16 @@ def infinite_generator(size=2):
         i = i + 1
 
 
+def test_streamer_list():
+
+    reference = list(finite_generator(10))
+
+    query = list(pescador.Streamer(reference).generate())
+
+    for b1, b2 in zip(reference, query):
+        __eq_batch(b1, b2)
+
+
 def test_streamer_finite():
 
     def __test(n_max, size):
@@ -71,6 +81,15 @@ def test_streamer_infinite():
     for n_max in [10, 50]:
         for size in [1, 2, 7]:
             yield __test, n_max, size
+
+
+@raises(TypeError)
+def test_streamer_bad_function():
+
+    def __fail():
+        return 5
+
+    _ = pescador.Streamer(__fail)
 
 
 def test_zmq():
