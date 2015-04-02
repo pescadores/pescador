@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 '''Test the streamer object for reusable generators'''
+from __future__ import print_function
 
 import itertools
 import six
@@ -123,3 +124,27 @@ def test_batch_length():
             else:
                 test = __test
             yield test, __zip_generator(3, n1, n2), n1
+
+
+def test_buffer_batch():
+
+    def __serialize_batches(batches):
+
+        for batch in batches:
+            for item in batch['X']:
+                yield item
+
+    def __test(n_batch, n_buf):
+        reference = finite_generator(50, size=n_batch)
+
+        reference = __serialize_batches(reference)
+
+        estimate = pescador.buffer_batch(finite_generator(50, size=n_batch),
+                                         n_buf)
+        estimate = __serialize_batches(estimate)
+
+        eq_(list(reference), list(estimate))
+
+    for batch_size in [1, 2, 5, 17]:
+        for buf_size in [1, 2, 5, 17, 100]:
+            yield __test, batch_size, buf_size
