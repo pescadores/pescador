@@ -8,7 +8,6 @@ python:
     - "3.4"
 
 before_install:
-    - sudo apt-get update
     - if [[ "$TRAVIS_PYTHON_VERSION" == "2.7" ]]; then
           wget http://repo.continuum.io/miniconda/Miniconda-3.8.3-Linux-x86_64.sh -O miniconda.sh;
       else
@@ -24,6 +23,8 @@ before_install:
     - conda info -a
     - deps='pip numpy scipy nose pyzmq scikit-learn'
     - conda create -q -n test-environment "python=$TRAVIS_PYTHON_VERSION" $deps 
+    - source activate test-environment
+    - pip install python-coveralls
 
 install:
     # install your own package into the environment

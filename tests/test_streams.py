@@ -148,3 +148,12 @@ def test_buffer_batch():
     for batch_size in [1, 2, 5, 17]:
         for buf_size in [1, 2, 5, 17, 100]:
             yield __test, batch_size, buf_size
+
+
+def test_mux_single():
+
+    reference = list(finite_generator(50))
+    stream = pescador.Streamer(reference, 50)
+
+    estimate = pescador.mux([stream], None, 1, with_replacement=False)
+    eq_(list(reference), list(estimate))
