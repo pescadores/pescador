@@ -153,7 +153,23 @@ def test_buffer_batch():
 def test_mux_single():
 
     reference = list(finite_generator(50))
-    stream = pescador.Streamer(reference, 50)
+    stream = pescador.Streamer(reference)
 
     estimate = pescador.mux([stream], None, 1, with_replacement=False)
     eq_(list(reference), list(estimate))
+
+
+def test_mux_weighted():
+
+    def __test(weight):
+        reference = list(finite_generator(50))
+        noise = list(finite_generator(50, size=1))
+        stream = pescador.Streamer(reference)
+        stream2 = pescador.Streamer(noise)
+        estimate = pescador.mux([stream, stream2], None, 2,
+                                pool_weights=[1.0, weight],
+                                with_replacement=False)
+        eq_(list(reference), list(estimate))
+
+    yield __test, 0.0
+    yield raises(AssertionError)(__test), 0.5

@@ -96,6 +96,8 @@ def mux(seed_pool, n_samples, k, lam=256.0, pool_weights=None,
     if pool_weights is None:
         pool_weights = seed_distribution.copy()
 
+    pool_weights = np.atleast_1d(pool_weights)
+
     assert len(pool_weights) == len(seed_pool)
     assert (pool_weights > 0.0).any()
     pool_weights /= np.sum(pool_weights)
