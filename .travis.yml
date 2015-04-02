@@ -22,7 +22,7 @@ before_install:
     # Useful for debugging any issues with conda
     - conda config --add channels pypi
     - conda info -a
-    - deps='pip numpy scipy nose pyzmq sklearn'
+    - deps='pip numpy scipy nose pyzmq scikit-learn'
     - conda create -q -n test-environment "python=$TRAVIS_PYTHON_VERSION" $deps 
 
 install:
