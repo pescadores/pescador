@@ -66,10 +66,10 @@ def test_streamer_infinite():
 
     def __test(n_max, size):
         reference = []
-        for i in enumerate(infinite_generator(size=size)):
+        for i, data in enumerate(infinite_generator(size=size)):
             if i >= n_max:
                 break
-            reference.append(i)
+            reference.append(data)
 
         streamer = pescador.Streamer(infinite_generator, size=size)
 
