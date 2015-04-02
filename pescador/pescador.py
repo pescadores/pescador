@@ -8,8 +8,6 @@ import six
 
 from sklearn.utils.metaestimators import if_delegate_has_method
 
-from . import util
-
 
 class Streamer(object):
     '''A wrapper class for reusable generators.
