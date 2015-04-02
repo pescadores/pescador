@@ -58,7 +58,7 @@ def zmq_recv_batch(socket, flags=0, copy=True, track=False):
     return results
 
 
-def zmq_worker(port, streamer, max_items=None):
+def zmq_worker(port, streamer, max_batches=None):
 
     context = zmq.Context()
     socket = context.socket(zmq.PAIR)
@@ -66,7 +66,7 @@ def zmq_worker(port, streamer, max_items=None):
 
     try:
         # Build the stream
-        for batch in streamer.generate(max_items=max_items):
+        for batch in streamer.generate(max_batches=max_batches):
             zmq_send_batch(socket, batch)
     finally:
         # send an empty payload to kill
@@ -74,7 +74,7 @@ def zmq_worker(port, streamer, max_items=None):
         context.destroy()
 
 
-def zmq_stream(port, streamer, max_items=None):
+def zmq_stream(port, streamer, max_batches=None):
     '''Stream over zeroMQ channels.
 
     This is more efficient than threaded_mux because passes data by
@@ -92,7 +92,7 @@ def zmq_stream(port, streamer, max_items=None):
     streamer : Streamer
         The streamer object
 
-    max_items : None or int > 0
+    max_batches : None or int > 0
         Maximum number of batches to generate
 
     Generates
@@ -101,7 +101,7 @@ def zmq_stream(port, streamer, max_items=None):
     '''
     worker = mp.Process(target=SafeFunction(zmq_worker),
                         args=[port, streamer],
-                        kwargs=dict(max_items=max_items))
+                        kwargs=dict(max_batches=max_batches))
 
     context = zmq.Context()
 

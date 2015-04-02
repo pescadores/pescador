@@ -39,12 +39,12 @@ def test_streamer_finite():
         streamer = pescador.Streamer(finite_generator, 50, size=size)
 
         for i in range(3):
-            query = list(streamer.generate(max_items=n_max))
+            query = list(streamer.generate(max_batches=n_max))
             for b1, b2 in zip(reference, query):
                 __eq_batch(b1, b2)
 
     for n_max in [None, 10, 50, 100]:
-        for size in [1, 2, 5]:
+        for size in [1, 2, 7]:
             yield __test, n_max, size
 
 
@@ -60,12 +60,11 @@ def test_streamer_infinite():
         streamer = pescador.Streamer(infinite_generator, size=size)
 
         for i in range(3):
-            query = list(streamer.generate(max_items=n_max))
+            query = list(streamer.generate(max_batches=n_max))
 
             for b1, b2 in zip(reference, query):
                 __eq_batch(b1, b2)
 
     for n_max in [10, 50]:
-        for size in [1, 2, 5]:
+        for size in [1, 2, 7]:
             yield __test, n_max, size
-

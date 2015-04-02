@@ -307,4 +307,4 @@ def generate_new_seed(idx, pool, weights, distribution, lam=256.0,
         if (distribution > 0).any():
             distribution[:] /= np.sum(distribution)
 
-    return pool[idx].generate(max_items=n_stream), weights[idx]
+    return pool[idx].generate(max_batches=n_stream), weights[idx]
