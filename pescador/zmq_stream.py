@@ -4,6 +4,7 @@
 import multiprocessing as mp
 import zmq
 import numpy as np
+import six
 
 try:
     import ujson as json
@@ -13,6 +14,11 @@ except ImportError:
 from joblib.parallel import SafeFunction
 
 __all__ = ['zmq_stream']
+
+
+# A hack to support 
+if six.PY3:
+    buffer = memoryview
 
 
 def zmq_send_batch(socket, batch, flags=0, copy=True, track=False):
@@ -32,7 +38,7 @@ def zmq_send_batch(socket, batch, flags=0, copy=True, track=False):
         payload.append(data)
 
     # Send the header
-    msg = [json.dumps(header)]
+    msg = [json.dumps(header).encode('ascii')]
     msg.extend(payload)
 
     return socket.send_multipart(msg, flags, copy=copy, track=track)
@@ -45,7 +51,7 @@ def zmq_recv_batch(socket, flags=0, copy=True, track=False):
 
     msg = socket.recv_multipart(flags=flags, copy=copy, track=track)
 
-    headers = json.loads(msg[0])
+    headers = json.loads(msg[0].decode('ascii'))
 
     if len(headers) == 0:
         raise StopIteration
