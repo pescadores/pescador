@@ -27,7 +27,7 @@ before_install:
 
 install:
     # install your own package into the environment
-    - pip install --user -e .
+    - pip install -e .
 
 script:
     - nosetests -v -w tests/ --with-coverage --cover-package=pescador
