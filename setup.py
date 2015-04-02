@@ -30,11 +30,10 @@ setup(
     install_requires=[
         'joblib',
         'six',
-        'zmq',
-        'multiprocessing',
+        'pyzmq',
         'numpy',
         'scipy',
-        'sklearn',
+        'scikit-learn',
     ],
     extras_require={
         'docs': ['numpydoc']
