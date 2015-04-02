@@ -38,7 +38,7 @@ def zmq_send_batch(socket, batch, flags=0, copy=True, track=False):
     return socket.send_multipart(msg, flags, copy=copy, track=track)
 
 
-def zmq_recv_arrays(socket, flags=0, copy=True, track=False):
+def zmq_recv_batch(socket, flags=0, copy=True, track=False):
     """recv a batch"""
 
     results = dict()
@@ -113,7 +113,7 @@ def zmq_stream(port, streamer, max_items=None):
 
         # Yield from the queue as long as it's open
         while worker.is_alive():
-            yield zmq_recv_arrays(socket)
+            yield zmq_recv_batch(socket)
 
     except StopIteration:
         pass
