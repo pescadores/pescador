@@ -133,7 +133,7 @@ def mux(seed_pool, n_samples, k, lam=256.0, pool_weights=None,
         # Can we sample from it?
         try:
             # Then yield the sample
-            yield streams[idx].next()
+            yield six.advance_iterator(streams[idx])
 
             # Increment the sample counter
             n += 1

@@ -107,8 +107,8 @@ def test_zmq():
 
 def __zip_generator(n, size1, size2):
 
-    for b1, b2 in itertools.izip(finite_generator(n, size=size1),
-                                 finite_generator(n, size=size2)):
+    for b1, b2 in zip(finite_generator(n, size=size1),
+                      finite_generator(n, size=size2)):
         yield dict(X=b1['X'], Y=b2['X'])
 
 
