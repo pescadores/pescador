@@ -31,12 +31,10 @@ setup(
         'joblib',
         'six',
         'zmq',
-        'Queue',
         'multiprocessing',
         'numpy',
         'scipy',
         'sklearn',
-        'ctypes',
     ],
     extras_require={
         'docs': ['numpydoc']

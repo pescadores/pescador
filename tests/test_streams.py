@@ -89,7 +89,7 @@ def test_streamer_bad_function():
     def __fail():
         return 5
 
-    _ = pescador.Streamer(__fail)
+    pescador.Streamer(__fail)
 
 
 def test_zmq():
