@@ -1,9 +1,41 @@
 #!/usr/bin/env python
 '''Utilities'''
 import numpy as np
+import six
+
+__all__ = ['mux', 'buffer_batch', 'batch_length']
 
 
-__all__ = ['mux', 'buffer_batch']
+def batch_length(batch):
+    '''Determine the number of samples in a batch.
+
+    Parameters
+    ----------
+    batch : dict
+        A batch dictionary.  Each value must implement `len`.
+        All values must have the same `len`.
+
+    Returns
+    -------
+    n : int >= 0 or None
+        The number of samples in this batch.
+        If the batch has no fields, n is None.
+
+    Raises
+    ------
+    RuntimeError
+        If some two values have unequal length
+    '''
+    n = None
+
+    for value in six.itervalues(batch):
+        if n is None:
+            n = len(value)
+
+        elif len(value) != n:
+            raise RuntimeError('Unequal field lengths')
+
+    return n
 
 
 def mux(seed_pool, n_samples, k, lam=256.0, pool_weights=None,
@@ -150,7 +182,7 @@ def buffer_batch(stream, buffer_size):
 
     for x in stream:
         batches.append(x)
-        n += len(x.keys()[0])
+        n += batch_length(x)
 
         if n < buffer_size:
             continue
@@ -196,7 +228,7 @@ def __split_batches(batches, buffer_size):
     while batches and (buffer_size is None or
                        batch_size < buffer_size):
         batch_data.append(batches.pop(0))
-        batch_size += len(batch_data[-1].keys()[0])
+        batch_size += batch_length(batch_data[-1])
 
     # Merge the batches
     batch = dict()

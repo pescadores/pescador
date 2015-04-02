@@ -8,6 +8,8 @@ import six
 
 from sklearn.utils.metaestimators import if_delegate_has_method
 
+from . import util
+
 
 class Streamer(object):
     '''A wrapper class for reusable generators.
@@ -77,8 +79,10 @@ class Streamer(object):
             # If it's iterable, use it directly.
             my_stream = self.stream
 
+        n = 0
         for i, x in enumerate(my_stream):
-            if max_items is not None and i >= max_items:
+            n += util.batch_length(x)
+            if max_items is not None and n >= max_items:
                 break
             yield x
 
