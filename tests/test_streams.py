@@ -1,9 +1,14 @@
 #!/usr/bin/env python
 '''Test the streamer object for reusable generators'''
 
-import numpy as np
-import pescador
+import itertools
 import six
+
+import numpy as np
+
+import pescador
+
+from nose.tools import raises, eq_
 
 
 def __eq_batch(b1, b2):
@@ -80,3 +85,22 @@ def test_zmq():
             __eq_batch(b1, b2)
 
 
+def __zip_generator(n, size1, size2):
+
+    for b1, b2 in itertools.izip(finite_generator(n, size=size1),
+                                 finite_generator(n, size=size2)):
+        yield dict(X=b1['X'], Y=b2['X'])
+
+
+def test_batch_length():
+    def __test(generator, n):
+        for batch in generator:
+            eq_(pescador.util.batch_length(batch), n)
+
+    for n1 in [5, 10, 15]:
+        for n2 in [5, 10, 15]:
+            if n1 != n2:
+                test = raises(RuntimeError)(__test)
+            else:
+                test = __test
+            yield test, __zip_generator(3, n1, n2), n1
