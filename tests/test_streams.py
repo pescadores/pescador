@@ -14,18 +14,16 @@ def __eq_batch(b1, b2):
 
 def finite_generator(n, size=2):
 
-    x = np.zeros((size, 3))
     for i in range(n):
-        yield {'X': x.copy()}
-        x[:] += i
+        yield {'X': np.tile(np.array([[i]]), (size, 1))}
 
 
-def infinite_generator(p=31, size=2):
+def infinite_generator(size=2):
 
-    x = np.zeros((size, 3))
+    i = 0
     while True:
-        yield {'X': x.copy()}
-        x[:] = np.mod(x + 1, p)
+        yield {'X': np.tile(np.array([[i]]), (size, 1))}
+        i = i + 1
 
 
 def test_streamer_finite():
@@ -68,3 +66,17 @@ def test_streamer_infinite():
     for n_max in [10, 50]:
         for size in [1, 2, 7]:
             yield __test, n_max, size
+
+
+def test_zmq():
+
+    stream = pescador.Streamer(finite_generator, 20, size=3)
+
+    reference = list(stream.generate())
+
+    for i in range(3):
+        query = list(pescador.zmq_stream(5155, stream))
+        for b1, b2 in zip(reference, query):
+            __eq_batch(b1, b2)
+
+
