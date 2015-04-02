@@ -186,7 +186,28 @@ def test_mux_rare():
                                 with_replacement=False)
         eq_(list(reference) + list(noise), list(estimate))
 
+    # This should give us all the reference before all the noise
     yield __test, [1e10, 1e-10]
+
+
+def test_empty_seeds():
+
+    def __empty():
+        if False:
+            yield 1
+
+    reference = pescador.Streamer(finite_generator, 10)
+    empty = pescador.Streamer(__empty)
+
+    estimate = pescador.mux([reference, empty], 10, 2, lam=None,
+                            with_replacement=False,
+                            pool_weights=[1e-10, 1e10])
+
+    estimate = list(estimate)
+
+    ref = list(reference.generate())
+    for b1, b2 in zip(ref, estimate):
+        __eq_batch(b1, b2)
 
 
 def test_mux_replacement():
@@ -204,8 +225,7 @@ def test_mux_replacement():
         eq_(len(estimate), n_samples)
 
     for n_streams in [1, 2, 4]:
-        for n_samples in [10, 20, 40]:
+        for n_samples in [10, 20, 80]:
             for k in [1, 2, 4]:
                 for lam in [1.0, 2.0, 8.0]:
                     yield __test, n_streams, n_samples, k, lam
-
