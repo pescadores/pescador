@@ -94,14 +94,18 @@ def test_streamer_bad_function():
 
 def test_zmq():
 
-    stream = pescador.Streamer(finite_generator, 20, size=3)
+    def __test(copy):
+        stream = pescador.Streamer(finite_generator, 20, size=3)
 
-    reference = list(stream.generate())
+        reference = list(stream.generate())
 
-    for i in range(3):
-        query = list(pescador.zmq_stream(5155, stream))
-        for b1, b2 in zip(reference, query):
-            __eq_batch(b1, b2)
+        for i in range(3):
+            query = list(pescador.zmq_stream(5155, stream))
+            for b1, b2 in zip(reference, query):
+                __eq_batch(b1, b2)
+
+    for copy in [False, True]:
+        yield __test, copy
 
 
 def __zip_generator(n, size1, size2):
