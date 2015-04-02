@@ -2,7 +2,6 @@
 '''Test the streamer object for reusable generators'''
 from __future__ import print_function
 
-import itertools
 import six
 
 import numpy as np
@@ -188,4 +187,25 @@ def test_mux_rare():
         eq_(list(reference) + list(noise), list(estimate))
 
     yield __test, [1e10, 1e-10]
+
+
+def test_mux_replacement():
+
+    def __test(n_streams, n_samples, k, lam):
+
+        seeds = [pescador.Streamer(infinite_generator)
+                 for _ in range(n_streams)]
+
+        mux = pescador.mux(seeds, n_samples, k, lam=lam)
+
+        estimate = list(mux)
+
+        # Make sure we get the right number of samples
+        eq_(len(estimate), n_samples)
+
+    for n_streams in [1, 2, 4]:
+        for n_samples in [10, 20, 40]:
+            for k in [1, 2, 4]:
+                for lam in [1.0, 2.0, 8.0]:
+                    yield __test, n_streams, n_samples, k, lam
 
