@@ -87,7 +87,7 @@ def test_streamer_infinite():
 def test_streamer_bad_function():
 
     def __fail():
-        return 5
+        return 6
 
     pescador.Streamer(__fail)
 
