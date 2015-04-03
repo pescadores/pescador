@@ -109,7 +109,17 @@ class Streamer(object):
 
 
 class StreamLearner(sklearn.base.BaseEstimator):
-    '''A class to facilitate iterative learning from a generator.'''
+    '''A class to facilitate iterative learning from a generator.
+    
+    Attributes
+    ----------
+    estimator : sklearn.base.BaseEstimator
+        An estimator object to wrap.  Must implement `partial_fit()`
+
+    max_steps : None or int > 0
+        The maximum number of calls to issue to `partial_fit()`.
+        If `None`, run until the generator is exhausted.
+    '''
 
     def __init__(self, estimator, max_steps=None):
         '''Learning on generators
@@ -174,59 +184,59 @@ class StreamLearner(sklearn.base.BaseEstimator):
 
     @if_delegate_has_method(delegate='estimator')
     def decision_function(self, *args, **kwargs):
-        '''Wrapper for estimator.predict()'''
+        '''Wrapper for `estimator.predict()`'''
 
         return self.estimator.decision_function(*args, **kwargs)
 
     @if_delegate_has_method(delegate='estimator')
     def predict_proba(self, *args, **kwargs):
-        '''Wrapper for estimator.predict_proba()'''
+        '''Wrapper for `estimator.predict_proba()`'''
 
         return self.estimator.predict_proba(*args, **kwargs)
 
     @if_delegate_has_method(delegate='estimator')
     def predict_log_proba(self, *args, **kwargs):
-        '''Wrapper for estimator.predict_log_proba()'''
+        '''Wrapper for `estimator.predict_log_proba()`'''
 
         return self.estimator.predict(*args, **kwargs)
 
     @if_delegate_has_method(delegate='estimator')
     def predict(self, *args, **kwargs):
-        '''Wrapper for estimator.predict()'''
+        '''Wrapper for `estimator.predict()`'''
 
         return self.estimator.predict(*args, **kwargs)
 
     @if_delegate_has_method(delegate='estimator')
     def inverse_transform(self, *args, **kwargs):
-        '''Wrapper for estimator.inverse_transform()'''
+        '''Wrapper for `estimator.inverse_transform()`'''
 
         return self.estimator.inverse_transform(*args, **kwargs)
 
     @if_delegate_has_method(delegate='estimator')
     def transform(self, *args, **kwargs):
-        '''Wrapper for estimator.transform()'''
+        '''Wrapper for `estimator.transform()`'''
 
         return self.estimator.transform(*args, **kwargs)
 
     @if_delegate_has_method(delegate='estimator')
     def fit_transform(self, *args, **kwargs):
-        '''Wrapper for estimator.fit_transform()'''
+        '''Wrapper for `estimator.fit_transform()`'''
 
         return self.estimator.fit_transform(*args, **kwargs)
 
     @if_delegate_has_method(delegate='estimator')
     def score(self, *args, **kwargs):
-        '''Wrapper for estimator.score()'''
+        '''Wrapper for `estimator.score()`'''
 
         return self.estimator.score(*args, **kwargs)
 
     @if_delegate_has_method(delegate='estimator')
     def partial_fit(self, *args, **kwargs):
-        '''Wrapper for estimator.fit()'''
+        '''Wrapper for `estimator.fit()`'''
         return self.estimator.partial_fit(*args, **kwargs)
 
     @if_delegate_has_method(delegate='estimator')
     def fit(self, *args, **kwargs):
-        '''Wrapper for estimator.fit()'''
+        '''Wrapper for `estimator.fit()`'''
 
         return self.estimator.fit(*args, **kwargs)
