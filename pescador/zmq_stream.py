@@ -1,5 +1,11 @@
 #!/usr/bin/env python
-'''ZMQ-baesd stream multiplexing'''
+'''ZMQ-baesd stream multiplexing
+
+.. autosummary::
+    :toctree: generated/
+
+    zmq_stream
+'''
 
 import multiprocessing as mp
 import zmq
@@ -16,7 +22,7 @@ from joblib.parallel import SafeFunction
 __all__ = ['zmq_stream']
 
 
-# A hack to support 
+# A hack to support buffers in py3
 if six.PY3:
     buffer = memoryview
 

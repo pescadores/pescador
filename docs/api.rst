@@ -14,3 +14,12 @@ The StreamLearner object
 .. autoclass:: StreamLearner
     :inherited-members:
 
+Stream manipulation
+-------------------
+
+.. automodule:: util
+
+Parallelism
+-----------
+.. automodule:: zmq_stream
+

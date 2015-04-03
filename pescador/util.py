@@ -1,5 +1,14 @@
 #!/usr/bin/env python
-'''Utilities'''
+'''Utility functions for stream manipulations
+
+.. autosummary::
+    :toctree: generated/
+
+    mux
+    buffer_batch
+    batch_length
+
+'''
 import numpy as np
 import six
 
