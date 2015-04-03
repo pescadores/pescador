@@ -10,16 +10,25 @@ Pescador is still in active development.
 
 For now, the best way to install is by cloning the repository:
 
-::
+.. code-block:: bash
+
     git clone https://github.com/bmcfee/pescador.git
     cd pescador
     [sudo] python setup.py install
 
+Example
+-------
+
+.. toctree::
+    :maxdepth: 2
+
+    example1
+    example2
 
 API Reference
 -------------
 .. toctree::
-    :maxdepth: 2
+    :maxdepth: 3
 
     api
 
