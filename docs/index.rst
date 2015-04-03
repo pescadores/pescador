@@ -3,13 +3,18 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Welcome to pescador's documentation!
-====================================
-
-Contents:
-
 Installation
 ------------
+
+Pescador is still in active development.
+
+For now, the best way to install is by cloning the repository:
+
+::
+    git clone https://github.com/bmcfee/pescador.git
+    cd pescador
+    [sudo] python setup.py install
+
 
 API Reference
 -------------
