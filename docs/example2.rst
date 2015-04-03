@@ -40,10 +40,55 @@ number of batches.
 Stream re-use and multiplexing
 ------------------------------
 The `mux()` function provides a powerful interface for randomly interleaving samples from 
-multiple input streams.
+multiple input streams.  `mux` can also dynamically activate and deactivate 
+individual `Streamers`, which allows it to operate on a bounded subset of streams at any given time.
+
+As a concrete example, we can simulate a mixture of noisy streams with differing variances.
+
+.. code-block:: python
+    :linenos:
+
+    for train, test in ShuffleSplit(len(X), n_iter=1, test_size=0.1)
+
+        # Instantiate a linear classifier
+        estimator = SGDClassifier()
+
+        # Wrap the estimator object in a stream learner
+        model = pescador.StreamLearner(estimator, max_batches=1000)
+
+        # Build a collection of streams with different variance scales
+        streams = [noisy_samples(X[train], Y[train], sigma=sigma)
+                   for sigma in [0.5, 1.0, 2.0, 4.0]]
+
+        # Build a mux stream, keeping only 2 streams alive at once
+        batch_stream = pescador.mux(streams,
+                                    1000,   # Generate 1000 batches in total
+                                    2,      # Keep 2 streams alive at once
+                                    lam=16) # Use a poisson rate of 16
 
 
+        # Fit the model to the stream
+        model.iter_fit(batch_stream, classes=classes)
+
+        # And report the accuracy
+        print('Test accuracy: {:.3f}'.format(accuracy_score(Y[test],
+                                                            model.predict(X[test]))))
+
+In the above example, each `noisy_samples` streamer is infinite.  The `lam=16` argument to `mux` 
+says that each stream should produce some `n` batches, where `n` is sampled from a Poisson distribution
+of rate `lam`.  When a stream exceeds its bound, it is deactivated, and a new stream is activated to fill its
+place.
+
+Setting `lam=None` disables the random stream bounding, and `mux()` simply runs each active stream until
+exhaustion.
+
+Streams can be sampled with or without replacement according to the `with_replacement` option.  Setting this
+parameter to `False` means that each stream can be active at most once.
+
+Streams can also be sampled with non-uniform weighting by specifying a vector `pool_weights`.
+
+Finally, exhausted streams can be removed by setting `prune_empty_seeds` to `True`.  If `False`, then
+exhausted streams may be reactivated at any time.
 
 
-Parallel streaming
-------------------
+Note that because `mux()` itself is a generator, it too can be wrapped in a `Streamer` object.

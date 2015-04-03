@@ -29,7 +29,7 @@ and adds gaussian noise to the features.
 
     import numpy as np
 
-    def noisy_samples(X, Y, batch_size=16):
+    def noisy_samples(X, Y, batch_size=16, sigma=1.0):
         '''Generate an infinite stream of noisy samples from a labeled dataset.
         
         Parameters
@@ -43,6 +43,9 @@ and adds gaussian noise to the features.
         batch_size : int > 0
             Size of the batches to generate
 
+        sigma : float > 0
+            Variance of the additive noise
+
         Yields
         ------
         batch
@@ -54,7 +57,7 @@ and adds gaussian noise to the features.
         while True:
             i = np.random.randint(0, n, size=m)
 
-            noise = np.random.randn(batch_size, d)
+            noise = sigma * np.random.randn(batch_size, d)
 
             yield dict(X=X[i] + noise, Y=Y[i])
 
