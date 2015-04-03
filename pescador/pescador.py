@@ -12,30 +12,37 @@ from sklearn.utils.metaestimators import if_delegate_has_method
 class Streamer(object):
     '''A wrapper class for reusable generators.
 
-    Parameters
+    Wrapping generators/iterators within an object provides
+    two useful features:
+
+    1. Streamer objects can be serialized (as long as the generator can be)
+    2. Streamer objects can instantiate a generator multiple times.
+
+    The first feature is important for parallelization (see `zmq_stream`),
+    while the second feature facilitates infinite streaming from finite data
+    (i.e., oversampling).
+
+
+    Attributes
     ----------
-    streamer : function or iterable
-        Any generator function or iterable python object
+    generator : iterable
+        A generator function or iterable collection to draw from
 
-    *args, **kwargs
-        Additional positional arguments or keyword arguments to pass
-        through to ``generator()``
-
-    Raises
-    ------
-    TypeError
-        If ``streamer`` is not a generator or an Iterable object.
+    args : list
+    kwargs : dict
+        If `generator` is a function, then `args` and `kwargs`
+        provide the parameters to the function.
 
     Examples
     --------
-    Make a generator
+    Generate batches of random 3-dimensional vectors
 
     >>> def my_generator(n):
     ...     for i in range(n):
-    ...             yield i
+    ...         yield {'X': np.random.randn(1, 3)}
     >>> GS = Streamer(my_generator, 5)
     >>> for i in GS.generate():
-    ...     print i
+    ...     print(i)
 
 
     Or with a maximum number of items
@@ -45,7 +52,22 @@ class Streamer(object):
     '''
 
     def __init__(self, streamer, *args, **kwargs):
-        '''Initializer'''
+        '''Initializer
+
+        Parameters
+        ----------
+        streamer : iterable
+            Any generator function or iterable python object
+
+        args, kwargs
+            Additional positional arguments or keyword arguments to pass
+            through to ``generator()``
+
+        Raises
+        ------
+        TypeError
+            If ``streamer`` is not a generator or an Iterable object.
+        '''
 
         if not (inspect.isgeneratorfunction(streamer) or
                 isinstance(streamer, collections.Iterable)):
@@ -66,7 +88,10 @@ class Streamer(object):
 
         Yields
         ------
-        Items from the contained generator
+        batch
+            Items from the contained generator
+            If `max_batches` is an integer, then at most
+            `max_batches` are generated.
         '''
 
         if six.callable(self.stream):
