@@ -101,8 +101,8 @@ def zmq_stream(port, streamer, copy=False, max_batches=None):
     max_batches : None or int > 0
         Maximum number of batches to generate
 
-    Generates
-    ---------
+    Yields
+    ------
     batch
     '''
     worker = mp.Process(target=SafeFunction(zmq_worker),

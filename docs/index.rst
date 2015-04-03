@@ -8,17 +8,20 @@ Welcome to pescador's documentation!
 
 Contents:
 
-.. toctree::
-   :maxdepth: 2
-
-
 Installation
 ------------
 
+API Reference
+=============
+.. toctree::
+    :maxdepth: 2
+
+    api
+
 Contribute
 ----------
-- Issue Tracker: github.com/bmcfee/pescador/issues
-- Source Code: github.com/bmcfee/pescador
+- `Issue Tracker <http://github.com/bmcfee/pescador/issues>`_
+- `Source Code <http://github.com/bmcfee/pescador>`_
 
 Indices and tables
 ==================

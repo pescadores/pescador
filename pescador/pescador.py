@@ -39,6 +39,7 @@ class Streamer(object):
 
 
     Or with a maximum number of items
+
     >>> for i in GS.generate(max_items=3):
     ...     print i
     '''
@@ -63,8 +64,8 @@ class Streamer(object):
             Maximum number of batches to yield.
             If ``None``, exhaust the generator.
 
-        Generates
-        ---------
+        Yields
+        ------
         Items from the contained generator
         '''
 

@@ -173,8 +173,8 @@ def buffer_batch(stream, buffer_size):
     buffer_size : int > 0
         The number of examples to retain per batch.
 
-    Generates
-    ---------
+    Yields
+    ------
     batch
         A batch of size at most `buffer_size`
     '''
