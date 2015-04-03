@@ -87,21 +87,23 @@ def zmq_worker(port, streamer, copy=False, max_batches=None):
 
 
 def zmq_stream(port, streamer, copy=False, max_batches=None):
-    '''Stream over zeroMQ channels.
+    '''Parallel data streaming over zeromq sockets.
 
-    This is more efficient than threaded_mux because passes data by
-    reference, rather than serializing.
+    This allows a data generator to run in a separate process
+    from the consumer.
 
-    For now, this only works with dense datatypes (ie, ndarray), and not
-    sparse matrices.
-
+    A typical usage pattern is to construct a `Streamer` object
+    from a generator (or `util.mux` of several `Streamer`s),
+    and then use `zmq_stream` to execute the stream in one process
+    while the other process consumes data, e.g., with a `StreamLearner`
+    object.
 
     Parameters
     ----------
     port : int > 0
         The TCP port to use
 
-    streamer : Streamer
+    streamer : `pescador.Streamer`
         The streamer object
 
     max_batches : None or int > 0
@@ -110,6 +112,7 @@ def zmq_stream(port, streamer, copy=False, max_batches=None):
     Yields
     ------
     batch
+        Data drawn from `streamer.generate(max_batches)`.
     '''
     worker = mp.Process(target=SafeFunction(zmq_worker),
                         args=[port, streamer],
