@@ -35,8 +35,9 @@ def test_streamer_list():
 
     reference = list(finite_generator(10))
 
-    query = list(pescador.Streamer(reference).generate())
+    query = list(pescador.Streamer(reference, 10).generate())
 
+    eq_(len(reference), len(query))
     for b1, b2 in zip(reference, query):
         __eq_batch(b1, b2)
 
@@ -101,6 +102,7 @@ def test_zmq():
 
         for i in range(3):
             query = list(pescador.zmq_stream(5155, stream))
+            eq_(len(reference), len(query))
             for b1, b2 in zip(reference, query):
                 __eq_batch(b1, b2)
 
@@ -210,6 +212,7 @@ def test_empty_seeds():
     estimate = list(estimate)
 
     ref = list(reference.generate())
+    eq_(len(ref), len(estimate))
     for b1, b2 in zip(ref, estimate):
         __eq_batch(b1, b2)
 
