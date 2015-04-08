@@ -17,10 +17,26 @@ def __eq_batch(b1, b2):
         assert np.allclose(b1[k], b2[k])
 
 
+def __eq_lists(b1, b2):
+
+    eq_(len(b1), len(b2))
+
+    for i, j in zip(b1, b2):
+        assert np.allclose(i, j)
+
+
 def finite_generator(n, size=2):
 
     for i in range(n):
         yield {'X': np.tile(np.array([[i]]), (size, 1))}
+
+
+def md_generator(dimension, n, size=2):
+
+    shape = [size] * dimension
+
+    for i in range(n):
+        yield {'X': i * np.ones(shape)[np.newaxis]}
 
 
 def infinite_generator(size=2):
@@ -139,20 +155,24 @@ def test_buffer_batch():
             for item in batch['X']:
                 yield item
 
-    def __test(n_batch, n_buf):
-        reference = finite_generator(50, size=n_batch)
+    def __test(dimension, n_batch, n_buf):
+        reference = md_generator(dimension, 50, size=n_batch)
 
-        reference = __serialize_batches(reference)
+        reference = list(__serialize_batches(reference))
 
-        estimate = pescador.buffer_batch(finite_generator(50, size=n_batch),
+        estimate = pescador.buffer_batch(md_generator(dimension,
+                                                      50,
+                                                      size=n_batch),
                                          n_buf)
-        estimate = __serialize_batches(estimate)
 
-        eq_(list(reference), list(estimate))
+        estimate = list(__serialize_batches(estimate))
 
-    for batch_size in [1, 2, 5, 17]:
-        for buf_size in [1, 2, 5, 17, 100]:
-            yield __test, batch_size, buf_size
+        __eq_lists(reference, estimate)
+
+    for dimension in [1, 2, 3]:
+        for batch_size in [1, 2, 5, 17]:
+            for buf_size in [1, 2, 5, 17, 100]:
+                yield __test, dimension, batch_size, buf_size
 
 
 def test_mux_single():
