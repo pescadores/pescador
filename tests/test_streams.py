@@ -175,6 +175,33 @@ def test_buffer_batch():
                 yield __test, dimension, batch_size, buf_size
 
 
+def test_buffer_streamer():
+
+    def __serialize_batches(batches):
+
+        for batch in batches:
+            for item in batch['X']:
+                yield item
+
+    def __test(dimension, n_batch, n_buf):
+        reference = md_generator(dimension, 50, size=n_batch)
+
+        reference = list(__serialize_batches(reference))
+
+        gen_stream = pescador.Streamer(md_generator, dimension, 50,
+                                       size=n_batch)
+        estimate = pescador.buffer_streamer(gen_stream, n_buf)
+
+        estimate = list(__serialize_batches(estimate))
+
+        __eq_lists(reference, estimate)
+
+    for dimension in [1, 2, 3]:
+        for batch_size in [1, 2, 5, 17]:
+            for buf_size in [1, 2, 5, 17, 100]:
+                yield __test, dimension, batch_size, buf_size
+
+
 def test_mux_single():
 
     reference = list(finite_generator(50))
