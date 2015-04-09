@@ -12,7 +12,7 @@
 import numpy as np
 import six
 
-__all__ = ['mux', 'buffer_batch', 'batch_length']
+__all__ = ['mux', 'buffer_batch', 'batch_length', 'buffer_streamer']
 
 
 def batch_length(batch):
@@ -171,13 +171,13 @@ def mux(seed_pool, n_samples, k, lam=256.0, pool_weights=None,
             weight_norm = np.sum(stream_weights)
 
 
-def buffer_batch(stream, buffer_size):
-    '''Buffer a stream of batches into larger batches
+def buffer_batch(generator, buffer_size):
+    '''Buffer an iterable of batches into larger (or smaller) batches
 
     Parameters
     ----------
-    stream : iterable
-        The stream to buffer
+    generator : iterable
+        The generator to buffer
 
     buffer_size : int > 0
         The number of examples to retain per batch.
@@ -191,7 +191,7 @@ def buffer_batch(stream, buffer_size):
     batches = []
     n = 0
 
-    for x in stream:
+    for x in generator:
         batches.append(x)
         n += batch_length(x)
 
@@ -210,6 +210,32 @@ def buffer_batch(stream, buffer_size):
         batch, batches = __split_batches(batches, buffer_size)
         if batch is not None:
             yield batch
+
+
+def buffer_streamer(streamer, buffer_size, *args, **kwargs):
+    '''Buffer a stream of batches
+
+    Parameters
+    ----------
+    streamer : pescador.Streamer
+        The streamer object to buffer
+
+    buffer_size : int > 0
+        the number of examples to retain per batch
+
+    Yields
+    ------
+    batch
+        A batch of size at most `buffer_size`
+
+    See Also
+    --------
+    buffer_batch
+
+    '''
+    for batch in buffer_batch(streamer.generate(*args, **kwargs),
+                              buffer_size):
+        yield batch
 
 
 def __split_batches(batches, buffer_size):
