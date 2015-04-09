@@ -1,1 +1,1 @@
--e git+git://github.com/numpy/numpydoc.git
+numpydoc>=0.5
