@@ -41,7 +41,8 @@ def zmq_send_batch(socket, batch, flags=0, copy=True, track=False):
         header.append(dict(dtype=str(data.dtype),
                            shape=data.shape,
                            key=key))
-        payload.append(data)
+        # Force contiguity
+        payload.append(np.ascontiguousarray(data))
 
     # Send the header
     msg = [json.dumps(header).encode('ascii')]
