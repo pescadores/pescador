@@ -6,6 +6,7 @@
 
     mux
     buffer_batch
+    buffer_streamer
     batch_length
 
 '''
