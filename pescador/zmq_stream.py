@@ -88,7 +88,7 @@ def zmq_worker(port, streamer, copy=False, max_batches=None):
         context.destroy()
 
 
-def zmq_stream(port, streamer, copy=False, max_batches=None):
+def zmq_stream(streamer, max_batches=None, min_port=8675, max_port=8685, max_tries=100, copy=False):
     '''Parallel data streaming over zeromq sockets.
 
     This allows a data generator to run in a separate process
@@ -102,8 +102,6 @@ def zmq_stream(port, streamer, copy=False, max_batches=None):
 
     Parameters
     ----------
-    port : int > 0
-        The TCP port to use
 
     streamer : `pescador.Streamer`
         The streamer object
@@ -111,23 +109,37 @@ def zmq_stream(port, streamer, copy=False, max_batches=None):
     max_batches : None or int > 0
         Maximum number of batches to generate
 
+    min_port : int > 0
+    max_port : int > min_port
+        The range of TCP ports to use
+
+    max_tries : int > 0
+        The maximum number of connection attempts to make
+
+    copy : bool
+        Set `True` to enable data copying
+
     Yields
     ------
     batch
         Data drawn from `streamer.generate(max_batches)`.
     '''
-    worker = mp.Process(target=SafeFunction(zmq_worker),
-                        args=[port, streamer],
-                        kwargs=dict(copy=copy,
-                                    max_batches=max_batches))
-
     context = zmq.Context()
 
     try:
-        worker.start()
-
         socket = context.socket(zmq.PAIR)
-        socket.bind('tcp://*:{:d}'.format(port))
+
+        port = socket.bind_to_random_port('tcp://*',
+                                          min_port=min_port,
+                                          max_port=max_port,
+                                          max_tries=max_tries)
+
+        worker = mp.Process(target=SafeFunction(zmq_worker),
+                            args=[port, streamer],
+                            kwargs=dict(copy=copy,
+                                        max_batches=max_batches))
+
+        worker.start()
 
         # Yield from the queue as long as it's open
         while worker.is_alive():
