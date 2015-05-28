@@ -11,6 +11,7 @@ import multiprocessing as mp
 import zmq
 import numpy as np
 import six
+import sys
 
 try:
     import ujson as json
@@ -149,6 +150,9 @@ def zmq_stream(streamer, max_batches=None,
 
     except StopIteration:
         pass
+
+    except:
+        six.reraise(*sys.exc_info())
 
     finally:
         worker.terminate()
