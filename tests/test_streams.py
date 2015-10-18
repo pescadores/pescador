@@ -10,8 +10,6 @@ import numpy as np
 import pescador
 
 from nose.tools import raises, eq_
-import coverage
-coverage.process_startup()
 
 def __eq_batch(b1, b2):
 
