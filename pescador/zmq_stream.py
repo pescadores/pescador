@@ -160,7 +160,6 @@ def zmq_stream(streamer, max_batches=None,
         six.reraise(*sys.exc_info())
 
     finally:
-        #worker.terminate()
         terminate.set()
         worker.join()
         context.destroy()

@@ -117,7 +117,7 @@ def test_streamer_bad_function():
 def test_zmq():
 
     def __test(copy):
-        stream = pescador.Streamer(finite_generator, 20, size=3, lag=0.01)
+        stream = pescador.Streamer(finite_generator, 200, size=3, lag=0.001)
 
         reference = list(stream.generate())
 
