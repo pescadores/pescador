@@ -1,37 +1,41 @@
 language: python
 
+sudo: false
+
+cache:
+  directories:
+  - $HOME/env
+
 notifications:
   email: false
 
 python:
     - "2.7"
     - "3.4"
+    - "3.5"
 
 before_install:
+    - bash .travis_dependencies.sh
     - if [[ "$TRAVIS_PYTHON_VERSION" == "2.7" ]]; then
-          wget http://repo.continuum.io/miniconda/Miniconda-3.8.3-Linux-x86_64.sh -O miniconda.sh;
+        export PATH="$HOME/env/miniconda27/bin:$PATH";
+      elif [[ "$TRAVIS_PYTHON_VERSION" == "3.4" ]]; then
+        export PATH="$HOME/env/miniconda34/bin:$PATH";
       else
-          wget http://repo.continuum.io/miniconda/Miniconda3-3.8.3-Linux-x86_64.sh -O miniconda.sh;
+        export PATH="$HOME/env/miniconda35/bin:$PATH";
       fi
-    - bash miniconda.sh -b -p $HOME/miniconda
-    - export PATH="$HOME/miniconda/bin:$PATH"
     - hash -r
-    - conda config --set always_yes yes --set changeps1 no
-    - conda update -q conda
-    # Useful for debugging any issues with conda
-    - conda config --add channels pypi
-    - conda info -a
-    - deps='pip numpy scipy nose pyzmq scikit-learn'
-    - conda create -q -n test-environment "python=$TRAVIS_PYTHON_VERSION" $deps 
     - source activate test-environment
-    - pip install python-coveralls
 
 install:
     # install your own package into the environment
     - pip install -e .
 
 script:
-    - nosetests -v -w tests/ --with-coverage --cover-package=pescador
+    - nosetests -v -w tests/ --with-coverage --cover-erase --cover-package=pescador
 
 after_success:
     - coveralls
+    - pip uninstall -y pescador
+
+after_failure:
+    - pip uninstall -y pescador
