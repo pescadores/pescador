@@ -9,6 +9,7 @@
 
 import multiprocessing as mp
 import zmq
+import signal
 import numpy as np
 import six
 import sys
@@ -142,6 +143,7 @@ def zmq_stream(streamer, max_batches=None,
                             kwargs=dict(copy=copy,
                                         max_batches=max_batches))
 
+        worker.daemon = True
         worker.start()
 
         # Yield from the queue as long as it's open
