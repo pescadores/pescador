@@ -9,6 +9,7 @@
 
 import multiprocessing as mp
 import zmq
+import signal
 import numpy as np
 import six
 import sys
@@ -72,7 +73,7 @@ def zmq_recv_batch(socket, flags=0, copy=True, track=False):
     return results
 
 
-def zmq_worker(port, streamer, copy=False, max_batches=None):
+def zmq_worker(port, streamer, terminate, copy=False, max_batches=None):
 
     context = zmq.Context()
     socket = context.socket(zmq.PAIR)
@@ -81,6 +82,8 @@ def zmq_worker(port, streamer, copy=False, max_batches=None):
     try:
         # Build the stream
         for batch in streamer.generate(max_batches=max_batches):
+            if terminate.is_set():
+                break
             zmq_send_batch(socket, batch, copy=copy)
 
     finally:
@@ -136,12 +139,14 @@ def zmq_stream(streamer, max_batches=None,
                                           min_port=min_port,
                                           max_port=max_port,
                                           max_tries=max_tries)
+        terminate = mp.Event()
 
         worker = mp.Process(target=SafeFunction(zmq_worker),
-                            args=[port, streamer],
+                            args=[port, streamer, terminate],
                             kwargs=dict(copy=copy,
                                         max_batches=max_batches))
 
+        worker.daemon = True
         worker.start()
 
         # Yield from the queue as long as it's open
@@ -155,5 +160,6 @@ def zmq_stream(streamer, max_batches=None,
         six.reraise(*sys.exc_info())
 
     finally:
-        worker.terminate()
+        terminate.set()
+        worker.join()
         context.destroy()

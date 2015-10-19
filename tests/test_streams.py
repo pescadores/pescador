@@ -3,13 +3,13 @@
 from __future__ import print_function
 
 import six
+import time
 
 import numpy as np
 
 import pescador
 
 from nose.tools import raises, eq_
-
 
 def __eq_batch(b1, b2):
 
@@ -25,10 +25,13 @@ def __eq_lists(b1, b2):
         assert np.allclose(i, j)
 
 
-def finite_generator(n, size=2):
+def finite_generator(n, size=2, lag=None):
 
     for i in range(n):
         yield {'X': np.tile(np.array([[i]]), (size, 1))}
+        if lag is not None:
+            time.sleep(lag)
+
 
 
 def md_generator(dimension, n, size=2):
@@ -112,7 +115,7 @@ def test_streamer_bad_function():
 def test_zmq():
 
     def __test(copy):
-        stream = pescador.Streamer(finite_generator, 20, size=3)
+        stream = pescador.Streamer(finite_generator, 200, size=3, lag=0.001)
 
         reference = list(stream.generate())
 
