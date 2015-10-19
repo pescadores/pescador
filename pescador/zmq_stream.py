@@ -9,7 +9,6 @@
 
 import multiprocessing as mp
 import zmq
-import signal
 import numpy as np
 import six
 import sys

@@ -61,6 +61,17 @@ copyright = u'2015, Brian McFee and Eric Humphrey'
 # |version| and |release|, also used in various other places throughout the
 # built documents.
 
+
+from mock import MagicMock
+
+class Mock(MagicMock):
+    @classmethod
+    def __getattr__(cls, name):
+            return Mock()
+
+MOCK_MODULES = ['sklearn', 'numpy', 'joblib', 'zmq', 'scipy']
+sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)
+
 import imp
 pescador_version = imp.load_source('pescador.version', '../pescador/version.py')
 # The short X.Y version.
