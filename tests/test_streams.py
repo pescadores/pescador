@@ -119,8 +119,8 @@ def test_zmq():
 
         reference = list(stream.generate())
 
-        for i in range(3):
-            query = list(pescador.zmq_stream(stream))
+        for _ in range(3):
+            query = list(pescador.zmq_stream(stream, copy=copy))
             eq_(len(reference), len(query))
             for b1, b2 in zip(reference, query):
                 __eq_batch(b1, b2)
