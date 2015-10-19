@@ -69,7 +69,8 @@ class Mock(MagicMock):
     def __getattr__(cls, name):
             return Mock()
 
-MOCK_MODULES = ['sklearn', 'numpy', 'joblib', 'zmq', 'scipy', 'joblib.parallel', 'sklearn.base']
+MOCK_MODULES = ['sklearn', 'numpy', 'joblib', 'zmq', 'scipy', 'joblib.parallel',
+                'sklearn.base', 'sklearn.utils.metaestimators']
 sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)
 
 import imp
