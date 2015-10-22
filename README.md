@@ -1,5 +1,6 @@
 pescador
 ========
+[![PyPI](https://img.shields.io/pypi/v/pescador.svg)](https://pypi.python.org/pypi/pescador)
 [![Build Status](https://travis-ci.org/bmcfee/pescador.svg?branch=master)](https://travis-ci.org/bmcfee/pescador)
 [![Coverage Status](https://coveralls.io/repos/bmcfee/pescador/badge.svg)](https://coveralls.io/r/bmcfee/pescador)
 [![Documentation Status](https://readthedocs.org/projects/pescador/badge/?version=latest)](https://readthedocs.org/projects/pescador/?badge=latest)
