@@ -3,21 +3,8 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Installation
-------------
-
-Pescador is still in active development.
-
-For now, the best way to install is by cloning the repository:
-
-.. code-block:: bash
-
-    git clone https://github.com/bmcfee/pescador.git
-    cd pescador
-    [sudo] python setup.py install
-
-Example
--------
+Examples
+--------
 
 .. toctree::
     :maxdepth: 2
@@ -31,6 +18,13 @@ API Reference
     :maxdepth: 3
 
     api
+
+Changes
+-------
+.. toctree::
+    :maxdepth: 2
+
+    changes
 
 Contribute
 ----------
