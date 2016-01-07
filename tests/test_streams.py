@@ -214,6 +214,12 @@ def test_mux_single():
     eq_(list(reference), list(estimate))
 
 
+@raises(RuntimeError)
+def test_mux_empty():
+
+    list(pescador.mux([], None, 1))
+
+
 def test_mux_weighted():
 
     def __test(weight):
