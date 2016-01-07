@@ -100,6 +100,9 @@ def mux(seed_pool, n_samples, k, lam=256.0, pool_weights=None,
     '''
     n_seeds = len(seed_pool)
 
+    if not n_seeds:
+        raise RuntimeError('Cannot mux an empty seed-pool')
+
     # Set up the sampling distribution over streams
     seed_distribution = 1./n_seeds * np.ones(n_seeds)
 
