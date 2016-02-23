@@ -93,7 +93,7 @@ def zmq_worker(port, streamer, terminate, copy=False, max_batches=None):
 
 def zmq_stream(streamer, max_batches=None,
                min_port=49152, max_port=65535, max_tries=100,
-               copy=False):
+               copy=False, timeout=None):
     '''Parallel data streaming over zeromq sockets.
 
     This allows a data generator to run in a separate process
@@ -160,5 +160,7 @@ def zmq_stream(streamer, max_batches=None,
 
     finally:
         terminate.set()
-        worker.join()
+        worker.join(timeout)
+        if worker.is_alive():
+            worker.terminate()
         context.destroy()
