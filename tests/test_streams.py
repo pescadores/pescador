@@ -292,4 +292,30 @@ def test_mux_replacement():
         for n_samples in [10, 20, 80]:
             for k in [1, 2, 4]:
                 for lam in [1.0, 2.0, 8.0]:
+                        yield __test, n_streams, n_samples, k, lam
+
+
+def test_mux_revive():
+
+    def __test(n_streams, n_samples, k, lam):
+
+        seeds = [pescador.Streamer(finite_generator, 10)
+                 for _ in range(n_streams)]
+
+        mux = pescador.mux(seeds, n_samples, k, lam=lam,
+                           with_replacement=False,
+                           revive=True)
+
+        estimate = list(mux)
+
+        # Make sure we get the right number of samples
+        # This is highly improbable when revive=False
+        eq_(len(estimate), n_samples)
+
+
+    for n_streams in [1, 2, 4]:
+        for n_samples in [512]:
+            for k in [1, 2, 4]:
+                for lam in [1.0, 2.0, 4.0]:
                     yield __test, n_streams, n_samples, k, lam
+

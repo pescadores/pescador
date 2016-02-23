@@ -49,7 +49,7 @@ def batch_length(batch):
 
 
 def mux(seed_pool, n_samples, k, lam=256.0, pool_weights=None,
-        with_replacement=True, prune_empty_seeds=True):
+        with_replacement=True, prune_empty_seeds=True, revive=False):
     '''Stochastic multiplexor for generator seeds.
 
     Given an array of Streamer objects, do the following:
@@ -97,6 +97,13 @@ def mux(seed_pool, n_samples, k, lam=256.0, pool_weights=None,
         revisited.
         Note that this may be undesireable for streams where past emptiness
         may not imply future emptiness.
+
+    revive: bool
+        If ``with_replacement`` is ``False``, setting ``revive=True``
+        will re-insert previously exhausted seeds into the candidate set.
+
+        This configuration allows a seed to be active at most once at any
+        time.
     '''
     n_seeds = len(seed_pool)
 
@@ -154,18 +161,29 @@ def mux(seed_pool, n_samples, k, lam=256.0, pool_weights=None,
 
         except StopIteration:
             # Oops, this one's exhausted.
-            # If we're disabling empty seeds, see if this stream produced data.
+
             if prune_empty_seeds and stream_counts[idx] == 0:
+                # If we're disabling empty seeds, see if this stream produced data
                 seed_distribution[stream_idxs[idx]] = 0.0
-                if (seed_distribution > 0).any():
-                    seed_distribution[:] /= np.sum(seed_distribution)
-            # Replace it and move on if there are still kids in the pool.
+
+            if revive and not with_replacement:
+                # If we need to revive a seed, give it the max current probability
+                if seed_distribution.any():
+                    seed_distribution[stream_idxs[idx]] = np.max(seed_distribution)
+                else:
+                    seed_distribution[stream_idxs[idx]] = 1.0
+
             if (seed_distribution > 0).any():
+                # Replace it and move on if there are still seedsin the pool.
+                seed_distribution[:] /= np.sum(seed_distribution)
+
                 stream_idxs[idx] = np.random.choice(n_seeds,
                                                     p=seed_distribution)
+
                 streams[idx], stream_weights[idx] = generate_new_seed(
                     stream_idxs[idx], seed_pool, pool_weights,
                     seed_distribution, lam, with_replacement)
+
                 stream_counts[idx] = 0
 
             else:
