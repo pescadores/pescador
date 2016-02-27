@@ -41,9 +41,10 @@ def zmq_send_batch(socket, batch, flags=0, copy=True, track=False):
 
         header.append(dict(dtype=str(data.dtype),
                            shape=data.shape,
-                           key=key))
+                           key=key,
+                           aligned=data.flags['ALIGNED']))
         # Force contiguity
-        payload.append(np.ascontiguousarray(data))
+        payload.append(data)
 
     # Send the header
     msg = [json.dumps(header).encode('ascii')]
@@ -68,6 +69,7 @@ def zmq_recv_batch(socket, flags=0, copy=True, track=False):
         results[header['key']] = np.frombuffer(buffer(payload),
                                                dtype=header['dtype'])
         results[header['key']].shape = header['shape']
+        results[header['key']].flags['ALIGNED'] = header['aligned']
 
     return results
 
