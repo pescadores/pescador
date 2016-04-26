@@ -4,6 +4,7 @@ from __future__ import print_function
 
 import six
 import time
+import warnings
 
 import numpy as np
 
@@ -129,6 +130,37 @@ def test_zmq():
         for timeout in [None, 1, 5]:
             yield __test, copy, timeout
 
+
+def test_zmq_align():
+
+    def __test(copy, timeout):
+        stream = pescador.Streamer(finite_generator, 200, size=3, lag=0.001)
+
+        reference = list(stream.generate())
+
+        for _ in range(3):
+            warnings.resetwarnings()
+            warnings.simplefilter('always')
+
+            with warnings.catch_warnings(record=True) as out:
+                query = list(pescador.zmq_stream(stream, copy=copy, timeout=timeout))
+                eq_(len(reference), len(query))
+
+                if six.PY2:
+                    assert len(out) > 0
+                    assert out[0].category is RuntimeWarning
+                    assert 'align' in str(out[0].message).lower()
+
+                for b1, b2 in zip(reference, query):
+                    __eq_batch(b1, b2)
+                    if six.PY2:
+                        continue
+                    for key in b2:
+                        assert b2[key].flags['ALIGNED']
+
+    for copy in [False, True]:
+        for timeout in [None, 1, 5]:
+            yield __test, copy, timeout
 
 def __zip_generator(n, size1, size2):
 
