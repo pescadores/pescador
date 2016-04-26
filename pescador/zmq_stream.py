@@ -12,6 +12,7 @@ import zmq
 import numpy as np
 import six
 import sys
+import warnings
 
 try:
     import ujson as json
@@ -41,9 +42,10 @@ def zmq_send_batch(socket, batch, flags=0, copy=True, track=False):
 
         header.append(dict(dtype=str(data.dtype),
                            shape=data.shape,
-                           key=key))
+                           key=key,
+                           aligned=data.flags['ALIGNED']))
         # Force contiguity
-        payload.append(np.ascontiguousarray(data))
+        payload.append(data)
 
     # Send the header
     msg = [json.dumps(header).encode('ascii')]
@@ -68,6 +70,10 @@ def zmq_recv_batch(socket, flags=0, copy=True, track=False):
         results[header['key']] = np.frombuffer(buffer(payload),
                                                dtype=header['dtype'])
         results[header['key']].shape = header['shape']
+        if six.PY2:
+            # Legacy python won't let us preserve alignment, skip this step
+            continue
+        results[header['key']].flags['ALIGNED'] = header['aligned']
 
     return results
 
@@ -107,7 +113,6 @@ def zmq_stream(streamer, max_batches=None,
 
     Parameters
     ----------
-
     streamer : `pescador.Streamer`
         The streamer object
 
@@ -130,6 +135,10 @@ def zmq_stream(streamer, max_batches=None,
         Data drawn from `streamer.generate(max_batches)`.
     '''
     context = zmq.Context()
+
+    if six.PY2:
+        warnings.warn('zmq_stream cannot preserve numpy array alignment in Python 2',
+                      RuntimeWarning)
 
     try:
         socket = context.socket(zmq.PAIR)
