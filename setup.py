@@ -29,7 +29,7 @@ setup(
     keywords='machine learning',
     license='ISC',
     install_requires=[
-        'joblib',
+        'joblib>=0.9',
         'six',
         'pyzmq',
         'numpy',

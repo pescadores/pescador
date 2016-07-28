@@ -1,6 +1,10 @@
 Changes
 =======
 
+v0.1.3
+------
+- Added support for ``joblib>=0.10``
+
 v0.1.2
 ------
 
