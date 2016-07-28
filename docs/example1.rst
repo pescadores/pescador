@@ -61,8 +61,9 @@ and adds gaussian noise to the features.
 
             yield dict(X=X[i] + noise, Y=Y[i])
 
-In the code above, `data_stream` is an iterator that can be sampled indefinitely because `noisy_samples`
-contains an infinite loop.  Each iterate of `data_stream` will be a dictionary containing the sample batch's
+
+In the code above, `noisy_samples` is a generator that can be sampled indefinitely because `noisy_samples`
+contains an infinite loop.  Each iterate of `noisy_samples` will be a dictionary containing the sample batch's
 features and labels.
 
 
