@@ -19,7 +19,12 @@ try:
 except ImportError:
     import json
 
-from joblib.parallel import SafeFunction
+try:
+    # joblib <= 0.9.4
+    from joblib.parallel import SafeFunction
+except ImportError:
+    # joblib >= 0.10.0
+    from joblib._parallel_backends import SafeFunction
 
 __all__ = ['zmq_stream']
 
