@@ -8,10 +8,10 @@ import warnings
 warnings.simplefilter('always')
 
 import numpy as np
-
 import pescador
 
 from nose.tools import raises, eq_
+
 
 def __eq_batch(b1, b2):
 
@@ -33,7 +33,6 @@ def finite_generator(n, size=2, lag=None):
         yield {'X': np.tile(np.array([[i]]), (size, 1))}
         if lag is not None:
             time.sleep(lag)
-
 
 
 def md_generator(dimension, n, size=2):
@@ -105,6 +104,54 @@ def test_streamer_infinite():
             yield __test, n_max, size
 
 
+def test_streamer_in_streamer():
+    # TODO minimize copypasta from above test.
+
+    def __test(n_max, size):
+        reference = []
+        for i, data in enumerate(infinite_generator(size=size)):
+            if i >= n_max:
+                break
+            reference.append(data)
+
+        streamer = pescador.Streamer(infinite_generator, size=size)
+
+        streamer2 = pescador.Streamer(streamer)
+
+        for i in range(3):
+            query = list(streamer2.generate(max_batches=n_max))
+
+            for b1, b2 in zip(reference, query):
+                __eq_batch(b1, b2)
+
+    for n_max in [10, 50]:
+        for size in [1, 2, 7]:
+            yield __test, n_max, size
+
+
+def test_streamer_cycle():
+    """Tests that a limited streamer will die
+    and restart automatically."""
+
+    stream_len = 10
+    streamer = pescador.Streamer(finite_generator, stream_len)
+    assert streamer.stream_ is None
+
+    # Exhaust the stream once.
+    query = list(streamer.generate())
+    eq_(stream_len, len(query))
+
+    # Now, generate from it infinitely using cycle.
+    # We're going to assume "infinite" == > 5*stream_len
+    count_max = 5 * stream_len
+    success = False
+    for i, x in enumerate(streamer.cycle()):
+        if i >= count_max:
+            success = True
+            break
+    assert success
+
+
 @raises(TypeError)
 def test_streamer_bad_function():
 
@@ -154,6 +201,7 @@ def test_zmq_align():
                 continue
             for key in b2:
                 assert b2[key].flags['ALIGNED']
+
 
 def __zip_generator(n, size1, size2):
 
@@ -337,10 +385,8 @@ def test_mux_revive():
         # This is highly improbable when revive=False
         eq_(len(estimate), n_samples)
 
-
     for n_streams in [1, 2, 4]:
         for n_samples in [512]:
             for k in [1, 2, 4]:
                 for lam in [1.0, 2.0, 4.0]:
                     yield __test, n_streams, n_samples, k, lam
-

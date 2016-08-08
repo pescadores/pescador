@@ -26,7 +26,8 @@ class Streamer(object):
     Attributes
     ----------
     generator : iterable
-        A generator function or iterable collection to draw from
+        A generator function or iterable collection to draw from.
+        May be another instance or subclass of Streamer.
 
     args : list
     kwargs : dict
@@ -70,12 +71,21 @@ class Streamer(object):
         '''
 
         if not (inspect.isgeneratorfunction(streamer) or
-                isinstance(streamer, collections.Iterable)):
-            raise TypeError('streamer must be a generator or iterable')
+                isinstance(streamer, collections.Iterable) or
+                isinstance(streamer, Streamer)):
+            raise TypeError('streamer must be a generator, iterable, or'
+                            ' Streamer')
 
-        self.stream = streamer
+        self.streamer = streamer
         self.args = args
         self.kwargs = kwargs
+        self.stream_ = None
+
+    def is_active(self):
+        """Returns true if the stream is active
+        (ie a StopIteration) has not been thrown.
+        """
+        return self.stream_ is not None
 
     def generate(self, max_batches=None):
         '''Instantiate the generator
@@ -94,18 +104,39 @@ class Streamer(object):
             `max_batches` are generated.
         '''
 
-        if six.callable(self.stream):
+        if six.callable(self.streamer):
             # If it's a function, create the stream.
-            my_stream = self.stream(*(self.args), **(self.kwargs))
+            self.stream_ = self.streamer(*(self.args), **(self.kwargs))
+
+        elif isinstance(self.streamer, Streamer):
+            self.stream_ = self.streamer.generate(max_batches)
 
         else:
             # If it's iterable, use it directly.
-            my_stream = self.stream
+            self.stream_ = self.streamer
 
-        for n, x in enumerate(my_stream):
+        for n, x in enumerate(self.stream_):
             if max_batches is not None and n >= max_batches:
                 break
             yield x
+
+        # Resets the streamer so that we can restart it as necessary.
+        self.stream_ = None
+
+    def cycle(self):
+        '''Generates from the streamer infinitely.
+
+        This function will force an infinite stream, restarting
+        the generator even if a StopIteration is raised.
+
+        Yields
+        ------
+        batch
+            Items from the contained generator.
+        '''
+        # ??? What more does this need?
+        while True:
+            yield self.generate()
 
 
 class StreamLearner(sklearn.base.BaseEstimator):
