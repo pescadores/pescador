@@ -14,9 +14,10 @@ def test_zmq():
 
         reference = list(stream.generate())
 
+        zmq_stream = pescador.ZMQStreamer(stream, copy=copy, timeout=timeout)
+
         for _ in range(3):
-            query = list(pescador.zmq_stream(stream,
-                                             copy=copy, timeout=timeout))
+            query = list(zmq_stream.generate())
             eq_(len(reference), len(query))
             for b1, b2 in zip(reference, query):
                 T.__eq_batch(b1, b2)
@@ -33,8 +34,9 @@ def test_zmq_align():
     reference = list(stream.generate())
     warnings.resetwarnings()
 
+    zmq_stream = pescador.ZMQStreamer(stream)
     with warnings.catch_warnings(record=True) as out:
-        query = list(pescador.zmq_stream(stream))
+        query = list(zmq_stream.generate())
         eq_(len(reference), len(query))
 
         if six.PY2:

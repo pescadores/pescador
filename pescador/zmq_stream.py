@@ -26,7 +26,10 @@ except ImportError:
     # joblib >= 0.10.0
     from joblib._parallel_backends import SafeFunction
 
-__all__ = ['zmq_stream']
+import pescador.core
+
+
+__all__ = ['ZMQStreamer']
 
 
 # A hack to support buffers in py3
@@ -102,10 +105,8 @@ def zmq_worker(port, streamer, terminate, copy=False, max_batches=None):
         context.destroy()
 
 
-def zmq_stream(streamer, max_batches=None,
-               min_port=49152, max_port=65535, max_tries=100,
-               copy=False, timeout=None):
-    '''Parallel data streaming over zeromq sockets.
+class ZMQStreamer(pescador.core.Streamer):
+    """Parallel data streaming over zeromq sockets.
 
     This allows a data generator to run in a separate process
     from the consumer.
@@ -115,66 +116,82 @@ def zmq_stream(streamer, max_batches=None,
     and then use `zmq_stream` to execute the stream in one process
     while the other process consumes data, e.g., with a `StreamLearner`
     object.
+    """
+    def __init__(self, streamer,
+                 min_port=49152, max_port=65535, max_tries=100,
+                 copy=False, timeout=None):
+        '''
+        Parameters
+        ----------
+        streamer : `pescador.Streamer`
+            The streamer object
 
-    Parameters
-    ----------
-    streamer : `pescador.Streamer`
-        The streamer object
+        max_batches : None or int > 0
+            Maximum number of batches to generate
 
-    max_batches : None or int > 0
-        Maximum number of batches to generate
+        min_port : int > 0
+        max_port : int > min_port
+            The range of TCP ports to use
 
-    min_port : int > 0
-    max_port : int > min_port
-        The range of TCP ports to use
+        max_tries : int > 0
+            The maximum number of connection attempts to make
 
-    max_tries : int > 0
-        The maximum number of connection attempts to make
+        copy : bool
+            Set `True` to enable data copying
+        '''
+        self.streamer = streamer
+        self.min_port = min_port
+        self.max_port = max_port
+        self.max_tries = max_tries
+        self.copy = copy
+        self.timeout = timeout
 
-    copy : bool
-        Set `True` to enable data copying
+    def generate(self, max_batches=None):
+        """
+        Note: A ZMQStreamer does not activate it's stream,
+        but allows the zmq_worker to do that.
 
-    Yields
-    ------
-    batch
-        Data drawn from `streamer.generate(max_batches)`.
-    '''
-    context = zmq.Context()
+        Yields
+        ------
+        batch
+            Data drawn from `streamer.generate(max_batches)`.
+        """
+        context = zmq.Context()
 
-    if six.PY2:
-        warnings.warn('zmq_stream cannot preserve numpy array alignment in Python 2',
-                      RuntimeWarning)
+        if six.PY2:
+            warnings.warn('zmq_stream cannot preserve numpy array alignment '
+                          'in Python 2', RuntimeWarning)
 
-    try:
-        socket = context.socket(zmq.PAIR)
+        try:
+            socket = context.socket(zmq.PAIR)
 
-        port = socket.bind_to_random_port('tcp://*',
-                                          min_port=min_port,
-                                          max_port=max_port,
-                                          max_tries=max_tries)
-        terminate = mp.Event()
+            port = socket.bind_to_random_port('tcp://*',
+                                              min_port=self.min_port,
+                                              max_port=self.max_port,
+                                              max_tries=self.max_tries)
+            terminate = mp.Event()
 
-        worker = mp.Process(target=SafeFunction(zmq_worker),
-                            args=[port, streamer, terminate],
-                            kwargs=dict(copy=copy,
-                                        max_batches=max_batches))
+            worker = mp.Process(target=SafeFunction(zmq_worker),
+                                args=[port, self.streamer, terminate],
+                                kwargs=dict(copy=self.copy,
+                                            max_batches=max_batches))
 
-        worker.daemon = True
-        worker.start()
+            worker.daemon = True
+            worker.start()
 
-        # Yield from the queue as long as it's open
-        while worker.is_alive():
-            yield zmq_recv_batch(socket)
+            # Yield from the queue as long as it's open
+            while worker.is_alive():
+                yield zmq_recv_batch(socket)
 
-    except StopIteration:
-        pass
+        except StopIteration:
+            pass
 
-    except:
-        six.reraise(*sys.exc_info())
+        except:
+            six.reraise(*sys.exc_info())
 
-    finally:
-        terminate.set()
-        worker.join(timeout)
-        if worker.is_alive():
-            worker.terminate()
-        context.destroy()
+        finally:
+            terminate.set()
+            worker.join(self.timeout)
+            if worker.is_alive():
+                worker.terminate()
+            context.destroy()
