@@ -59,8 +59,8 @@ def test_buffer_batch():
         reference = list(__serialize_batches(reference))
 
         estimate = pescador.buffer_batch(T.md_generator(dimension,
-                                                      50,
-                                                      size=n_batch),
+                                                        50,
+                                                        size=n_batch),
                                          n_buf)
 
         estimate = list(__serialize_batches(estimate))
