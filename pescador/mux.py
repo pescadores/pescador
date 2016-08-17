@@ -4,11 +4,13 @@ import numpy as np
 import pescador.core
 
 
-def mux(seed_pool, n_samples, k, lam=256.0, pool_weights=None,
-        with_replacement=True, prune_empty_seeds=True, revive=False):
-    '''Stochastic multiplexor for generator seeds.
+class Mux(pescador.core.Streamer):
+    '''Stochastic multiplexor for generator seeds.'''
 
-    Given an array of Streamer objects, do the following:
+    def __init__(self, seed_pool, k,
+                 lam=256.0, pool_weights=None, with_replacement=True,
+                 prune_empty_seeds=True, revive=False):
+        """Given an array of Streamer objects, do the following:
 
         1. Select ``k`` seeds at random to activate
         2. Assign each activated seed a sample count ~ Poisson(lam)
@@ -16,140 +18,166 @@ def mux(seed_pool, n_samples, k, lam=256.0, pool_weights=None,
            from the active set.
         4. When a stream is exhausted, select a new one from the pool.
 
-    Parameters
-    ----------
-    seed_pool : iterable of Streamer
-        The collection of Streamer objects
+        Parameters
+        ----------
+        seed_pool : iterable of Streamer
+            The collection of Streamer objects
 
-    n_samples : int > 0 or None
-        The number of samples to generate.
-        If ``None``, sample indefinitely.
+        k : int > 0
+            The number of streams to keep active at any time.
 
-    k : int > 0
-        The number of streams to keep active at any time.
+        lam : float > 0 or None
+            Rate parameter for the Poisson distribution governing sample counts
+            for individual streams.
+            If ``None``, sample infinitely from each stream.
 
-    lam : float > 0 or None
-        Rate parameter for the Poisson distribution governing sample counts
-        for individual streams.
-        If ``None``, sample infinitely from each stream.
+        pool_weights : np.ndarray or None
+            Optional weighting for ``seed_pool``.
+            If ``None``, then weights are assumed to be uniform.
+            Otherwise, ``pool_weights[i]`` defines the sampling proportion
+            of ``seed_pool[i]``.
 
-    pool_weights : np.ndarray or None
-        Optional weighting for ``seed_pool``.
-        If ``None``, then weights are assumed to be uniform.
-        Otherwise, ``pool_weights[i]`` defines the sampling proportion
-        of ``seed_pool[i]``.
+            Must have the same length as ``seed_pool``.
 
-        Must have the same length as ``seed_pool``.
+        with_replacement : bool
+            Sample Streamers with replacement.  This allows a single stream to
+            be used multiple times (even simultaneously).
+            If ``False``, then each Streamer is consumed at most once and never
+            revisited.
 
-    with_replacement : bool
-        Sample Streamers with replacement.  This allows a single stream to be
-        used multiple times (even simultaneously).
-        If ``False``, then each Streamer is consumed at most once and never
-        revisited.
+        prune_empty_seeds : bool
+            Disable seeds from the pool that produced no data.
+            If ``True``, Streamers that previously produced no data are never
+            revisited.
+            Note that this may be undesireable for streams where past emptiness
+            may not imply future emptiness.
 
-    prune_empty_seeds : bool
-        Disable seeds from the pool that produced no data.
-        If ``True``, Streamers that previously produced no data are never
-        revisited.
-        Note that this may be undesireable for streams where past emptiness
-        may not imply future emptiness.
+        revive: bool
+            If ``with_replacement`` is ``False``, setting ``revive=True``
+            will re-insert previously exhausted seeds into the candidate set.
 
-    revive: bool
-        If ``with_replacement`` is ``False``, setting ``revive=True``
-        will re-insert previously exhausted seeds into the candidate set.
+            This configuration allows a seed to be active at most once at any
+            time.
+        """
+        self.seed_pool = seed_pool
+        self.n_seeds = len(seed_pool)
+        self.k = k
+        self.lam = lam
+        self.pool_weights = pool_weights
+        self.with_replacement = with_replacement
+        self.prune_empty_seeds = prune_empty_seeds
+        self.revive = revive
 
-        This configuration allows a seed to be active at most once at any
-        time.
-    '''
-    n_seeds = len(seed_pool)
+        self.reset()
 
-    if not n_seeds:
-        raise RuntimeError('Cannot mux an empty seed-pool')
+        if not self.n_seeds:
+            raise RuntimeError('Cannot mux an empty seed-pool')
 
-    # Set up the sampling distribution over streams
-    seed_distribution = 1./n_seeds * np.ones(n_seeds)
+        # Set up the sampling distribution over streams
+        self.seed_distribution = 1. / self.n_seeds * np.ones(self.n_seeds)
 
-    if pool_weights is None:
-        pool_weights = seed_distribution.copy()
+        if self.pool_weights is None:
+            self.pool_weights = self.seed_distribution.copy()
 
-    pool_weights = np.atleast_1d(pool_weights)
+        self.pool_weights = np.atleast_1d(self.pool_weights)
 
-    assert len(pool_weights) == len(seed_pool)
-    assert (pool_weights > 0.0).any()
-    pool_weights /= np.sum(pool_weights)
+        assert len(self.pool_weights) == len(self.seed_pool)
+        assert (self.pool_weights > 0.0).any()
+        self.pool_weights /= np.sum(self.pool_weights)
 
-    # Instantiate the pool
-    streams = [None] * k
+    def activate(self):
+        """Activates the seed pool"""
+        # Instantiate the pool
+        self.streams_ = [None] * self.k
 
-    stream_weights = np.zeros(k)
-    stream_counts = np.zeros(k, dtype=int)
-    stream_idxs = np.zeros(k, dtype=int)
-    for idx in range(k):
+        self.stream_weights_ = np.zeros(self.k)
+        self.stream_counts_ = np.zeros(self.k, dtype=int)
+        self.stream_idxs_ = np.zeros(self.k, dtype=int)
 
-        if not (seed_distribution > 0).any():
-            break
+        for idx in range(self.k):
 
-        stream_idxs[idx] = np.random.choice(n_seeds, p=seed_distribution)
-        streams[idx], stream_weights[idx] = generate_new_seed(
-            stream_idxs[idx], seed_pool, pool_weights, seed_distribution, lam,
-            with_replacement)
+            if not (self.seed_distribution > 0).any():
+                break
 
-    weight_norm = np.sum(stream_weights)
+            self.stream_idxs_[idx] = np.random.choice(
+                self.n_seeds, p=self.seed_distribution)
+            self.streams_[idx], self.stream_weights_[idx] = generate_new_seed(
+                self.stream_idxs_[idx], self.seed_pool, self.pool_weights,
+                self.seed_distribution, self.lam, self.with_replacement)
 
-    # Main sampling loop
-    n = 0
+        self.weight_norm_ = np.sum(self.stream_weights_)
 
-    if n_samples is None:
-        n_samples = np.inf
+    def reset(self):
+        self.streams_ = None
+        self.stream_weights_ = None
+        self.stream_counts_ = None
+        self.stream_idxs_ = None
+        self.weight_norm_ = None
 
-    while n < n_samples and weight_norm > 0.0:
-        # Pick a stream from the active set
-        idx = np.random.choice(k, p=stream_weights / weight_norm)
+    def generate(self, max_batches=None):
+        self.activate()
 
-        # Can we sample from it?
-        try:
-            # Then yield the sample
-            yield six.advance_iterator(streams[idx])
+        # Main sampling loop
+        n = 0
 
-            # Increment the sample counter
-            n += 1
-            stream_counts[idx] += 1
+        if max_batches is None:
+            max_batches = np.inf
 
-        except StopIteration:
-            # Oops, this one's exhausted.
+        while n < max_batches and self.weight_norm_ > 0.0:
+            # Pick a stream from the active set
+            idx = np.random.choice(self.k, p=(self.stream_weights_ /
+                                              self.weight_norm_))
 
-            if prune_empty_seeds and stream_counts[idx] == 0:
-                # If we're disabling empty seeds, see if this stream
-                # produced data
-                seed_distribution[stream_idxs[idx]] = 0.0
+            # Can we sample from it?
+            try:
+                # Then yield the sample
+                yield six.advance_iterator(self.streams_[idx])
 
-            if revive and not with_replacement:
-                # If we need to revive a seed, give it the max
-                # current probability
-                if seed_distribution.any():
-                    seed_distribution[stream_idxs[idx]] = (
-                        np.max(seed_distribution))
+                # Increment the sample counter
+                n += 1
+                self.stream_counts_[idx] += 1
+
+            except StopIteration:
+                # Oops, this one's exhausted.
+
+                if self.prune_empty_seeds and self.stream_counts_[idx] == 0:
+                    # If we're disabling empty seeds, see if this stream
+                    # produced data
+                    self.seed_distribution[self.stream_idxs_[idx]] = 0.0
+
+                if self.revive and not self.with_replacement:
+                    # If we need to revive a seed, give it the max
+                    # current probability
+                    if self.seed_distribution.any():
+                        self.seed_distribution[self.stream_idxs_[idx]] = (
+                            np.max(self.seed_distribution))
+                    else:
+                        self.seed_distribution[self.stream_idxs_[idx]] = 1.0
+
+                if (self.seed_distribution > 0).any():
+                    # Replace it and move on if there are still seeds
+                    # in the pool.
+                    self.seed_distribution[:] /= np.sum(self.seed_distribution)
+
+                    self.stream_idxs_[idx] = np.random.choice(
+                        self.n_seeds, p=self.seed_distribution)
+
+                    self.streams_[idx], self.stream_weights_[idx] = (
+                        generate_new_seed(self.stream_idxs_[idx],
+                                          self.seed_pool, self.pool_weights,
+                                          self.seed_distribution, self.lam,
+                                          self.with_replacement))
+
+                    self.stream_counts_[idx] = 0
+
                 else:
-                    seed_distribution[stream_idxs[idx]] = 1.0
+                    # Otherwise, this one's exhausted.
+                    # Set its probability to 0
+                    self.stream_weights_[idx] = 0.0
 
-            if (seed_distribution > 0).any():
-                # Replace it and move on if there are still seedsin the pool.
-                seed_distribution[:] /= np.sum(seed_distribution)
+                self.weight_norm_ = np.sum(self.stream_weights_)
 
-                stream_idxs[idx] = np.random.choice(n_seeds,
-                                                    p=seed_distribution)
-
-                streams[idx], stream_weights[idx] = generate_new_seed(
-                    stream_idxs[idx], seed_pool, pool_weights,
-                    seed_distribution, lam, with_replacement)
-
-                stream_counts[idx] = 0
-
-            else:
-                # Otherwise, this one's exhausted.  Set its probability to 0
-                stream_weights[idx] = 0.0
-
-            weight_norm = np.sum(stream_weights)
+        self.reset()
 
 
 def generate_new_seed(idx, pool, weights, distribution, lam=256.0,
@@ -158,6 +186,8 @@ def generate_new_seed(idx, pool, weights, distribution, lam=256.0,
 
     Parameters
     ----------
+    idx : int
+
     pool : iterable of Streamer
         The collection of Streamer objects
 

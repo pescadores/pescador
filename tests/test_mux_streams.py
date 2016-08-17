@@ -1,6 +1,7 @@
 from nose.tools import raises, eq_
 
 import pescador
+import pescador.mux
 import test_utils as T
 
 
@@ -9,14 +10,15 @@ def test_mux_single():
     reference = list(T.finite_generator(50))
     stream = pescador.Streamer(reference)
 
-    estimate = pescador.mux([stream], None, 1, with_replacement=False)
+    mux = pescador.mux.Mux([stream], 1, with_replacement=False)
+    estimate = mux.generate()
     eq_(list(reference), list(estimate))
 
 
 @raises(RuntimeError)
 def test_mux_empty():
 
-    list(pescador.mux([], None, 1))
+    list(pescador.mux.Mux([], 1).generate())
 
 
 def test_mux_weighted():
@@ -26,9 +28,10 @@ def test_mux_weighted():
         noise = list(T.finite_generator(50, size=1))
         stream = pescador.Streamer(reference)
         stream2 = pescador.Streamer(noise)
-        estimate = pescador.mux([stream, stream2], None, 2,
-                                pool_weights=[1.0, weight],
-                                with_replacement=False)
+        mux = pescador.mux.Mux([stream, stream2], 2,
+                               pool_weights=[1.0, weight],
+                               with_replacement=False)
+        estimate = mux.generate()
         eq_(list(reference), list(estimate))
 
     yield __test, 0.0
@@ -42,9 +45,10 @@ def test_mux_rare():
         noise = list(T.finite_generator(50, size=1))
         stream = pescador.Streamer(reference)
         stream2 = pescador.Streamer(noise)
-        estimate = pescador.mux([stream, stream2], None, 2,
-                                pool_weights=weight,
-                                with_replacement=False)
+        mux = pescador.mux.Mux([stream, stream2], 2,
+                               pool_weights=weight,
+                               with_replacement=False)
+        estimate = mux.generate()
         eq_(list(reference) + list(noise), list(estimate))
 
     # This should give us all the reference before all the noise
@@ -60,10 +64,10 @@ def test_empty_seeds():
     reference = pescador.Streamer(T.finite_generator, 10)
     empty = pescador.Streamer(__empty)
 
-    estimate = pescador.mux([reference, empty], 10, 2, lam=None,
-                            with_replacement=False,
-                            pool_weights=[1e-10, 1e10])
-
+    mux = pescador.mux.Mux([reference, empty], 2, lam=None,
+                           with_replacement=False,
+                           pool_weights=[1e-10, 1e10])
+    estimate = mux.generate(10)
     estimate = list(estimate)
 
     ref = list(reference.generate())
@@ -79,9 +83,9 @@ def test_mux_replacement():
         seeds = [pescador.Streamer(T.infinite_generator)
                  for _ in range(n_streams)]
 
-        mux = pescador.mux(seeds, n_samples, k, lam=lam)
+        mux = pescador.mux.Mux(seeds, k, lam=lam)
 
-        estimate = list(mux)
+        estimate = list(mux.generate(n_samples))
 
         # Make sure we get the right number of samples
         eq_(len(estimate), n_samples)
@@ -100,11 +104,11 @@ def test_mux_revive():
         seeds = [pescador.Streamer(T.finite_generator, 10)
                  for _ in range(n_streams)]
 
-        mux = pescador.mux(seeds, n_samples, k, lam=lam,
-                           with_replacement=False,
-                           revive=True)
+        mux = pescador.mux.Mux(seeds, k, lam=lam,
+                               with_replacement=False,
+                               revive=True)
 
-        estimate = list(mux)
+        estimate = list(mux.generate(n_samples))
 
         # Make sure we get the right number of samples
         # This is highly improbable when revive=False
