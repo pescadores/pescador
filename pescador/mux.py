@@ -101,9 +101,8 @@ class Mux(pescador.core.Streamer):
 
             self.stream_idxs_[idx] = np.random.choice(
                 self.n_seeds, p=self.seed_distribution)
-            self.streams_[idx], self.stream_weights_[idx] = generate_new_seed(
-                self.stream_idxs_[idx], self.seed_pool, self.pool_weights,
-                self.seed_distribution, self.lam, self.with_replacement)
+            self.streams_[idx], self.stream_weights_[idx] = (
+                self.generate_new_seed(self.stream_idxs_[idx]))
 
         self.weight_norm_ = np.sum(self.stream_weights_)
 
@@ -163,10 +162,7 @@ class Mux(pescador.core.Streamer):
                         self.n_seeds, p=self.seed_distribution)
 
                     self.streams_[idx], self.stream_weights_[idx] = (
-                        generate_new_seed(self.stream_idxs_[idx],
-                                          self.seed_pool, self.pool_weights,
-                                          self.seed_distribution, self.lam,
-                                          self.with_replacement))
+                        self.generate_new_seed(self.stream_idxs_[idx]))
 
                     self.stream_counts_[idx] = 0
 
@@ -179,54 +175,27 @@ class Mux(pescador.core.Streamer):
 
         self.reset()
 
+    def generate_new_seed(self, idx):
+        '''Randomly select and create a stream from the pool.
 
-def generate_new_seed(idx, pool, weights, distribution, lam=256.0,
-                      with_replacement=True):
-    '''Randomly select and create a stream from the pool.
+        Parameters
+        ----------
+        idx : int
+        '''
+        assert (len(self.seed_pool) == len(self.pool_weights) ==
+                len(self.seed_distribution))
+        # instantiate
+        if self.lam is not None:
+            n_stream = 1 + np.random.poisson(lam=self.lam)
+        else:
+            n_stream = None
 
-    Parameters
-    ----------
-    idx : int
+        # If we're sampling without replacement, zero this one out
+        if not self.with_replacement:
+            self.seed_distribution[idx] = 0.0
 
-    pool : iterable of Streamer
-        The collection of Streamer objects
+            if (self.seed_distribution > 0).any():
+                self.seed_distribution[:] /= np.sum(self.seed_distribution)
 
-    weights : np.ndarray or None
-        Defines the stream sample weight of each ``pool[i]``.
-
-        Must have the same length as ``pool``.
-
-    distribution : np.ndarray
-        Defines the probability of selecting the item '`pool[i]``.
-
-        Notes:
-        1. Must have the same length as ``pool``.
-        2. ``distribution`` will be modified in-place when
-        with_replacement=False.
-
-    lam : float > 0 or None
-        Rate parameter for the Poisson distribution governing sample counts
-        for individual streams.
-        If ``None``, sample infinitely from each stream.
-
-    with_replacement : bool
-        Sample Streamers with replacement.  This allows a single stream to be
-        used multiple times (even simultaneously).
-        If ``False``, then each Streamer is consumed at most once and never
-        revisited.
-    '''
-    assert len(pool) == len(weights) == len(distribution)
-    # instantiate
-    if lam is not None:
-        n_stream = 1 + np.random.poisson(lam=lam)
-    else:
-        n_stream = None
-
-    # If we're sampling without replacement, zero this one out
-    if not with_replacement:
-        distribution[idx] = 0.0
-
-        if (distribution > 0).any():
-            distribution[:] /= np.sum(distribution)
-
-    return pool[idx].generate(max_batches=n_stream), weights[idx]
+        return (self.seed_pool[idx].generate(max_batches=n_stream),
+                self.pool_weights[idx])
