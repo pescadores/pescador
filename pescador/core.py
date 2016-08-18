@@ -1,5 +1,6 @@
 #!/usr/bin/python
 """Core classes"""
+from contextlib import ContextDecorator
 import collections
 import inspect
 import sklearn.base
@@ -8,15 +9,17 @@ import six
 from sklearn.utils.metaestimators import if_delegate_has_method
 
 
-class StreamActivator(object):
+class StreamActivator(ContextDecorator):
     def __init__(self, streamer):
         self.streamer = streamer
 
-    def __enter__(self):
+    def __enter__(self, *args, **kwargs):
         self.streamer.activate()
+        return self
 
     def __exit__(self, *exc):
         self.streamer.deactivate()
+        return False
 
 
 class Streamer(object):
@@ -132,7 +135,6 @@ class Streamer(object):
             If `max_batches` is an integer, then at most
             `max_batches` are generated.
         '''
-        # TODO: You could probably be cute and make this a decorator
         with StreamActivator(self):
             for n, x in enumerate(self.stream_):
                 if max_batches is not None and n >= max_batches:
@@ -151,6 +153,7 @@ class Streamer(object):
             Items from the contained generator.
         '''
         # ??? What more does this need?
+
         while True:
             for item in self.generate():
                 yield item
