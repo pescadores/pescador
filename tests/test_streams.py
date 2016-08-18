@@ -90,7 +90,6 @@ def test_streamer_in_streamer():
 
 def test_streamer_cycle():
     """Test that a limited streamer will die and restart automatically."""
-
     stream_len = 10
     streamer = pescador.Streamer(T.finite_generator, stream_len)
     assert streamer.stream_ is None
@@ -102,12 +101,13 @@ def test_streamer_cycle():
     # Now, generate from it infinitely using cycle.
     # We're going to assume "infinite" == > 5*stream_len
     count_max = 5 * stream_len
-    success = False
+
+    data_results = []
     for i, x in enumerate(streamer.cycle()):
-        if i >= count_max:
-            success = True
+        data_results.append((isinstance(x, dict) and 'X' in x))
+        if (i + 1) >= count_max:
             break
-    assert success
+    assert (len(data_results) == count_max and all(data_results))
 
 
 @raises(TypeError)
