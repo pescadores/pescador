@@ -68,7 +68,7 @@ class Mux(core.Streamer):
         self.prune_empty_seeds = prune_empty_seeds
         self.revive = revive
 
-        self.reset()
+        self.deactivate()
 
         if not self.n_seeds:
             raise RuntimeError('Cannot mux an empty seed-pool')
@@ -106,7 +106,7 @@ class Mux(core.Streamer):
 
         self.weight_norm_ = np.sum(self.stream_weights_)
 
-    def reset(self):
+    def deactivate(self):
         self.streams_ = None
         self.stream_weights_ = None
         self.stream_counts_ = None
@@ -114,66 +114,66 @@ class Mux(core.Streamer):
         self.weight_norm_ = None
 
     def generate(self, max_batches=None):
-        self.activate()
+        with core.StreamActivator(self):
 
-        # Main sampling loop
-        n = 0
+            # Main sampling loop
+            n = 0
 
-        if max_batches is None:
-            max_batches = np.inf
+            if max_batches is None:
+                max_batches = np.inf
 
-        while n < max_batches and self.weight_norm_ > 0.0:
-            # Pick a stream from the active set
-            idx = np.random.choice(self.k, p=(self.stream_weights_ /
-                                              self.weight_norm_))
+            while n < max_batches and self.weight_norm_ > 0.0:
+                # Pick a stream from the active set
+                idx = np.random.choice(self.k, p=(self.stream_weights_ /
+                                                  self.weight_norm_))
 
-            # Can we sample from it?
-            try:
-                # Then yield the sample
-                yield six.advance_iterator(self.streams_[idx])
+                # Can we sample from it?
+                try:
+                    # Then yield the sample
+                    yield six.advance_iterator(self.streams_[idx])
 
-                # Increment the sample counter
-                n += 1
-                self.stream_counts_[idx] += 1
+                    # Increment the sample counter
+                    n += 1
+                    self.stream_counts_[idx] += 1
 
-            except StopIteration:
-                # Oops, this one's exhausted.
+                except StopIteration:
+                    # Oops, this one's exhausted.
 
-                if self.prune_empty_seeds and self.stream_counts_[idx] == 0:
-                    # If we're disabling empty seeds, see if this stream
-                    # produced data
-                    self.seed_distribution[self.stream_idxs_[idx]] = 0.0
+                    if (self.prune_empty_seeds and
+                            self.stream_counts_[idx] == 0):
+                        # If we're disabling empty seeds, see if this stream
+                        # produced data
+                        self.seed_distribution[self.stream_idxs_[idx]] = 0.0
 
-                if self.revive and not self.with_replacement:
-                    # If we need to revive a seed, give it the max
-                    # current probability
-                    if self.seed_distribution.any():
-                        self.seed_distribution[self.stream_idxs_[idx]] = (
-                            np.max(self.seed_distribution))
+                    if self.revive and not self.with_replacement:
+                        # If we need to revive a seed, give it the max
+                        # current probability
+                        if self.seed_distribution.any():
+                            self.seed_distribution[self.stream_idxs_[idx]] = (
+                                np.max(self.seed_distribution))
+                        else:
+                            self.seed_distribution[self.stream_idxs_[idx]] = 1.0
+
+                    if (self.seed_distribution > 0).any():
+                        # Replace it and move on if there are still seeds
+                        # in the pool.
+                        self.seed_distribution[:] /= np.sum(
+                            self.seed_distribution)
+
+                        self.stream_idxs_[idx] = np.random.choice(
+                            self.n_seeds, p=self.seed_distribution)
+
+                        self.streams_[idx], self.stream_weights_[idx] = (
+                            self.generate_new_seed(self.stream_idxs_[idx]))
+
+                        self.stream_counts_[idx] = 0
+
                     else:
-                        self.seed_distribution[self.stream_idxs_[idx]] = 1.0
+                        # Otherwise, this one's exhausted.
+                        # Set its probability to 0
+                        self.stream_weights_[idx] = 0.0
 
-                if (self.seed_distribution > 0).any():
-                    # Replace it and move on if there are still seeds
-                    # in the pool.
-                    self.seed_distribution[:] /= np.sum(self.seed_distribution)
-
-                    self.stream_idxs_[idx] = np.random.choice(
-                        self.n_seeds, p=self.seed_distribution)
-
-                    self.streams_[idx], self.stream_weights_[idx] = (
-                        self.generate_new_seed(self.stream_idxs_[idx]))
-
-                    self.stream_counts_[idx] = 0
-
-                else:
-                    # Otherwise, this one's exhausted.
-                    # Set its probability to 0
-                    self.stream_weights_[idx] = 0.0
-
-                self.weight_norm_ = np.sum(self.stream_weights_)
-
-        self.reset()
+                    self.weight_norm_ = np.sum(self.stream_weights_)
 
     def generate_new_seed(self, idx):
         '''Randomly select and create a stream from the pool.

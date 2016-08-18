@@ -8,6 +8,17 @@ import six
 from sklearn.utils.metaestimators import if_delegate_has_method
 
 
+class StreamActivator(object):
+    def __init__(self, streamer):
+        self.streamer = streamer
+
+    def __enter__(self):
+        self.streamer.activate()
+
+    def __exit__(self, *exc):
+        self.streamer.deactivate()
+
+
 class Streamer(object):
     '''A wrapper class for reusable generators.
 
@@ -99,7 +110,7 @@ class Streamer(object):
             # If it's iterable, use it directly.
             self.stream_ = self.streamer
 
-    def close(self):
+    def deactivate(self):
         self.stream_ = None
 
     def generate(self, max_batches=None):
@@ -122,15 +133,11 @@ class Streamer(object):
             `max_batches` are generated.
         '''
         # TODO: You could probably be cute and make this a decorator
-        self.activate(max_batches)
-
-        for n, x in enumerate(self.stream_):
-            if max_batches is not None and n >= max_batches:
-                break
-            yield x
-
-        # Resets the streamer so that we can restart it as necessary.
-        self.close()
+        with StreamActivator(self):
+            for n, x in enumerate(self.stream_):
+                if max_batches is not None and n >= max_batches:
+                    break
+                yield x
 
     def cycle(self):
         '''Generates from the streamer infinitely.

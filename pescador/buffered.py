@@ -48,14 +48,12 @@ class BufferedStreamer(core.Streamer):
             number of *buffered* batches that are generated,
             not the number of individual samples.
         """
-        self.activate()
-        for n, batch in enumerate(buffer_batch(self.stream_.generate(),
-                                               self.buffer_size)):
-            if max_batches is not None and n >= max_batches:
-                break
-            yield batch
-
-        self.close()
+        with core.StreamActivator(self):
+            for n, batch in enumerate(buffer_batch(self.stream_.generate(),
+                                                   self.buffer_size)):
+                if max_batches is not None and n >= max_batches:
+                    break
+                yield batch
 
 
 def buffer_batch(generator, buffer_size):
