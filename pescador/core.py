@@ -1,7 +1,5 @@
 #!/usr/bin/python
 """Core classes"""
-from __future__ import print_function
-
 import collections
 import inspect
 import sklearn.base
@@ -26,7 +24,7 @@ class Streamer(object):
 
     Attributes
     ----------
-    generator : iterable
+    generator : iterable or Streamer
         A generator function or iterable collection to draw from.
         May be another instance or subclass of Streamer.
 
@@ -72,8 +70,7 @@ class Streamer(object):
         '''
 
         if not (inspect.isgeneratorfunction(streamer) or
-                isinstance(streamer, collections.Iterable) or
-                isinstance(streamer, Streamer)):
+                isinstance(streamer, (collections.Iterable, Streamer))):
             raise TypeError('streamer must be a generator, iterable, or'
                             ' Streamer')
 
@@ -82,6 +79,7 @@ class Streamer(object):
         self.kwargs = kwargs
         self.stream_ = None
 
+    @property
     def is_active(self):
         """Returns true if the stream is active
         (ie a StopIteration) has not been thrown.
@@ -147,12 +145,13 @@ class Streamer(object):
         '''
         # ??? What more does this need?
         while True:
-            yield self.generate()
+            for item in self.generate():
+                yield item
 
 
 class StreamLearner(sklearn.base.BaseEstimator):
     '''A class to facilitate iterative learning from a generator.
-    
+
     Attributes
     ----------
     estimator : sklearn.base.BaseEstimator

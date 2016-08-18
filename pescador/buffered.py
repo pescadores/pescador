@@ -1,10 +1,10 @@
 import numpy as np
 
-import pescador.core
-import pescador.util as util
+from . import core
+from . import util
 
 
-class BufferedStreamer(pescador.core.Streamer):
+class BufferedStreamer(core.Streamer):
     """Buffers a stream into batches.
 
     """
@@ -30,8 +30,8 @@ class BufferedStreamer(pescador.core.Streamer):
              of samples currently in the buffer.
         """
         self.streamer = streamer
-        if not isinstance(streamer, pescador.core.Streamer):
-            self.streamer = pescador.core.Streamer(streamer)
+        if not isinstance(streamer, core.Streamer):
+            self.streamer = core.Streamer(streamer)
         self.buffer_size = buffer_size
         self.strict_batch_size = strict_batch_size
 

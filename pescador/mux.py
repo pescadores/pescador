@@ -1,10 +1,10 @@
 import six
 import numpy as np
 
-import pescador.core
+from . import core
 
 
-class Mux(pescador.core.Streamer):
+class Mux(core.Streamer):
     '''Stochastic multiplexor for generator seeds.'''
 
     def __init__(self, seed_pool, k,

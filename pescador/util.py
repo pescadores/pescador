@@ -42,5 +42,3 @@ def batch_length(batch):
             raise RuntimeError('Unequal field lengths')
 
     return n
-
-

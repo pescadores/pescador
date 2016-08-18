@@ -26,7 +26,7 @@ except ImportError:
     # joblib >= 0.10.0
     from joblib._parallel_backends import SafeFunction
 
-import pescador.core
+from . import core
 
 
 __all__ = ['ZMQStreamer']
@@ -105,7 +105,7 @@ def zmq_worker(port, streamer, terminate, copy=False, max_batches=None):
         context.destroy()
 
 
-class ZMQStreamer(pescador.core.Streamer):
+class ZMQStreamer(core.Streamer):
     """Parallel data streaming over zeromq sockets.
 
     This allows a data generator to run in a separate process
