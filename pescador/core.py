@@ -1,6 +1,5 @@
 #!/usr/bin/python
 """Core classes"""
-from contextlib import ContextDecorator
 import collections
 import inspect
 import sklearn.base
@@ -9,7 +8,7 @@ import six
 from sklearn.utils.metaestimators import if_delegate_has_method
 
 
-class StreamActivator(ContextDecorator):
+class StreamActivator(object):
     def __init__(self, streamer):
         self.streamer = streamer
 
