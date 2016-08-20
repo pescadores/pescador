@@ -93,20 +93,20 @@ class Streamer(object):
         self.stream_ = None
 
     @property
-    def is_active(self):
+    def active(self):
         """Returns true if the stream is active
         (ie a StopIteration) has not been thrown.
         """
         return self.stream_ is not None
 
-    def activate(self, max_batches=None):
+    def activate(self):
         """Activates the stream."""
         if six.callable(self.streamer):
             # If it's a function, create the stream.
             self.stream_ = self.streamer(*(self.args), **(self.kwargs))
 
         elif isinstance(self.streamer, Streamer):
-            self.stream_ = self.streamer.generate(max_batches)
+            self.stream_ = self.streamer.generate()
 
         else:
             # If it's iterable, use it directly.
