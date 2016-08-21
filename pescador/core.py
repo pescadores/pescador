@@ -1,12 +1,24 @@
 #!/usr/bin/python
 """Core classes"""
-
 import collections
 import inspect
 import sklearn.base
 import six
 
 from sklearn.utils.metaestimators import if_delegate_has_method
+
+
+class StreamActivator(object):
+    def __init__(self, streamer):
+        self.streamer = streamer
+
+    def __enter__(self, *args, **kwargs):
+        self.streamer.activate()
+        return self
+
+    def __exit__(self, *exc):
+        self.streamer.deactivate()
+        return False
 
 
 class Streamer(object):
@@ -25,8 +37,9 @@ class Streamer(object):
 
     Attributes
     ----------
-    generator : iterable
-        A generator function or iterable collection to draw from
+    generator : iterable or Streamer
+        A generator function or iterable collection to draw from.
+        May be another instance or subclass of Streamer.
 
     args : list
     kwargs : dict
@@ -70,12 +83,37 @@ class Streamer(object):
         '''
 
         if not (inspect.isgeneratorfunction(streamer) or
-                isinstance(streamer, collections.Iterable)):
-            raise TypeError('streamer must be a generator or iterable')
+                isinstance(streamer, (collections.Iterable, Streamer))):
+            raise TypeError('streamer must be a generator, iterable, or'
+                            ' Streamer')
 
-        self.stream = streamer
+        self.streamer = streamer
         self.args = args
         self.kwargs = kwargs
+        self.stream_ = None
+
+    @property
+    def active(self):
+        """Returns true if the stream is active
+        (ie a StopIteration) has not been thrown.
+        """
+        return self.stream_ is not None
+
+    def activate(self):
+        """Activates the stream."""
+        if six.callable(self.streamer):
+            # If it's a function, create the stream.
+            self.stream_ = self.streamer(*(self.args), **(self.kwargs))
+
+        elif isinstance(self.streamer, Streamer):
+            self.stream_ = self.streamer.generate()
+
+        else:
+            # If it's iterable, use it directly.
+            self.stream_ = self.streamer
+
+    def deactivate(self):
+        self.stream_ = None
 
     def generate(self, max_batches=None):
         '''Instantiate the generator
@@ -85,6 +123,9 @@ class Streamer(object):
         max_batches : None or int > 0
             Maximum number of batches to yield.
             If ``None``, exhaust the generator.
+            If the stream is finite, the generator
+            will be exausted when it complete. Call generate again,
+            or use cycle to force an infinite stream.
 
         Yields
         ------
@@ -93,24 +134,33 @@ class Streamer(object):
             If `max_batches` is an integer, then at most
             `max_batches` are generated.
         '''
+        with StreamActivator(self):
+            for n, x in enumerate(self.stream_):
+                if max_batches is not None and n >= max_batches:
+                    break
+                yield x
 
-        if six.callable(self.stream):
-            # If it's a function, create the stream.
-            my_stream = self.stream(*(self.args), **(self.kwargs))
+    def cycle(self):
+        '''Generates from the streamer infinitely.
 
-        else:
-            # If it's iterable, use it directly.
-            my_stream = self.stream
+        This function will force an infinite stream, restarting
+        the generator even if a StopIteration is raised.
 
-        for n, x in enumerate(my_stream):
-            if max_batches is not None and n >= max_batches:
-                break
-            yield x
+        Yields
+        ------
+        batch
+            Items from the contained generator.
+        '''
+        # ??? What more does this need?
+
+        while True:
+            for item in self.generate():
+                yield item
 
 
 class StreamLearner(sklearn.base.BaseEstimator):
     '''A class to facilitate iterative learning from a generator.
-    
+
     Attributes
     ----------
     estimator : sklearn.base.BaseEstimator
