@@ -114,8 +114,7 @@ class ZMQStreamer(core.Streamer):
     A typical usage pattern is to construct a `Streamer` object
     from a generator (or `util.mux` of several `Streamer`s),
     and then use `zmq_stream` to execute the stream in one process
-    while the other process consumes data, e.g., with a `StreamLearner`
-    object.
+    while the other process consumes data.
     """
     def __init__(self, streamer,
                  min_port=49152, max_port=65535, max_tries=100,

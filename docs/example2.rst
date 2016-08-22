@@ -53,9 +53,6 @@ As a concrete example, we can simulate a mixture of noisy streams with differing
         # Instantiate a linear classifier
         estimator = SGDClassifier()
 
-        # Wrap the estimator object in a stream learner
-        model = pescador.StreamLearner(estimator, max_batches=1000)
-
         # Build a collection of streams with different variance scales
         streams = [noisy_samples(X[train], Y[train], sigma=sigma)
                    for sigma in [0.5, 1.0, 2.0, 4.0]]
@@ -68,11 +65,12 @@ As a concrete example, we can simulate a mixture of noisy streams with differing
 
 
         # Fit the model to the stream
-        model.iter_fit(batch_stream, classes=classes)
+        for batch in batch_stream:
+            estimator.partial_fit(batch_stream, classes=classes)
 
         # And report the accuracy
         print('Test accuracy: {:.3f}'.format(accuracy_score(Y[test],
-                                                            model.predict(X[test]))))
+                                                            estimator.predict(X[test]))))
 
 In the above example, each `noisy_samples` streamer is infinite.  The `lam=16` argument to `mux` 
 says that each stream should produce some `n` batches, where `n` is sampled from a Poisson distribution
