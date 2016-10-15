@@ -12,7 +12,7 @@ The Streamer object
 Stream manipulation
 -------------------
 
-.. automodule:: util
+.. automodule:: buffered
 
 Parallelism
 -----------

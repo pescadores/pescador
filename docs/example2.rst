@@ -39,8 +39,8 @@ number of batches.
 
 Stream re-use and multiplexing
 ------------------------------
-The `mux()` function provides a powerful interface for randomly interleaving samples from 
-multiple input streams.  `mux` can also dynamically activate and deactivate 
+The `Mux` streamer provides a powerful interface for randomly interleaving samples from
+multiple input streams.  `Mux` can also dynamically activate and deactivate
 individual `Streamers`, which allows it to operate on a bounded subset of streams at any given time.
 
 As a concrete example, we can simulate a mixture of noisy streams with differing variances.
@@ -58,7 +58,7 @@ As a concrete example, we can simulate a mixture of noisy streams with differing
                    for sigma in [0.5, 1.0, 2.0, 4.0]]
 
         # Build a mux stream, keeping only 2 streams alive at once
-        batch_stream = pescador.mux(streams,
+        batch_stream = pescador.Mux(streams,
                                     1000,   # Generate 1000 batches in total
                                     2,      # Keep 2 streams alive at once
                                     lam=16) # Use a poisson rate of 16
@@ -89,4 +89,4 @@ Finally, exhausted streams can be removed by setting `prune_empty_seeds` to `Tru
 exhausted streams may be reactivated at any time.
 
 
-Note that because `mux()` itself is a generator, it too can be wrapped in a `Streamer` object.
+Note that because `Mux` itself is a Streamer, it too can be wrapped in a `Streamer` object.
