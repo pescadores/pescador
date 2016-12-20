@@ -62,16 +62,27 @@ copyright = u'2016, Brian McFee and Eric Humphrey'
 # built documents.
 
 
-from mock import MagicMock
+import six
+if six.PY3:
+    from unittest.mock import MagicMock
+else:
+    from mock import Mock as MagicMock
+
 
 class Mock(MagicMock):
     @classmethod
     def __getattr__(cls, name):
-            return Mock()
+        return Mock()
 
-MOCK_MODULES = ['sklearn', 'numpy', 'joblib', 'zmq', 'scipy', 'joblib.parallel',
-                'sklearn.base', 'sklearn.utils.metaestimators']
-sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)
+
+MOCK_MODULES = ['numpy', 'scipy',
+                'joblib', 'joblib.parallel', 'joblib._parallel_backends',
+                'zmq',
+                'json', 'ujson',
+                'sklearn.base',
+                'multiprocessing']
+
+#sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)
 
 import imp
 pescador_version = imp.load_source('pescador.version', '../pescador/version.py')
