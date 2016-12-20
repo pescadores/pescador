@@ -79,7 +79,6 @@ MOCK_MODULES = ['numpy', 'scipy',
                 'joblib', 'joblib.parallel', 'joblib._parallel_backends',
                 'zmq',
                 'json', 'ujson',
-                'sklearn.base',
                 'multiprocessing']
 
 #sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)
@@ -135,8 +134,7 @@ numpydoc_show_class_members = False
 intersphinx_mapping = {'python': ('http://docs.python.org/2', None),
                        'numpy': ('http://docs.scipy.org/doc/numpy/', None),
                        'np': ('http://docs.scipy.org/doc/numpy/', None),
-                       'scipy': ('http://docs.scipy.org/doc/scipy/reference/', None),
-                       'sklearn': ('http://scikit-learn.org/stable/', None)}
+                       'scipy': ('http://docs.scipy.org/doc/scipy/reference/', None)}
 
 
 # -- Options for HTML output ----------------------------------------------
