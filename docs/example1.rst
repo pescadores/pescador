@@ -8,9 +8,8 @@ This document will walk through the basics of training models using pescador.
 Our running example will be learning from an infinite stream of stochastically perturbed samples
 from the Iris dataset.
 
-Before we can get started, we'll need to introduce a few core concepts.  We will assume some basic
-familiarity with `scikit-learn <http://scikit-learn.org/stable/>`_ and 
-`generators <https://wiki.python.org/moin/Generators>`_.
+Before we can get started, we'll need to introduce a few core concepts.  
+We will assume some basic familiarity with `generators <https://wiki.python.org/moin/Generators>`_.
 
 
 Batch generators
@@ -48,7 +47,10 @@ and adds gaussian noise to the features.
 
         Yields
         ------
-        batch
+        batch : dict
+            batch['X'] is an `np.ndarray` of shape `(batch_size, d)`
+
+            batch[Y'] is an `np.ndarray` of shape `(batch_size,)`
         '''
 
 
@@ -65,61 +67,3 @@ and adds gaussian noise to the features.
 In the code above, `noisy_samples` is a generator that can be sampled indefinitely because `noisy_samples`
 contains an infinite loop.  Each iterate of `noisy_samples` will be a dictionary containing the sample batch's
 features and labels.
-
-
-StreamLearner
--------------
-
-Many scikit-learn classes provide an iterative learning interface via `partial_fit()`, which can update an
-existing model after observing a new batch of samples.  Pescador provides an additional layer
-(`StreamLearner`) which interfaces between batch generators and `partial_fit()`.
-
-The following example illustrates how to use `StreamLearner`.
-
-.. code-block:: python
-    :linenos:
-
-    from __future__ import print_function
-
-    import sklearn.datasets
-    from sklearn.cross_validation import ShuffleSplit
-    from sklearn.linear_model import SGDClassifier
-    from sklearn.metrics import accuracy_score
-
-    import pescador
-
-    # Load the Iris dataset
-    data = sklearn.datasets.load_iris()
-    X, Y = data.data, data.target
-
-    # Get the space of class labels
-    classes = np.unique(Y)
-
-    # Generate a single 90/10 train/test split
-    for train, test in ShuffleSplit(len(X), n_iter=1, test_size=0.1)
-
-        # Instantiate a linear classifier
-        estimator = SGDClassifier()
-
-        # Wrap the estimator object in a stream learner
-        model = pescador.StreamLearner(estimator, max_batches=1000)
-
-        # Build a data stream
-        batch_stream = noisy_samples(X[train], Y[train])
-
-        # Fit the model to the stream
-        model.iter_fit(batch_stream, classes=classes)
-
-        # And report the accuracy
-        print('Test accuracy: {:.3f}'.format(accuracy_score(Y[test],
-                                                            model.predict(X[test]))))
-
-A few things to note here:
-
-    * Because `noisy_samples` is an infinite generator, we need to provide an explicit bound on the amount of
-      samples to draw when fitting.  This is done in line 20 with the `max_batches` parameter to
-      `StreamLearner`.
-
-
-    * `StreamLearner` objects transparently wrap the methods of their contained `estimator` object, so
-      `model.predict(X[test])` and `model.estimator.predict(X[test])` are equivalent.

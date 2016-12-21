@@ -8,18 +8,17 @@ The Streamer object
 .. autoclass:: Streamer
     :inherited-members:
 
-The StreamLearner object
-------------------------
+.. autoclass:: BufferedStreamer
+    :inherited-members:
 
-.. autoclass:: StreamLearner
+.. autoclass:: Mux
+    :inherited-members:
+
+.. autoclass:: ZMQStreamer
     :inherited-members:
 
 Stream manipulation
 -------------------
 
 .. automodule:: util
-
-Parallelism
------------
-.. automodule:: zmq_stream
 
