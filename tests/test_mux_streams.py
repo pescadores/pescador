@@ -15,7 +15,7 @@ def test_mux_single():
     eq_(list(reference), list(estimate))
 
 
-@raises(RuntimeError)
+@raises(pescador.PescadorError)
 def test_mux_empty():
 
     list(pescador.mux.Mux([], 1).generate())

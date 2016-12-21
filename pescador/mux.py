@@ -4,6 +4,7 @@ import six
 import numpy as np
 
 from . import core
+from .exceptions import PescadorError
 
 
 class Mux(core.Streamer):
@@ -84,7 +85,7 @@ class Mux(core.Streamer):
         self.deactivate()
 
         if not self.n_seeds:
-            raise RuntimeError('Cannot mux an empty seed-pool')
+            raise PescadorError('Cannot mux an empty seed-pool')
 
         # Set up the sampling distribution over streams
         self.seed_distribution = 1. / self.n_seeds * np.ones(self.n_seeds)

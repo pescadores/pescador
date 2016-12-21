@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 '''Utility functions for stream manipulations'''
 import six
+from .exceptions import PescadorError
 
 __all__ = ['batch_length']
 
@@ -32,6 +33,6 @@ def batch_length(batch):
             n = len(value)
 
         elif len(value) != n:
-            raise RuntimeError('Unequal field lengths')
+            raise PescadorError('Unequal field lengths')
 
     return n

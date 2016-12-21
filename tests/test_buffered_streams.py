@@ -39,7 +39,7 @@ def test_batch_length():
     for n1 in [5, 10, 15]:
         for n2 in [5, 10, 15]:
             if n1 != n2:
-                test = raises(RuntimeError)(__test)
+                test = raises(pescador.PescadorError)(__test)
             else:
                 test = __test
             yield test, T.__zip_generator(3, n1, n2), n1

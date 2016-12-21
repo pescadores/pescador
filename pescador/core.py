@@ -3,6 +3,8 @@
 import collections
 import inspect
 import six
+from .exceptions import PescadorError
+
 
 class StreamActivator(object):
     def __init__(self, streamer):
@@ -74,14 +76,14 @@ class Streamer(object):
 
         Raises
         ------
-        TypeError
+        PescadorError
             If ``streamer`` is not a generator or an Iterable object.
         '''
 
         if not (inspect.isgeneratorfunction(streamer) or
                 isinstance(streamer, (collections.Iterable, Streamer))):
-            raise TypeError('streamer must be a generator, iterable, or'
-                            ' Streamer')
+            raise PescadorError('streamer must be a generator, iterable, or '
+                                'Streamer')
 
         self.streamer = streamer
         self.args = args

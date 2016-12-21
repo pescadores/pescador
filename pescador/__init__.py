@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 '''Pescador streaming learning'''
 
+from .exceptions import *
 from .core import *
 from .util import *
 from .buffered import *
