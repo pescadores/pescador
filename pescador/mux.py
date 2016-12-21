@@ -4,6 +4,7 @@ import six
 import numpy as np
 
 from . import core
+from .exceptions import PescadorError
 
 
 class Mux(core.Streamer):
@@ -84,7 +85,7 @@ class Mux(core.Streamer):
         self.deactivate()
 
         if not self.n_seeds:
-            raise RuntimeError('Cannot mux an empty seed-pool')
+            raise PescadorError('Cannot mux an empty seed-pool')
 
         # Set up the sampling distribution over streams
         self.seed_distribution = 1. / self.n_seeds * np.ones(self.n_seeds)
@@ -94,8 +95,14 @@ class Mux(core.Streamer):
 
         self.pool_weights = np.atleast_1d(self.pool_weights)
 
-        assert len(self.pool_weights) == len(self.seed_pool)
-        assert (self.pool_weights > 0.0).any()
+        if len(self.pool_weights) != len(self.seed_pool):
+            raise PescadorError('pool_weights must be the same '
+                                'length as seed_pool')
+
+        if not (self.pool_weights > 0.0).any():
+            raise PescadorError('pool_weights must contain at least '
+                                'one positive value')
+
         self.pool_weights /= np.sum(self.pool_weights)
 
     def activate(self):
@@ -194,9 +201,16 @@ class Mux(core.Streamer):
         Parameters
         ----------
         idx : int
+            The seed index to replace
         '''
-        assert (len(self.seed_pool) == len(self.pool_weights) ==
-                len(self.seed_distribution))
+        if len(self.seed_pool) != len(self.pool_weights):
+            raise PescadorError('seed_pool must have the same '
+                                'length as pool_weights')
+
+        if len(self.seed_pool) != len(self.seed_distribution):
+            raise PescadorError('seed_pool must have the same '
+                                'length as seed_distribution')
+
         # instantiate
         if self.lam is not None:
             n_stream = 1 + np.random.poisson(lam=self.lam)

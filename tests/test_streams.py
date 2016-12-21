@@ -110,7 +110,7 @@ def test_streamer_cycle():
     assert (len(data_results) == count_max and all(data_results))
 
 
-@raises(TypeError)
+@raises(pescador.PescadorError)
 def test_streamer_bad_function():
 
     def __fail():
