@@ -106,9 +106,19 @@ class ZMQStreamer(Streamer):
     from the consumer.
 
     A typical usage pattern is to construct a `Streamer` object
-    from a generator (or `util.mux` of several `Streamer`s),
-    and then use `zmq_stream` to execute the stream in one process
-    while the other process consumes data.
+    from a generator and then use `ZMQStreamer` to execute the stream in one
+    process while the other process consumes data.
+
+
+    Examples
+    --------
+    >>> # Construct a streamer object
+    >>> S = pescador.Streamer(my_generator)
+    >>> # Wrap the streamer in a ZMQ streamer
+    >>> Z = pescador.ZMQStreamer(S)
+    >>> # Process as normal
+    >>> for batch in Z.generate():
+    ...     MY_FUNCTION(batch)
     """
     def __init__(self, streamer,
                  min_port=49152, max_port=65535, max_tries=100,
@@ -131,6 +141,9 @@ class ZMQStreamer(Streamer):
 
         copy : bool
             Set `True` to enable data copying
+
+        timeout : [optional] number > 0
+            Maximum time (in seconds) to wait before killing subprocesses
         '''
         self.streamer = streamer
         self.min_port = min_port

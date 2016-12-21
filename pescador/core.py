@@ -57,7 +57,7 @@ class Streamer(object):
     Or with a maximum number of items
 
     >>> for i in GS.generate(max_items=3):
-    ...     print i
+    ...     print(i)
     '''
 
     def __init__(self, streamer, *args, **kwargs):

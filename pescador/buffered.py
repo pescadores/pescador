@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+'''Buffered streamers'''
 import numpy as np
 
 from . import core
@@ -6,8 +7,22 @@ from . import util
 
 
 class BufferedStreamer(core.Streamer):
-    """Buffers a stream into batches.
-
+    """Buffers a stream into batches of examples
+    
+    Examples
+    --------
+    >>> def my_generator(n):
+    ...     # Generates a single 30-dimensional example vector for each iterate
+    ...     for i in range(n):
+    ...         yield dict(X=np.random.randn(1, 30))
+    >>> # Wrap the generator in a Streamer
+    >>> S = pescador.Streamer(my_generator, 128)
+    >>> # A buffered streamer will combine N iterates into a single batch
+    >>> N = 10
+    >>> B = pescador.BufferedStreamer(my_generator, N)
+    >>> for batch in B.generate():
+    ...     # Work on a batch of N=10 examples
+    ...     MY_PROCESS_FUNCTION(batch)
     """
     def __init__(self, streamer, buffer_size,
                  strict_batch_size=True):
@@ -15,18 +30,18 @@ class BufferedStreamer(core.Streamer):
         Parameters
         ----------
         streamer : pescador.Streamer
-            Expects a Streamer, but if you pass it an iterable,
-            it will just wrap it in a streamer.
+            A `Streamer` object to sample from
 
         buffer_size : int
             Number of samples to buffer into a batch.
 
         strict_batch_size : bool
-            If True, will only return batches of length buffer_size.
+            If `True`, will only return batches of length `buffer_size`.
              If the enclosed streamer runs out of samples before completing
              the last batch, generate() will raise a StopIteration
              instead of returning a partial batch.
-            If False, if the enclosed streamer runs out of samples before
+
+            If `False`, if the enclosed streamer runs out of samples before
              completing teh last batch, will just return the number
              of samples currently in the buffer.
         """
@@ -41,7 +56,8 @@ class BufferedStreamer(core.Streamer):
         self.stream_ = self.streamer
 
     def generate(self, max_batches=None):
-        """
+        """Generate samples from the streamer.
+
         Parameters
         ----------
         max_batches : int

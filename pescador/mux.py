@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+'''Stream multiplexing'''
 import six
 import numpy as np
 
@@ -6,7 +7,18 @@ from . import core
 
 
 class Mux(core.Streamer):
-    '''Stochastic multiplexor for generator seeds.'''
+    '''Stochastic multiplexor for Streamers
+    
+    Examples
+    --------
+    >>> # Create a collection of streamers
+    >>> seeds = [pescador.Streamer(my_generator) for i in range(10)]
+    >>> # Multiplex them together into a single streamer
+    >>> # Use at most 3 streams at once
+    >>> mux = pescador.Mux(seeds, k=3)
+    >>> for batch in mux.generate():
+    ...     MY_FUNCTION(batch)
+    '''
 
     def __init__(self, seed_pool, k,
                  lam=256.0, pool_weights=None, with_replacement=True,
