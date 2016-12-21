@@ -1,1 +1,3 @@
 numpydoc>=0.5
+six
+unittest

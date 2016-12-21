@@ -8,9 +8,8 @@ This document will walk through the basics of training models using pescador.
 Our running example will be learning from an infinite stream of stochastically perturbed samples
 from the Iris dataset.
 
-Before we can get started, we'll need to introduce a few core concepts.  We will assume some basic
-familiarity with `scikit-learn <http://scikit-learn.org/stable/>`_ and 
-`generators <https://wiki.python.org/moin/Generators>`_.
+Before we can get started, we'll need to introduce a few core concepts.  
+We will assume some basic familiarity with `generators <https://wiki.python.org/moin/Generators>`_.
 
 
 Batch generators
@@ -48,7 +47,10 @@ and adds gaussian noise to the features.
 
         Yields
         ------
-        batch
+        batch : dict
+            batch['X'] is an `np.ndarray` of shape `(batch_size, d)`
+
+            batch[Y'] is an `np.ndarray` of shape `(batch_size,)`
         '''
 
 
