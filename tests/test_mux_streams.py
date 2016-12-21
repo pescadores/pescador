@@ -1,5 +1,7 @@
 from nose.tools import raises, eq_
 
+import numpy as np
+
 import pescador
 import pescador.mux
 import test_utils as T
@@ -119,3 +121,23 @@ def test_mux_revive():
             for k in [1, 2, 4]:
                 for lam in [1.0, 2.0, 4.0]:
                     yield __test, n_streams, n_samples, k, lam
+
+
+@raises(pescador.PescadorError)
+def test_mux_bad_pool():
+
+    seeds = [pescador.Streamer(T.finite_generator, 10)
+             for _ in range(5)]
+
+    # 5 seeds, 10 weights, should trigger an error
+    M = pescador.Mux(seeds, None, pool_weights=np.random.randn(10))
+
+
+@raises(pescador.PescadorError)
+def test_mux_bad_weights():
+
+    seeds = [pescador.Streamer(T.finite_generator, 10)
+             for _ in range(5)]
+
+    # 5 seeds, all-zeros weight vector should trigger an error
+    M = pescador.Mux(seeds, None, pool_weights=np.zeros(5))
