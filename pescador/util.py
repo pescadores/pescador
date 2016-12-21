@@ -1,12 +1,5 @@
 #!/usr/bin/env python
-'''Utility functions for stream manipulations
-
-.. autosummary::
-    :toctree: generated/
-
-    batch_length
-
-'''
+'''Utility functions for stream manipulations'''
 import six
 
 __all__ = ['batch_length']

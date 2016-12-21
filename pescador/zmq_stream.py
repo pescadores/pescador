@@ -1,11 +1,5 @@
 #!/usr/bin/env python
-'''ZMQ-based stream multiplexing
-
-.. autosummary::
-    :toctree: generated/
-
-    zmq_stream
-'''
+'''ZMQ-based stream multiplexing'''
 
 import multiprocessing as mp
 import zmq

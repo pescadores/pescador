@@ -62,26 +62,16 @@ copyright = u'2016, Brian McFee and Eric Humphrey'
 # built documents.
 
 
-import six
-if six.PY3:
-    from unittest.mock import MagicMock
-else:
-    from mock import Mock as MagicMock
-
-
-class Mock(MagicMock):
-    @classmethod
-    def __getattr__(cls, name):
-        return Mock()
+from unittest.mock import MagicMock as Mock
 
 
 MOCK_MODULES = ['numpy', 'scipy',
-                'joblib', 'joblib.parallel', 'joblib._parallel_backends',
+                'joblib.parallel', 'joblib._parallel_backends', 'joblib',
                 'zmq',
                 'json', 'ujson',
                 'multiprocessing']
 
-#sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)
+sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)
 
 import imp
 pescador_version = imp.load_source('pescador.version', '../pescador/version.py')
@@ -131,10 +121,10 @@ pygments_style = 'sphinx'
 
 numpydoc_show_class_members = False
 
-intersphinx_mapping = {'python': ('http://docs.python.org/2', None),
-                       'numpy': ('http://docs.scipy.org/doc/numpy/', None),
-                       'np': ('http://docs.scipy.org/doc/numpy/', None),
-                       'scipy': ('http://docs.scipy.org/doc/scipy/reference/', None)}
+intersphinx_mapping = {'python': ('https://docs.python.org/2', None),
+                       'numpy': ('https://docs.scipy.org/doc/numpy/', None),
+                       'np': ('https://docs.scipy.org/doc/numpy/', None),
+                       'scipy': ('https://docs.scipy.org/doc/scipy/reference/', None)}
 
 
 # -- Options for HTML output ----------------------------------------------
