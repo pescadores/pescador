@@ -1,4 +1,6 @@
-from nose.tools import raises, eq_
+#!/usr/bin/env python
+
+from nose.tools import raises
 import pescador
 
 import test_utils as T
@@ -34,7 +36,7 @@ def test_buffer_streamer():
 def test_batch_length():
     def __test(generator, n):
         for batch in generator:
-            T.eq_(pescador.util.batch_length(batch), n)
+            T.eq_(pescador.buffered.batch_length(batch), n)
 
     for n1 in [5, 10, 15]:
         for n2 in [5, 10, 15]:

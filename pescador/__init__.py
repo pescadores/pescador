@@ -3,7 +3,6 @@
 
 from .exceptions import *
 from .core import *
-from .util import *
 from .buffered import *
 from .mux import *
 from .zmq_stream import *

@@ -16,9 +16,3 @@ The Streamer object
 
 .. autoclass:: ZMQStreamer
     :inherited-members:
-
-Stream manipulation
--------------------
-
-.. automodule:: util
-
