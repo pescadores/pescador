@@ -90,9 +90,9 @@ def zmq_worker(port, streamer, terminate, copy=False, max_batches=None):
     try:
         # Build the stream
         for batch in streamer.generate(max_batches=max_batches):
+            zmq_send_batch(socket, batch, copy=copy)
             if terminate.is_set():
                 break
-            zmq_send_batch(socket, batch, copy=copy)
 
     finally:
         # send an empty payload to kill
