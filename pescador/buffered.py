@@ -1,14 +1,15 @@
 #!/usr/bin/env python
 '''Buffered streamers'''
 import numpy as np
+import six
 
 from . import core
-from . import util
+from .exceptions import PescadorError
 
 
 class BufferedStreamer(core.Streamer):
     """Buffers a stream into batches of examples
-    
+
     Examples
     --------
     >>> def my_generator(n):
@@ -95,7 +96,7 @@ def buffer_batch(generator, buffer_size):
 
     for x in generator:
         batches.append(x)
-        n += util.batch_length(x)
+        n += batch_length(x)
 
         if n < buffer_size:
             continue
@@ -141,7 +142,7 @@ def __split_batches(batches, buffer_size):
     while batches and (buffer_size is None or
                        batch_size < buffer_size):
         batch_data.append(batches.pop(0))
-        batch_size += util.batch_length(batch_data[-1])
+        batch_size += batch_length(batch_data[-1])
 
     # Merge the batches
     batch = dict()
@@ -171,3 +172,35 @@ def __split_batches(batches, buffer_size):
         batch = None
 
     return batch, batches
+
+
+def batch_length(batch):
+    '''Determine the number of samples in a batch.
+
+    Parameters
+    ----------
+    batch : dict
+        A batch dictionary.  Each value must implement `len`.
+        All values must have the same `len`.
+
+    Returns
+    -------
+    n : int >= 0 or None
+        The number of samples in this batch.
+        If the batch has no fields, n is None.
+
+    Raises
+    ------
+    PescadorError
+        If some two values have unequal length
+    '''
+    n = None
+
+    for value in six.itervalues(batch):
+        if n is None:
+            n = len(value)
+
+        elif len(value) != n:
+            raise PescadorError('Unequal field lengths')
+
+    return n
