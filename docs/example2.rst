@@ -83,7 +83,7 @@ As a concrete example, we can simulate a mixture of noisy streams with differing
         streams = [Streamer(noisy_samples, X[train], Y[train], sigma=sigma)
                    for sigma in [0, 0.5, 1.0, 2.0, 4.0]]
 
-        # Build a mux stream, keeping only 2 streams alive at once
+        # Build a mux stream, keeping 3 streams alive at once
         mux_stream = Mux(streams,
                          k=3,    # Keep 3 streams alive at once
                          lam=64) # Use a poisson rate of 64
@@ -98,7 +98,7 @@ As a concrete example, we can simulate a mixture of noisy streams with differing
 
 
 In the above example, each `Streamer` in `streams` can make infinitely many samples.
-The `lam=16` argument to `Mux` says that each stream should produce some `n` batches, where `n` is sampled from a Poisson distribution of rate `lam`.
+The `lam=64` argument to `Mux` says that each stream should produce some `n` batches, where `n` is sampled from a Poisson distribution of rate `lam`.
 When a stream exceeds its bound, it is deactivated, and a new streamer is activated to fill its place.
 
 Setting `lam=None` disables the random stream bounding, and `mux()` simply runs each active stream until
