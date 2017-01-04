@@ -60,10 +60,12 @@ copyright = u'2016, Brian McFee and Eric Humphrey'
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
 # built documents.
+import six
 
-
-from unittest.mock import MagicMock as Mock
-
+if six.PY3:
+    from unittest.mock import MagicMock as Mock
+else:
+    from mock import Mock
 
 MOCK_MODULES = ['numpy', 'scipy',
                 'joblib.parallel', 'joblib._parallel_backends', 'joblib',
