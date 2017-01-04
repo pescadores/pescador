@@ -55,7 +55,8 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'pescador'
-copyright = u'2016, Brian McFee and Eric Humphrey'
+authors = u'Pescador development team'
+copyright = u'2016, {}'.format(authors)
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
@@ -232,7 +233,7 @@ latex_elements = {
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
   ('index', 'pescador.tex', u'pescador Documentation',
-   u'Brian McFee and Eric Humphrey', 'manual'),
+   authors),
 ]
 
 # The name of an image file (relative to this directory) to place at the top of
@@ -262,7 +263,7 @@ latex_documents = [
 # (source start file, name, description, authors, manual section).
 man_pages = [
     ('index', 'pescador', u'pescador Documentation',
-     [u'Brian McFee and Eric Humphrey'], 1)
+     [authors], 1)
 ]
 
 # If true, show URL addresses after external links.
@@ -276,7 +277,7 @@ man_pages = [
 #  dir menu entry, description, category)
 texinfo_documents = [
   ('index', 'pescador', u'pescador Documentation',
-   u'Brian McFee and Eric Humphrey', 'pescador', 'One line description of project.',
+   authors, 'pescador', 'One line description of project.',
    'Miscellaneous'),
 ]
 
