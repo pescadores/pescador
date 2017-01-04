@@ -1,18 +1,27 @@
 .. _api:
 
+API Reference
+=============
+
 .. module:: pescador
 
-The Streamer object
--------------------
 
+Streamer
+--------
 .. autoclass:: Streamer
     :inherited-members:
 
+Buffered Streamers
+------------------
 .. autoclass:: BufferedStreamer
     :inherited-members:
 
+Multiplexing
+------------
 .. autoclass:: Mux
     :inherited-members:
 
+Parallel streaming
+------------------
 .. autoclass:: ZMQStreamer
     :inherited-members:

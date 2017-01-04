@@ -56,7 +56,7 @@ multiplexed streamer object as follows:
 
 
 Memory-mapping
-==============
+--------------
 
 The `NPZ` file format requires loading the entire contents of each archive into memory.
 This can lead to high memory consumption when the number of active streams is large.
