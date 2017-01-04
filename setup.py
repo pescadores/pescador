@@ -10,8 +10,8 @@ setup(
     description='Multiplex generators for incremental learning',
     author='Pescador developers',
     author_email='brian.mcfee@nyu.edu',
-    url='http://github.com/bmcfee/pescador',
-    download_url='http://github.com/bmcfee/pescador/releases',
+    url='http://github.com/pescadores/pescador',
+    download_url='http://github.com/pescadores/pescador/releases',
     packages=find_packages(),
     long_description='Multiplex generators for incremental learning',
     classifiers=[
@@ -32,9 +32,7 @@ setup(
         'joblib>=0.9',
         'six',
         'pyzmq',
-        'numpy',
-        'scipy',
-        'scikit-learn',
+        'numpy'
     ],
     extras_require={
         'docs': ['numpydoc']
