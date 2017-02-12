@@ -23,7 +23,7 @@ def test_zmq():
                 T.__eq_batch(b1, b2)
 
     for copy in [False, True]:
-        for timeout in [None, 2, 5]:
+        for timeout in [None, 0.5, 2, 5]:
             yield __test, copy, timeout
 
 

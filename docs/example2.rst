@@ -48,28 +48,49 @@ As a concrete example, we can simulate a mixture of noisy streams with differing
 
     from __future__ import print_function
 
+    import numpy as np
+
+    from sklearn.datasets import load_breast_cancer
     from sklearn.linear_model import SGDClassifier
     from sklearn.model_selection import ShuffleSplit
+    from sklearn.metrics import accuracy_score
 
     from pescador import Streamer, Mux
 
-    for train, test in ShuffleSplit(len(X), n_iter=1, test_size=0.1)
+    def noisy_samples(X, Y, batch_size=16, sigma=1.0):
+        '''Copied over from the previous example'''
+        n, d = X.shape
+
+        while True:
+            i = np.random.randint(0, n, size=batch_size)
+
+            noise = sigma * np.random.randn(batch_size, d)
+
+            yield dict(X=X[i] + noise, Y=Y[i])
+
+    # Load some example data from sklearn
+    raw_data = load_breast_cancer()
+    X, Y = raw_data['data'], raw_data['target']
+
+    classes = np.unique(Y)
+
+    for train, test in ShuffleSplit(len(X), n_splits=1, test_size=0.1):
 
         # Instantiate a linear classifier
         estimator = SGDClassifier()
 
         # Build a collection of Streamers with different noise scales
         streams = [Streamer(noisy_samples, X[train], Y[train], sigma=sigma)
-                   for sigma in [0.5, 1.0, 2.0, 4.0]]
+                   for sigma in [0, 0.5, 1.0, 2.0, 4.0]]
 
-        # Build a mux stream, keeping only 2 streams alive at once
+        # Build a mux stream, keeping 3 streams alive at once
         mux_stream = Mux(streams,
-                         k=2,    # Keep 2 streams alive at once
-                         lam=16) # Use a poisson rate of 16
+                         k=3,    # Keep 3 streams alive at once
+                         lam=64) # Use a poisson rate of 64
 
-        # Fit the model to the stream, use at most 1000 batches
-        for batch in batch_stream.generate(max_batches=1000):
-            estimator.partial_fit(batch_stream, classes=classes)
+        # Fit the model to the stream, use at most 5000 batches
+        for batch in batch_stream.generate(max_batches=5000):
+            estimator.partial_fit(batch['X'], batch['Y'], classes=classes)
 
         # And report the accuracy
         Ypred = estimator.predict(X[test])
@@ -77,7 +98,7 @@ As a concrete example, we can simulate a mixture of noisy streams with differing
 
 
 In the above example, each `Streamer` in `streams` can make infinitely many samples.
-The `lam=16` argument to `Mux` says that each stream should produce some `n` batches, where `n` is sampled from a Poisson distribution of rate `lam`.
+The `lam=64` argument to `Mux` says that each stream should produce some `n` batches, where `n` is sampled from a Poisson distribution of rate `lam`.
 When a stream exceeds its bound, it is deactivated, and a new streamer is activated to fill its place.
 
 Setting `lam=None` disables the random stream bounding, and `mux()` simply runs each active stream until

@@ -57,7 +57,7 @@ and adds gaussian noise to the features.
         n, d = X.shape
 
         while True:
-            i = np.random.randint(0, n, size=m)
+            i = np.random.randint(0, n, size=batch_size)
 
             noise = sigma * np.random.randn(batch_size, d)
 
