@@ -1,75 +1,73 @@
 #!/usr/bin/env python
 
-from nose.tools import raises
+import pytest
 import pescador
 
 import test_utils as T
 
 
-def test_buffer_streamer():
+@pytest.mark.parametrize('dimension', [1, 2, 3])
+@pytest.mark.parametrize('batch_size', [1, 2, 5, 17])
+@pytest.mark.parametrize('buf_size', [1, 2, 5, 17, 100])
+def test_buffer_streamer(dimension, batch_size, buf_size):
 
     def __serialize_batches(batches):
-
         for batch in batches:
             for item in batch['X']:
                 yield item
 
-    def __test(dimension, n_batch, n_buf):
-        reference = T.md_generator(dimension, 50, size=n_batch)
+    reference = T.md_generator(dimension, 50, size=batch_size)
 
-        reference = list(__serialize_batches(reference))
+    reference = list(__serialize_batches(reference))
 
-        gen_stream = pescador.Streamer(T.md_generator, dimension, 50,
-                                       size=n_batch)
-        estimate = pescador.BufferedStreamer(gen_stream, n_buf)
+    gen_stream = pescador.Streamer(T.md_generator, dimension, 50,
+                                   size=batch_size)
+    estimate = pescador.BufferedStreamer(gen_stream, buf_size)
 
-        estimate = list(__serialize_batches(estimate.generate()))
+    estimate = list(__serialize_batches(estimate.generate()))
 
-        T.__eq_lists(reference, estimate)
-
-    for dimension in [1, 2, 3]:
-        for batch_size in [1, 2, 5, 17]:
-            for buf_size in [1, 2, 5, 17, 100]:
-                yield __test, dimension, batch_size, buf_size
+    T.__eq_lists(reference, estimate)
 
 
-def test_batch_length():
-    def __test(generator, n):
+@pytest.mark.parametrize('n1', [5, 10, 15])
+@pytest.mark.parametrize('n2', [5, 10, 15])
+def test_batch_length__not_equal(n1, n2):
+    if n1 != n2:
+        generator, n = T.__zip_generator(3, n1, n2), n1
+
+        with pytest.raises(pescador.PescadorError):
+            for batch in generator:
+                assert pescador.buffered.batch_length(batch) == n
+
+
+@pytest.mark.parametrize('n1', [5, 10, 15])
+@pytest.mark.parametrize('n2', [5, 10, 15])
+def test_batch_length__equal(n1, n2):
+    if n1 == n2:
+        generator, n = T.__zip_generator(3, n1, n2), n1
+
         for batch in generator:
-            T.eq_(pescador.buffered.batch_length(batch), n)
-
-    for n1 in [5, 10, 15]:
-        for n2 in [5, 10, 15]:
-            if n1 != n2:
-                test = raises(pescador.PescadorError)(__test)
-            else:
-                test = __test
-            yield test, T.__zip_generator(3, n1, n2), n1
+            assert pescador.buffered.batch_length(batch) == n
 
 
-def test_buffer_batch():
-
+@pytest.mark.parametrize('dimension', [1, 2, 3])
+@pytest.mark.parametrize('batch_size', [1, 2, 5, 17])
+@pytest.mark.parametrize('buf_size', [1, 2, 5, 17, 100])
+def test_buffer_batch(dimension, batch_size, buf_size):
     def __serialize_batches(batches):
-
         for batch in batches:
             for item in batch['X']:
                 yield item
 
-    def __test(dimension, n_batch, n_buf):
-        reference = T.md_generator(dimension, 50, size=n_batch)
+    reference = T.md_generator(dimension, 50, size=batch_size)
 
-        reference = list(__serialize_batches(reference))
+    reference = list(__serialize_batches(reference))
 
-        estimate = pescador.buffer_batch(T.md_generator(dimension,
-                                                        50,
-                                                        size=n_batch),
-                                         n_buf)
+    estimate = pescador.buffer_batch(T.md_generator(dimension,
+                                                    50,
+                                                    size=batch_size),
+                                     buf_size)
 
-        estimate = list(__serialize_batches(estimate))
+    estimate = list(__serialize_batches(estimate))
 
-        T.__eq_lists(reference, estimate)
-
-    for dimension in [1, 2, 3]:
-        for batch_size in [1, 2, 5, 17]:
-            for buf_size in [1, 2, 5, 17, 100]:
-                yield __test, dimension, batch_size, buf_size
+    T.__eq_lists(reference, estimate)

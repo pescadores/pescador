@@ -2,8 +2,6 @@ import six
 import time
 import numpy as np
 
-from nose.tools import raises, eq_
-
 
 def __eq_batch(b1, b2):
 
@@ -13,7 +11,7 @@ def __eq_batch(b1, b2):
 
 def __eq_lists(b1, b2):
 
-    eq_(len(b1), len(b2))
+    assert len(b1) == len(b2)
 
     for i, j in zip(b1, b2):
         assert np.allclose(i, j)
