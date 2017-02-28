@@ -1,5 +1,4 @@
 import six
-from nose.tools import eq_
 import pescador
 import test_utils as T
 
