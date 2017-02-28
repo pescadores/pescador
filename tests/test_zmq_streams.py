@@ -17,7 +17,7 @@ def test_zmq():
 
         for _ in range(3):
             query = list(zmq_stream.generate())
-            eq_(len(reference), len(query))
+            assert len(reference) == len(query)
             for b1, b2 in zip(reference, query):
                 T.__eq_batch(b1, b2)
 
@@ -36,7 +36,7 @@ def test_zmq_align():
     zmq_stream = pescador.ZMQStreamer(stream)
     with warnings.catch_warnings(record=True) as out:
         query = list(zmq_stream.generate())
-        eq_(len(reference), len(query))
+        assert len(reference) == len(query)
 
         if six.PY2:
             assert len(out) > 0
