@@ -29,25 +29,17 @@ def test_buffer_streamer(dimension, batch_size, buf_size):
     T.__eq_lists(reference, estimate)
 
 
-@pytest.mark.parametrize('n1', [5, 10, 15])
-@pytest.mark.parametrize('n2', [5, 10, 15])
-def test_batch_length__not_equal(n1, n2):
-    if n1 != n2:
-        generator, n = T.__zip_generator(3, n1, n2), n1
+@pytest.mark.parametrize(
+    'n1,n2', [pytest.mark.xfail((5, 10), raises=pescador.PescadorError),
+              pytest.mark.xfail((5, 15), raises=pescador.PescadorError),
+              pytest.mark.xfail((10, 5), raises=pescador.PescadorError),
+              pytest.mark.xfail((15, 5), raises=pescador.PescadorError),
+              (5, 5), (10, 10), (15, 15)])
+def test_batch_length(n1, n2):
+    generator, n = T.__zip_generator(3, n1, n2), n1
 
-        with pytest.raises(pescador.PescadorError):
-            for batch in generator:
-                assert pescador.buffered.batch_length(batch) == n
-
-
-@pytest.mark.parametrize('n1', [5, 10, 15])
-@pytest.mark.parametrize('n2', [5, 10, 15])
-def test_batch_length__equal(n1, n2):
-    if n1 == n2:
-        generator, n = T.__zip_generator(3, n1, n2), n1
-
-        for batch in generator:
-            assert pescador.buffered.batch_length(batch) == n
+    for batch in generator:
+        assert pescador.buffered.batch_length(batch) == n
 
 
 @pytest.mark.parametrize('dimension', [1, 2, 3])
