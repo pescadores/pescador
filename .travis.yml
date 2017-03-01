@@ -26,7 +26,7 @@ install:
     - pip install -e .
 
 script:
-    - nosetests -v -w tests/ --with-coverage --cover-erase --cover-package=pescador
+    - py.test -v --cov-report= --cov=pescador tests/
 
 after_success:
     - coveralls

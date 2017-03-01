@@ -1,4 +1,4 @@
-from nose.tools import raises, eq_
+import pytest
 
 import numpy as np
 
@@ -14,47 +14,42 @@ def test_mux_single():
 
     mux = pescador.mux.Mux([stream], 1, with_replacement=False)
     estimate = mux.generate()
-    eq_(list(reference), list(estimate))
+    assert list(reference) == list(estimate)
 
 
-@raises(pescador.PescadorError)
 def test_mux_empty():
-
-    list(pescador.mux.Mux([], 1).generate())
-
-
-def test_mux_weighted():
-
-    def __test(weight):
-        reference = list(T.finite_generator(50))
-        noise = list(T.finite_generator(50, size=1))
-        stream = pescador.Streamer(reference)
-        stream2 = pescador.Streamer(noise)
-        mux = pescador.mux.Mux([stream, stream2], 2,
-                               pool_weights=[1.0, weight],
-                               with_replacement=False)
-        estimate = mux.generate()
-        eq_(list(reference), list(estimate))
-
-    yield __test, 0.0
-    yield raises(AssertionError)(__test), 0.5
+    with pytest.raises(pescador.PescadorError):
+        list(pescador.mux.Mux([], 1).generate())
 
 
-def test_mux_rare():
+@pytest.mark.parametrize('weight', [0.0, 0.5])
+def test_mux_weighted(weight):
+    reference = list(T.finite_generator(50))
+    noise = list(T.finite_generator(50, size=1))
+    stream = pescador.Streamer(reference)
+    stream2 = pescador.Streamer(noise)
+    mux = pescador.mux.Mux([stream, stream2], 2,
+                           pool_weights=[1.0, weight],
+                           with_replacement=False)
+    estimate = mux.generate()
+    if weight == 0.0:
+        assert list(reference) == list(estimate)
+    else:
+        assert list(reference) != list(estimate)
 
-    def __test(weight):
-        reference = list(T.finite_generator(50))
-        noise = list(T.finite_generator(50, size=1))
-        stream = pescador.Streamer(reference)
-        stream2 = pescador.Streamer(noise)
-        mux = pescador.mux.Mux([stream, stream2], 2,
-                               pool_weights=weight,
-                               with_replacement=False)
-        estimate = mux.generate()
-        eq_(list(reference) + list(noise), list(estimate))
 
-    # This should give us all the reference before all the noise
-    yield __test, [1e10, 1e-10]
+# This should give us all the reference before all the noise
+@pytest.mark.parametrize('weight', ([1e10, 1e-10],))
+def test_mux_rare(weight):
+    reference = list(T.finite_generator(50))
+    noise = list(T.finite_generator(50, size=1))
+    stream = pescador.Streamer(reference)
+    stream2 = pescador.Streamer(noise)
+    mux = pescador.mux.Mux([stream, stream2], 2,
+                           pool_weights=weight,
+                           with_replacement=False)
+    estimate = mux.generate()
+    assert (list(reference) + list(noise)) == list(estimate)
 
 
 def test_empty_seeds():
@@ -73,71 +68,59 @@ def test_empty_seeds():
     estimate = list(estimate)
 
     ref = list(reference.generate())
-    eq_(len(ref), len(estimate))
+    assert len(ref) == len(estimate)
     for b1, b2 in zip(ref, estimate):
         T.__eq_batch(b1, b2)
 
 
-def test_mux_replacement():
+@pytest.mark.parametrize('n_streams', [1, 2, 4])
+@pytest.mark.parametrize('n_samples', [10, 20, 80])
+@pytest.mark.parametrize('k', [1, 2, 4])
+@pytest.mark.parametrize('lam', [1.0, 2.0, 8.0])
+def test_mux_replacement(n_streams, n_samples, k, lam):
+    seeds = [pescador.Streamer(T.infinite_generator)
+             for _ in range(n_streams)]
 
-    def __test(n_streams, n_samples, k, lam):
+    mux = pescador.mux.Mux(seeds, k, lam=lam)
 
-        seeds = [pescador.Streamer(T.infinite_generator)
-                 for _ in range(n_streams)]
+    estimate = list(mux.generate(n_samples))
 
-        mux = pescador.mux.Mux(seeds, k, lam=lam)
-
-        estimate = list(mux.generate(n_samples))
-
-        # Make sure we get the right number of samples
-        eq_(len(estimate), n_samples)
-
-    for n_streams in [1, 2, 4]:
-        for n_samples in [10, 20, 80]:
-            for k in [1, 2, 4]:
-                for lam in [1.0, 2.0, 8.0]:
-                        yield __test, n_streams, n_samples, k, lam
+    # Make sure we get the right number of samples
+    assert len(estimate) == n_samples
 
 
-def test_mux_revive():
+@pytest.mark.parametrize('n_streams', [1, 2, 4])
+@pytest.mark.parametrize('n_samples', [512])
+@pytest.mark.parametrize('k', [1, 2, 4])
+@pytest.mark.parametrize('lam', [1.0, 2.0, 4.0])
+def test_mux_revive(n_streams, n_samples, k, lam):
+    seeds = [pescador.Streamer(T.finite_generator, 10)
+             for _ in range(n_streams)]
 
-    def __test(n_streams, n_samples, k, lam):
+    mux = pescador.mux.Mux(seeds, k, lam=lam,
+                           with_replacement=False,
+                           revive=True)
 
-        seeds = [pescador.Streamer(T.finite_generator, 10)
-                 for _ in range(n_streams)]
+    estimate = list(mux.generate(n_samples))
 
-        mux = pescador.mux.Mux(seeds, k, lam=lam,
-                               with_replacement=False,
-                               revive=True)
-
-        estimate = list(mux.generate(n_samples))
-
-        # Make sure we get the right number of samples
-        # This is highly improbable when revive=False
-        eq_(len(estimate), n_samples)
-
-    for n_streams in [1, 2, 4]:
-        for n_samples in [512]:
-            for k in [1, 2, 4]:
-                for lam in [1.0, 2.0, 4.0]:
-                    yield __test, n_streams, n_samples, k, lam
+    # Make sure we get the right number of samples
+    # This is highly improbable when revive=False
+    assert len(estimate) == n_samples
 
 
-@raises(pescador.PescadorError)
 def test_mux_bad_pool():
+    with pytest.raises(pescador.PescadorError):
+        seeds = [pescador.Streamer(T.finite_generator, 10)
+                 for _ in range(5)]
 
-    seeds = [pescador.Streamer(T.finite_generator, 10)
-             for _ in range(5)]
-
-    # 5 seeds, 10 weights, should trigger an error
-    M = pescador.Mux(seeds, None, pool_weights=np.random.randn(10))
+        # 5 seeds, 10 weights, should trigger an error
+        M = pescador.Mux(seeds, None, pool_weights=np.random.randn(10))
 
 
-@raises(pescador.PescadorError)
 def test_mux_bad_weights():
+    with pytest.raises(pescador.PescadorError):
+        seeds = [pescador.Streamer(T.finite_generator, 10)
+                 for _ in range(5)]
 
-    seeds = [pescador.Streamer(T.finite_generator, 10)
-             for _ in range(5)]
-
-    # 5 seeds, all-zeros weight vector should trigger an error
-    M = pescador.Mux(seeds, None, pool_weights=np.zeros(5))
+        # 5 seeds, all-zeros weight vector should trigger an error
+        M = pescador.Mux(seeds, None, pool_weights=np.zeros(5))
