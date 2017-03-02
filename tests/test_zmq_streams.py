@@ -32,7 +32,7 @@ def test_zmq_tuple(items):
     stream = pescador.Streamer(T.md_generator, 2, 50, items=items)
     reference = list(stream.generate())
 
-    zmq_stream = pescador.ZMQStreamer(stream)
+    zmq_stream = pescador.ZMQStreamer(stream, timeout=5)
 
     estimate = list(zmq_stream.tuples(*items))
 

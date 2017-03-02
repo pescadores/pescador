@@ -29,9 +29,11 @@ def md_generator(dimension, n, size=2, items='X'):
 
     shape = [size] * dimension
 
+    M = len(items)
     for i in range(n):
 
-        yield {item: i * np.ones(shape)[np.newaxis] for item in items}
+        yield {item: i * M * np.ones(shape)[np.newaxis] + j
+               for j, item in enumerate(items)}
 
 
 def infinite_generator(size=2):
