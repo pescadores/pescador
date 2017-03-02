@@ -21,6 +21,23 @@ def test_streamer_list():
         T.__eq_batch(b1, b2)
 
 
+@pytest.mark.parametrize('items',
+                         [['X'], ['Y'], ['X', 'Y'], ['Y', 'X'],
+                          pytest.mark.xfail([],
+                                            raises=pescador.PescadorError)])
+def test_streamer_tuple(items):
+
+    reference = [tuple(batch[it] for it in items)
+                 for batch in T.__zip_generator(10, 2, 3)]
+
+    query = list(pescador.Streamer(T.__zip_generator, 10, 2, 3).tuples(*items))
+
+    assert len(reference) == len(query)
+    for b1, b2 in zip(reference, query):
+        assert isinstance(b2, tuple)
+        T.__eq_lists(b1, b2)
+
+
 @pytest.mark.parametrize('n_max', [None, 10, 50, 100])
 @pytest.mark.parametrize('stream_size', [1, 2, 7])
 def test_streamer_finite(n_max, stream_size):

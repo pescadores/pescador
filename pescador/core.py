@@ -121,13 +121,13 @@ class Streamer(object):
         max_batches : None or int > 0
             Maximum number of batches to yield.
             If ``None``, exhaust the generator.
-            If the stream is finite, the generator
-            will be exausted when it complete. Call generate again,
-            or use cycle to force an infinite stream.
+            If the stream is finite, the generator will be
+            exhausted when it completes.
+            Call generate again, or use cycle to force an infinite stream.
 
         Yields
         ------
-        batch
+        batch : dict
             Items from the contained generator
             If `max_batches` is an integer, then at most
             `max_batches` are generated.
@@ -154,3 +154,44 @@ class Streamer(object):
         while True:
             for item in self.generate():
                 yield item
+
+    def tuples(self, *items, max_batches=None):
+        '''Generate data in tuple-form instead of dicts.
+
+        This is useful for interfacing with Keras's generator system,
+        which requires iterates to be provided as tuples.
+
+        Parameters
+        ----------
+        *items
+            One or more dictionary keys.
+            The generated tuples will correspond to
+            `(batch[item1], batch[item2], ..., batch[itemk])`
+            where `batch` is a single iterate produced by the
+            streamer.
+
+        max_batches : None or int > 0
+            Maximum number of batches to yield.
+            If ``None``, exhaust the generator.
+            If the stream is finite, the generator will be
+            exhausted when it completes.
+            Call generate again, or use cycle to force an infinite stream.
+
+        Yields
+        ------
+        batch : tuple
+            Items from the contained generator
+            If `max_batches` is an integer, then at most
+            `max_batches` are generated.
+
+        See Also
+        --------
+        generate
+        '''
+
+        if not items:
+            raise PescadorError('Unable to generate tuples from '
+                                'an empty item set')
+
+        for data in self.generate(max_batches=max_batches):
+            yield tuple(data[item] for item in items)
