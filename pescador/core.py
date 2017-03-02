@@ -170,6 +170,12 @@ class Streamer(object):
             where `batch` is a single iterate produced by the
             streamer.
 
+        cycle : bool
+            If `True`, then data is generated infinitely
+            using the `cycle` method.
+            Otherwise, data is generated according to the
+            `generate` method.
+
         max_batches : None or int > 0
             Maximum number of batches to yield.
             If ``None``, exhaust the generator.
@@ -187,11 +193,16 @@ class Streamer(object):
         See Also
         --------
         generate
+        cycle
         '''
 
         if not items:
             raise PescadorError('Unable to generate tuples from '
                                 'an empty item set')
 
-        for data in self.generate(**kwargs):
-            yield tuple(data[item] for item in items)
+        if kwargs.pop('cycle', False):
+            for data in self.cycle():
+                yield tuple(data[item] for item in items)
+        else:
+            for data in self.generate(**kwargs):
+                yield tuple(data[item] for item in items)
