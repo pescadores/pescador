@@ -155,7 +155,7 @@ class Streamer(object):
             for item in self.generate():
                 yield item
 
-    def tuples(self, *items, max_batches=None):
+    def tuples(self, *items, **kwargs):
         '''Generate data in tuple-form instead of dicts.
 
         This is useful for interfacing with Keras's generator system,
@@ -193,5 +193,5 @@ class Streamer(object):
             raise PescadorError('Unable to generate tuples from '
                                 'an empty item set')
 
-        for data in self.generate(max_batches=max_batches):
+        for data in self.generate(**kwargs):
             yield tuple(data[item] for item in items)
