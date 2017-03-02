@@ -17,6 +17,25 @@ def test_mux_single():
     assert list(reference) == list(estimate)
 
 
+@pytest.mark.parametrize('items',
+                         [['X'], ['Y'], ['X', 'Y'], ['Y', 'X'],
+                          pytest.mark.xfail([],
+                                            raises=pescador.PescadorError)])
+def test_mux_single_tuple(items):
+
+    stream = pescador.Streamer(T.md_generator, 2, 50, items=items)
+    reference = list(stream.generate())
+
+    mux = pescador.mux.Mux([stream], 1, with_replacement=False)
+    estimate = list(mux.tuples(*items))
+
+    assert len(reference) == len(estimate)
+    for r, e in zip(reference, estimate):
+        assert isinstance(e, tuple)
+        for item, value in zip(items, e):
+            assert np.allclose(r[item], value)
+
+
 def test_mux_empty():
     with pytest.raises(pescador.PescadorError):
         list(pescador.mux.Mux([], 1).generate())
