@@ -121,13 +121,13 @@ class Streamer(object):
         max_batches : None or int > 0
             Maximum number of batches to yield.
             If ``None``, exhaust the generator.
-            If the stream is finite, the generator
-            will be exausted when it complete. Call generate again,
-            or use cycle to force an infinite stream.
+            If the stream is finite, the generator will be
+            exhausted when it completes.
+            Call generate again, or use cycle to force an infinite stream.
 
         Yields
         ------
-        batch
+        batch : dict
             Items from the contained generator
             If `max_batches` is an integer, then at most
             `max_batches` are generated.
@@ -154,3 +154,55 @@ class Streamer(object):
         while True:
             for item in self.generate():
                 yield item
+
+    def tuples(self, *items, **kwargs):
+        '''Generate data in tuple-form instead of dicts.
+
+        This is useful for interfacing with Keras's generator system,
+        which requires iterates to be provided as tuples.
+
+        Parameters
+        ----------
+        *items
+            One or more dictionary keys.
+            The generated tuples will correspond to
+            `(batch[item1], batch[item2], ..., batch[itemk])`
+            where `batch` is a single iterate produced by the
+            streamer.
+
+        cycle : bool
+            If `True`, then data is generated infinitely
+            using the `cycle` method.
+            Otherwise, data is generated according to the
+            `generate` method.
+
+        max_batches : None or int > 0
+            Maximum number of batches to yield.
+            If ``None``, exhaust the generator.
+            If the stream is finite, the generator will be
+            exhausted when it completes.
+            Call generate again, or use cycle to force an infinite stream.
+
+        Yields
+        ------
+        batch : tuple
+            Items from the contained generator
+            If `max_batches` is an integer, then at most
+            `max_batches` are generated.
+
+        See Also
+        --------
+        generate
+        cycle
+        '''
+
+        if not items:
+            raise PescadorError('Unable to generate tuples from '
+                                'an empty item set')
+
+        if kwargs.pop('cycle', False):
+            for data in self.cycle():
+                yield tuple(data[item] for item in items)
+        else:
+            for data in self.generate(**kwargs):
+                yield tuple(data[item] for item in items)

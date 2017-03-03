@@ -1,3 +1,5 @@
+import pytest
+import numpy as np
 import six
 import pescador
 import test_utils as T
@@ -6,24 +8,39 @@ import warnings
 warnings.simplefilter('always')
 
 
-def test_zmq():
+@pytest.mark.parametrize('copy', [False, True])
+@pytest.mark.parametrize('timeout', [None, 0.5, 2, 5])
+def test_zmq(copy, timeout):
+    stream = pescador.Streamer(T.finite_generator, 200, size=3, lag=0.001)
+    reference = list(stream.generate())
 
-    def __test(copy, timeout):
-        stream = pescador.Streamer(T.finite_generator, 200, size=3, lag=0.001)
+    zmq_stream = pescador.ZMQStreamer(stream, copy=copy, timeout=timeout)
 
-        reference = list(stream.generate())
+    for _ in range(3):
+        query = list(zmq_stream.generate())
+        assert len(reference) == len(query)
+        for b1, b2 in zip(reference, query):
+            T.__eq_batch(b1, b2)
 
-        zmq_stream = pescador.ZMQStreamer(stream, copy=copy, timeout=timeout)
 
-        for _ in range(3):
-            query = list(zmq_stream.generate())
-            assert len(reference) == len(query)
-            for b1, b2 in zip(reference, query):
-                T.__eq_batch(b1, b2)
+@pytest.mark.parametrize('items',
+                         [['X'], ['Y'], ['X', 'Y'], ['Y', 'X'],
+                          pytest.mark.xfail([],
+                                            raises=pescador.PescadorError)])
+def test_zmq_tuple(items):
 
-    for copy in [False, True]:
-        for timeout in [None, 0.5, 2, 5]:
-            yield __test, copy, timeout
+    stream = pescador.Streamer(T.md_generator, 2, 50, items=items)
+    reference = list(stream.generate())
+
+    zmq_stream = pescador.ZMQStreamer(stream, timeout=None)
+
+    estimate = list(zmq_stream.tuples(*items))
+
+    assert len(reference) == len(estimate)
+    for r, e in zip(reference, estimate):
+        assert isinstance(e, tuple)
+        for item, value in zip(items, e):
+            assert np.allclose(r[item], value)
 
 
 def test_zmq_align():

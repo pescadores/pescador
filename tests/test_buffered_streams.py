@@ -2,6 +2,7 @@
 
 import pytest
 import pescador
+import numpy as np
 
 import test_utils as T
 
@@ -27,6 +28,29 @@ def test_buffer_streamer(dimension, batch_size, buf_size):
     estimate = list(__serialize_batches(estimate.generate()))
 
     T.__eq_lists(reference, estimate)
+
+
+@pytest.mark.parametrize('items',
+                         [['X'], ['Y'], ['X', 'Y'], ['Y', 'X'],
+                          pytest.mark.xfail([],
+                                            raises=pescador.PescadorError)])
+@pytest.mark.parametrize('dimension', [1, 2, 3])
+@pytest.mark.parametrize('batch_size', [1, 2, 5, 17])
+@pytest.mark.parametrize('buf_size', [1, 2, 5, 17, 100])
+def test_buffer_streamer_tuple(dimension, batch_size, buf_size, items):
+
+    gen_stream = pescador.Streamer(T.md_generator, dimension, 50,
+                                   size=batch_size, items=items)
+
+    buf = pescador.BufferedStreamer(gen_stream, buf_size)
+    estimate = list(buf.tuples(*items))
+    reference = list(buf.generate())
+
+    for b, t in zip(reference, estimate):
+        assert isinstance(t, tuple)
+        assert len(t) == len(items)
+        for item, ti in zip(items, t):
+            assert np.allclose(b[item], ti)
 
 
 @pytest.mark.parametrize(

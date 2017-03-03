@@ -25,12 +25,15 @@ def finite_generator(n, size=2, lag=None):
             time.sleep(lag)
 
 
-def md_generator(dimension, n, size=2):
+def md_generator(dimension, n, size=2, items='X'):
 
     shape = [size] * dimension
 
+    M = len(items)
     for i in range(n):
-        yield {'X': i * np.ones(shape)[np.newaxis]}
+
+        yield {item: i * M * np.ones(shape)[np.newaxis] + j
+               for j, item in enumerate(items)}
 
 
 def infinite_generator(size=2):
