@@ -36,6 +36,7 @@ extensions = [
     'sphinx.ext.viewcode',
     'sphinx.ext.doctest',
     'numpydoc',
+    'sphinx_gallery.gen_gallery'
 ]
 
 from glob import glob
@@ -276,9 +277,9 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-  ('index', 'pescador', u'pescador Documentation',
-   authors, 'pescador', 'One line description of project.',
-   'Miscellaneous'),
+    ('index', 'pescador', u'pescador Documentation',
+     authors, 'pescador', 'One line description of project.',
+     'Miscellaneous'),
 ]
 
 # Documents to append as an appendix to all manuals.
@@ -294,3 +295,10 @@ texinfo_documents = [
 #texinfo_no_detailmenu = False
 
 
+# Configuration for sphinx-gallery
+sphinx_gallery_confg = {
+    # Path to examples scripts
+    'examples_dirs': '../examples',
+    # Path to where to save gallery generated examples
+    'gallery_dirs': 'auto_examples'
+}
