@@ -187,7 +187,7 @@ class ZMQStreamer(Streamer):
             worker.start()
 
             # Yield from the queue as long as it's open
-            while worker.is_alive():
+            while True:
                 yield zmq_recv_batch(socket)
 
         except StopIteration:
