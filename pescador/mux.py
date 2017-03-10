@@ -23,7 +23,8 @@ class Mux(core.Streamer):
 
     def __init__(self, seed_pool, k,
                  lam=256.0, pool_weights=None, with_replacement=True,
-                 prune_empty_seeds=True, revive=False):
+                 prune_empty_seeds=True, revive=False,
+                 random_state=None):
         """Given an array of Streamer objects, do the following:
 
         1. Select ``k`` seeds at random to activate
@@ -72,6 +73,14 @@ class Mux(core.Streamer):
 
             This configuration allows a seed to be active at most once at any
             time.
+
+        random_state : None, int, or np.random.RandomState
+            If int, random_state is the seed used by the random number generator;
+
+            If RandomState instance, random_state is the random number generator;
+
+            If None, the random number generator is the RandomState instance used
+            by np.random.
         """
         self.seed_pool = seed_pool
         self.n_seeds = len(seed_pool)
@@ -83,6 +92,15 @@ class Mux(core.Streamer):
         self.revive = revive
 
         self.deactivate()
+
+        if random_state is None:
+            self.rng = np.random
+        elif isinstance(random_state, int):
+            self.rng = np.random.RandomState(seed=random_state)
+        elif isinstance(random_state, np.random.RandomState):
+            self.rng = random_state
+        else:
+            raise PescadorError('Invalid random_state={}'.format(random_state))
 
         if not self.n_seeds:
             raise PescadorError('Cannot mux an empty seed-pool')
@@ -119,7 +137,7 @@ class Mux(core.Streamer):
             if not (self.seed_distribution > 0).any():
                 break
 
-            self.stream_idxs_[idx] = np.random.choice(
+            self.stream_idxs_[idx] = self.rng.choice(
                 self.n_seeds, p=self.seed_distribution)
             self.streams_[idx], self.stream_weights_[idx] = (
                 self.generate_new_seed(self.stream_idxs_[idx]))
@@ -144,7 +162,7 @@ class Mux(core.Streamer):
 
             while n < max_batches and self.weight_norm_ > 0.0:
                 # Pick a stream from the active set
-                idx = np.random.choice(self.k, p=(self.stream_weights_ /
+                idx = self.rng.choice(self.k, p=(self.stream_weights_ /
                                                   self.weight_norm_))
 
                 # Can we sample from it?
@@ -180,7 +198,7 @@ class Mux(core.Streamer):
                         self.seed_distribution[:] /= np.sum(
                             self.seed_distribution)
 
-                        self.stream_idxs_[idx] = np.random.choice(
+                        self.stream_idxs_[idx] = self.rng.choice(
                             self.n_seeds, p=self.seed_distribution)
 
                         self.streams_[idx], self.stream_weights_[idx] = (
@@ -213,7 +231,7 @@ class Mux(core.Streamer):
 
         # instantiate
         if self.lam is not None:
-            n_stream = 1 + np.random.poisson(lam=self.lam)
+            n_stream = 1 + self.rng.poisson(lam=self.lam)
         else:
             n_stream = None
 

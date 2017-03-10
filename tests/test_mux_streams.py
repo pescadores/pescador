@@ -96,11 +96,17 @@ def test_empty_seeds():
 @pytest.mark.parametrize('n_samples', [10, 20, 80])
 @pytest.mark.parametrize('k', [1, 2, 4])
 @pytest.mark.parametrize('lam', [1.0, 2.0, 8.0])
-def test_mux_replacement(n_streams, n_samples, k, lam):
+@pytest.mark.parametrize('random_state',
+                         [None,
+                          1000,
+                          np.random.RandomState(seed=1000),
+                          pytest.mark.xfail('foo',
+                                            raises=pescador.PescadorError)])
+def test_mux_replacement(n_streams, n_samples, k, lam, random_state):
     seeds = [pescador.Streamer(T.infinite_generator)
              for _ in range(n_streams)]
 
-    mux = pescador.mux.Mux(seeds, k, lam=lam)
+    mux = pescador.mux.Mux(seeds, k, lam=lam, random_state=random_state)
 
     estimate = list(mux.generate(n_samples))
 
