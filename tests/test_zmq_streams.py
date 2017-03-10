@@ -66,3 +66,29 @@ def test_zmq_align():
                 continue
             for key in b2:
                 assert b2[key].flags['ALIGNED']
+
+
+@pytest.mark.xfail(raises=pescador.PescadorError)
+def test_zmq_bad_type():
+
+    def __bad_generator():
+
+        for _ in range(100):
+            yield dict(X=list(range(100)))
+
+    stream = pescador.Streamer(__bad_generator)
+
+    zs = pescador.ZMQStreamer(stream)
+
+    for item in zs.generate():
+        pass
+
+
+def test_zmq_early_stop():
+    stream = pescador.Streamer(T.finite_generator, 200, size=3, lag=0.001)
+
+    zmq_stream = pescador.ZMQStreamer(stream)
+
+    # Only sample five batches
+    for item in zip(zmq_stream.generate(), range(5)):
+        pass
