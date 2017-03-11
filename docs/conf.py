@@ -32,12 +32,30 @@ extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.autosummary',
     'sphinx.ext.intersphinx',
-    'sphinx.ext.coverage',
-    'sphinx.ext.viewcode',
-    'sphinx.ext.doctest',
+    # 'sphinx.ext.coverage',
+    # 'sphinx.ext.viewcode',
+    # 'sphinx.ext.doctest',
     'numpydoc',
-    'sphinx_gallery.gen_gallery'
+    'sphinx_gallery.gen_gallery',
 ]
+
+# Configuration for sphinx-gallery
+sphinx_gallery_confg = {
+    # Path to examples scripts
+    'examples_dirs': '../examples',
+    # Path to where to save gallery generated examples
+    'gallery_dirs': 'auto_examples',
+    'reference_url': {
+        'sphinx_gallery': None,
+        'numpy': 'http://docs.scipy.org/doc/numpy/',
+        'np': 'http://docs.scipy.org/doc/numpy/',
+        'scipy': 'http://docs.scipy.org/doc/scipy/reference/',
+        'matplotlib': 'http://matplotlib.org/',
+        'sklearn': 'http://scikit-learn.org/stable/',
+        'keras': 'https://keras.io/',
+        'theano': 'http://deeplearning.net/software/theano/'
+    }
+}
 
 from glob import glob
 autosummary_generate = glob('*.rst')
@@ -95,7 +113,7 @@ relaese = pescador_version.version
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
-exclude_patterns = ['_build']
+exclude_patterns = ['_build', '.DS_Store']
 
 # The reST default role (used for this markup: `text`) to use for all
 # documents.
@@ -294,11 +312,3 @@ texinfo_documents = [
 # If true, do not generate a @detailmenu in the "Top" node's menu.
 #texinfo_no_detailmenu = False
 
-
-# Configuration for sphinx-gallery
-sphinx_gallery_confg = {
-    # Path to examples scripts
-    'examples_dirs': '../examples',
-    # Path to where to save gallery generated examples
-    'gallery_dirs': 'auto_examples'
-}
