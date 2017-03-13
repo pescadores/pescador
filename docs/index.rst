@@ -34,6 +34,7 @@ Basic Usage
     example1
     example2
     example3
+    bufferedstreaming
 
 Examples
 --------
