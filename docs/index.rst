@@ -26,7 +26,7 @@ On top of this basic functionality, pescador provides the following tools:
 For examples of each of these use-cases, refer to the :ref:`Examples` section.
 
 
-Basic Concepts
+Basic Usage
 --------------
 .. toctree::
     :maxdepth: 2
@@ -37,9 +37,10 @@ Basic Concepts
 
 Examples
 --------
-.. _examples:
-    auto_examples/index
+.. toctree::
+    :maxdepth: 2
 
+    auto_examples/index
 
 API Reference
 -------------
