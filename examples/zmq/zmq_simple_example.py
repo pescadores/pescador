@@ -2,11 +2,13 @@
 ==================
 Simple ZMQ Example
 ==================
-A trivial ZMQ example.
+An example of how to use a ZMQStreamer to generate samples,
+with some small benchmarks along the way.
 """
 
 import numpy as np
 import pescador
+import time
 
 
 def batch_gen():
@@ -17,9 +19,18 @@ def batch_gen():
         A batch which looks like it might come from some
         machine learning problem, with X as Features, and Y as targets.
     """
-    yield dict(X=np.random.random((1, 10)),
-               Y=np.random.randint(10))
+    while True:
+        # For both of these, the first dimension is the number of samples.
+        # Therefore, we have to force the target to be of 2 dimensions.
+        yield dict(X=np.random.random((1, 10)),
+                   Y=np.atleast_2d(np.random.randint(10)))
 
+
+n_test_batches = 1e3
+
+##############################################
+# Basic ZMQ Usage
+##############################################
 
 # Construct a streamer
 s = pescador.Streamer(batch_gen)
@@ -28,23 +39,33 @@ s = pescador.Streamer(batch_gen)
 zs = pescador.ZMQStreamer(s)
 
 # Get batches from the stream as you would normally.
+t0 = time.time()
 batch_count = 0
-for batch in zs.generate(max_batches=10):
-    batch_count += len(batch)
+for batch in zs.generate(max_batches=n_test_batches):
+    batch_count += len(batch['X'])
 
     # Train your network, etc.
+duration = time.time() - t0
+print("Generated {} samples from ZMQ\n\t"
+      "in {:.5f}s ({:.5f} / sample)".format(
+          batch_count, duration, duration / batch_count))
 
-print("Generated {} batches from ZMQ".format(batch_count))
-
+##############################################
+# Buffering ZMQ
+##############################################
 # Now, you could also wrap the ZMQStreamer in a BufferedStreamer, like so:
 buffer_size = 10
 buffered_zmq = pescador.BufferedStreamer(zs, buffer_size)
 
 # Get batches from the stream as you would normally.
+iter_count = 0
 batch_count = 0
-for batch in zs.generate(max_batches=10):
-    batch_count += len(batch)
+t0 = time.time()
+for batch in buffered_zmq.generate(max_batches=n_test_batches):
+    iter_count += 1
+    batch_count += len(batch['X'])
 
-    print("Received {} batches.")
-
-print("Generated {} batches from Buffered ZMQ Streamer".format(batch_count))
+duration = time.time() - t0
+print("Generated {} batches of {} samples from Buffered ZMQ Streamer"
+      "\n\tin {:.5f}s ({:.5f} / sample)".format(
+          iter_count, batch_count, duration, duration / batch_count))
