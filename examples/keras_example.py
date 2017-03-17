@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 ===============
 A Keras Example
@@ -15,7 +16,7 @@ import numpy as np
 from keras.datasets import mnist
 from keras.models import Sequential
 from keras.layers import Dense, Dropout, Activation, Flatten
-from keras.layers import Convolution2D, MaxPooling2D
+from keras.layers import Conv2D, MaxPooling2D
 from keras.utils import np_utils
 from keras import backend as K
 
@@ -23,12 +24,12 @@ import pescador
 
 batch_size = 128
 nb_classes = 10
-nb_epoch = 6
+num_epochs = 6
 
 # input image dimensions
 img_rows, img_cols = 28, 28
 # number of convolutional filters to use
-nb_filters = 32
+n_filters = 32
 # size of pooling area for max pooling
 pool_size = (2, 2)
 # convolution kernel size
@@ -66,11 +67,11 @@ def setup_data():
 def build_model(input_shape):
     model = Sequential()
 
-    model.add(Convolution2D(nb_filters, kernel_size[0], kernel_size[1],
-                            border_mode='valid',
-                            input_shape=input_shape))
+    model.add(Conv2D(n_filters, kernel_size=kernel_size,
+                     padding='valid',
+                     input_shape=input_shape))
     model.add(Activation('relu'))
-    model.add(Convolution2D(nb_filters, kernel_size[0], kernel_size[1]))
+    model.add(Conv2D(n_filters, kernel_size=kernel_size))
     model.add(Activation('relu'))
     model.add(MaxPooling2D(pool_size=pool_size))
     model.add(Dropout(0.25))
@@ -113,7 +114,7 @@ def noisy_generator(X, y, scale=1e-1):
 
 
 input_shape, (X_train, Y_train), (X_test, Y_test) = setup_data()
-samples_per_epoch = len(X_train)
+steps_per_epoch = len(X_train) // batch_size
 
 # Create two streams from the same data, where one of the streams
 # adds a small amount of gaussian noise. You could easily perform
@@ -134,11 +135,11 @@ training_streamer = pescador.BufferedStreamer(mux, batch_size)
 model = build_model(input_shape)
 model.fit_generator(
     training_streamer.tuples('X', 'y', cycle=True),
-    samples_per_epoch=samples_per_epoch,
-    nb_epoch=nb_epoch,
+    steps_per_epoch=steps_per_epoch,
+    epochs=num_epochs,
     verbose=1,
     validation_data=(X_test, Y_test),
-    nb_val_samples=100)
+    validation_steps=100)
 
 score = model.evaluate(X_test, Y_test, verbose=0)
 print('Test score:', score[0])
