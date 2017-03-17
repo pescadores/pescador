@@ -2,6 +2,7 @@
 ==================
 Simple ZMQ Example
 ==================
+
 An example of how to use a ZMQStreamer to generate samples,
 with some small benchmarks along the way.
 """
@@ -67,5 +68,7 @@ for batch in buffered_zmq.generate(max_batches=n_test_batches):
 
 duration = time.time() - t0
 print("Generated {} batches of {} samples from Buffered ZMQ Streamer"
-      "\n\tin {:.5f}s ({:.5f} / sample)".format(
-          iter_count, batch_count, duration, duration / batch_count))
+      "\n\tin {:.5f}s ({:.5f} / sample)".format(iter_count,
+                                                batch_count,
+                                                duration,
+                                                duration / batch_count))
