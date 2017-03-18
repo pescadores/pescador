@@ -94,3 +94,17 @@ Here's a simple example, using the generator from the previous section.
 Iterating over `streamer.generate()` is equivalent to iterating over `noisy_samples(X[train], Y[train])`.
 
 Additionally, Streamer can be bounded easily by saying `streamer.generate(max_batches=N)` for some `N` maximum number of batches.
+
+Finally, because `generate()` is such a common operation with streamer objects, a short-hand interface is
+provided by treating the streamer object as if it was a generator:
+
+.. code-block:: python
+    :linenos:
+
+    import pescador
+
+    streamer = pescador.Streamer(noisy_samples, X[train], Y[train])
+
+    # Equivalent to batch_stream2 above
+    batch_stream3 = streamer()
+
