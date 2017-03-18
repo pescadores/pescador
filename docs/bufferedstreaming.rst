@@ -20,7 +20,7 @@ Following up on the first example, we use the `noisy_samples` generator.
     buffered_streamer = pescador.BufferedStreamer(streamer, minibatch_size)
 
     # Generate batches in exactly the same way as you would from the base streamer
-    for batch in streamer():
+    for batch in buffered_streamer():
         ...
 
 A few important points to note about using :ref:`BufferedStreamer`:

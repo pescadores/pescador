@@ -17,7 +17,7 @@ class Mux(core.Streamer):
     >>> # Multiplex them together into a single streamer
     >>> # Use at most 3 streams at once
     >>> mux = pescador.Mux(seeds, k=3)
-    >>> for batch in mux.generate():
+    >>> for batch in mux():
     ...     MY_FUNCTION(batch)
     '''
 

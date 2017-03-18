@@ -89,7 +89,7 @@ def zmq_worker(port, streamer, terminate, copy=False, max_batches=None):
 
     try:
         # Build the stream
-        for batch in streamer.generate(max_batches=max_batches):
+        for batch in streamer(max_batches=max_batches):
             zmq_send_batch(socket, batch, copy=copy)
             if terminate.is_set():
                 break
@@ -118,7 +118,7 @@ class ZMQStreamer(Streamer):
     >>> # Wrap the streamer in a ZMQ streamer
     >>> Z = pescador.ZMQStreamer(S)
     >>> # Process as normal
-    >>> for batch in Z.generate():
+    >>> for batch in Z():
     ...     MY_FUNCTION(batch)
     """
     def __init__(self, streamer,
@@ -161,7 +161,7 @@ class ZMQStreamer(Streamer):
         Yields
         ------
         batch
-            Data drawn from `streamer.generate(max_batches)`.
+            Data drawn from `streamer(max_batches)`.
         """
         context = zmq.Context()
 
