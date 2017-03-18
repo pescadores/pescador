@@ -75,12 +75,14 @@ class Mux(core.Streamer):
             time.
 
         random_state : None, int, or np.random.RandomState
-            If int, random_state is the seed used by the random number generator;
+            If int, random_state is the seed used by the random number
+            generator;
 
-            If RandomState instance, random_state is the random number generator;
+            If RandomState instance, random_state is the random number
+            generator;
 
-            If None, the random number generator is the RandomState instance used
-            by np.random.
+            If None, the random number generator is the RandomState instance
+            used by np.random.
         """
         self.seed_pool = seed_pool
         self.n_seeds = len(seed_pool)
