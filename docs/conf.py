@@ -57,6 +57,10 @@ sphinx_gallery_confg = {
     }
 }
 
+import matplotlib as mpl
+mpl.use('Agg')
+import matplotlib.pyplot as plt
+
 from glob import glob
 autosummary_generate = glob('*.rst')
 

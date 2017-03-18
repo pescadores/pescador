@@ -5,7 +5,7 @@ This document will walk through some advanced usage of pescador.
 We will assume a working understanding of the simple example in the previous section.
 
 Stream re-use and multiplexing
-================
+==============================
 
 The `Mux` streamer provides a powerful interface for randomly interleaving samples from multiple input streams. 
 `Mux` can also dynamically activate and deactivate individual `Streamers`, which allows it to operate on a bounded subset of streams at any given time.
