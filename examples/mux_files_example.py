@@ -52,9 +52,9 @@ def split_and_save_datasets(X, Y, paths):
 (X_train, Y_train), (X_test, Y_test) = load_mnist()
 split_and_save_datasets(X_train, Y_train, datasets)
 
-##############################################
+#################################################
 # Create Generator and Streams for each dataset.
-##############################################
+#################################################
 
 
 def npz_generator(npz_path):
