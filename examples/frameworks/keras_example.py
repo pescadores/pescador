@@ -97,7 +97,7 @@ def build_model(input_shape):
 ##############################################
 # To add a little bit of complexity, and show a little of what you could
 # do with Keras, we'll add an additional generator which simply
-# adds a little gaussian noise to the data.
+# adds a little Gaussian noise to the data.
 
 
 def data_generator(X, y):
@@ -135,7 +135,7 @@ input_shape, (X_train, Y_train), (X_test, Y_test) = setup_data()
 steps_per_epoch = len(X_train) // batch_size
 
 # Create two streams from the same data, where one of the streams
-# adds a small amount of gaussian noise. You could easily perform
+# adds a small amount of Gaussian noise. You could easily perform
 # other data augmentations using the same basic strategy.
 basic_stream = pescador.Streamer(data_generator, X_train, Y_train)
 noisy_stream = pescador.Streamer(noisy_generator, X_train, Y_train)

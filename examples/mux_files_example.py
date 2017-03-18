@@ -9,7 +9,7 @@ You have multiple datasets, and you would like to sample from them evenly.
 Pescador's Mux Streamer is a perfect tool to facilitate this sort of setup.
 
 For this example, to simulate this experience, we will split the canonical
-MNIST training set evenly into three pieces, and save them to thier own
+MNIST training set evenly into three pieces, and save them to their own
 .npy files.
 """
 
@@ -85,7 +85,7 @@ mux = pescador.mux.Mux(streams,
                        k=len(streams),
                        # We want to sample from each stream infinitely,
                        # so we turn off the lam parameter, which
-                       # controlls how long to sample from each stream.
+                       # controls how long to sample from each stream.
                        lam=None)
 
 
@@ -93,7 +93,7 @@ mux = pescador.mux.Mux(streams,
 # Option 2: Sample from one at a time.
 ##############################################
 # Another approach might be to restrict sampling to one stream at a time.
-# Now, the lam parameter controlls (statistically) how long to sapmle
+# Now, the lam parameter controls (statistically) how long to sample
 # from a stream before activating a new stream.
 
 mux = pescador.mux.Mux(streams,
@@ -107,4 +107,9 @@ mux = pescador.mux.Mux(streams,
 ##############################################
 # Use the mux as a streamer
 ##############################################
-# At this point, you can use the Mux as a streamer normally.
+# At this point, you can use the Mux as a streamer normally:
+
+
+for data in mux.generate():
+    process(data)
+
