@@ -3,7 +3,8 @@ Changes
 
 v1.0.0
 ------
-
+This release constitutes a major revision over the 0.x series, and the new interface
+is not backward-compatible.
 
 - `#23`_ Preserve memory alignment of numpy arrays across ZMQ streams
 - `#34`_ Rewrite of all core functionality under a unified object interface ``Streamer``.
