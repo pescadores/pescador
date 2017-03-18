@@ -40,7 +40,7 @@ extensions = [
 ]
 
 # Configuration for sphinx-gallery
-sphinx_gallery_confg = {
+sphinx_gallery_conf = {
     # Path to examples scripts
     'examples_dirs': '../examples',
     # Path to where to save gallery generated examples
@@ -52,9 +52,10 @@ sphinx_gallery_confg = {
         'scipy': 'http://docs.scipy.org/doc/scipy/reference/',
         'matplotlib': 'http://matplotlib.org/',
         'sklearn': 'http://scikit-learn.org/stable/',
-        'keras': 'https://keras.io/',
+        'keras': None,
         'theano': 'http://deeplearning.net/software/theano/'
-    }
+    },
+    'default_thumb_file': 'noun_199.png',
 }
 
 import matplotlib as mpl
