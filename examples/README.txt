@@ -1,20 +1,12 @@
 .. _examples-index:
 
-Pescador Examples
+Gallery of Pescador Examples
 =================
 
 
-.. _framework_examples:
-
-Framework Examples
-------------------
-
-Examples of how to use Pescador with common Machine Learning frameworks.
-
-
--- _advanced_examples:
+.. _advanced_examples:
 
 Advanded Examples
 -----------------
 
-Advanced Pescador examples.
+Examples of more advanced Pescador usage.

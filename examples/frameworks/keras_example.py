@@ -5,10 +5,16 @@ A Keras Example
 ===============
 
 An example of how to use Pescador with Keras.
+
+3/18/2017: Updated to Keras 2.0 API.
 """
 
 # Original Code source: https://github.com/fchollet/keras/blob/master/examples/mnist_cnn.py
 # author: Christopher Jacoby
+
+##############################################
+# Setup and Definitions
+##############################################
 
 from __future__ import print_function
 import numpy as np
@@ -28,6 +34,10 @@ epochs = 12
 # input image dimensions
 img_rows, img_cols = 28, 28
 
+
+##############################################
+# Load and preprocess data
+##############################################
 
 def setup_data():
     # the data, shuffled and split between train and test sets
@@ -56,6 +66,10 @@ def setup_data():
 
     return input_shape, (x_train, y_train), (x_test, y_test)
 
+##############################################
+# Setup Keras model
+##############################################
+
 
 def build_model(input_shape):
     model = Sequential()
@@ -77,6 +91,11 @@ def build_model(input_shape):
                   optimizer=keras.optimizers.Adadelta(),
                   metrics=['accuracy'])
     return model
+
+
+##############################################
+# Define Data Generators
+##############################################
 
 
 def data_generator(X, y):
@@ -101,6 +120,11 @@ def noisy_generator(X, y, scale=1e-1):
         noise = scale * np.random.randn(*noise_shape)
 
         yield {'X': sample['X'] + noise, 'y': sample['y']}
+
+
+##############################################
+# Put it all together
+##############################################
 
 
 input_shape, (X_train, Y_train), (X_test, Y_test) = setup_data()
