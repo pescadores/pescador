@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 ==================
-Simple ZMQ Example
+ZMQ Example
 ==================
 
 An example of how to use a ZMQStreamer to generate samples,

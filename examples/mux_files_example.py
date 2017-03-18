@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 """
-=================
-Mux Files Example
-=================
+=================================
+Muxing Multiple Datasets Together
+=================================
 
 Let's say you have a machine learning task like digit recognition.
 You have multiple datasets, and you would like to sample from them evenly.
