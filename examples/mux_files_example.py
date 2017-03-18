@@ -13,14 +13,11 @@ MNIST training set evenly into three pieces, and save them to thier own
 .npy files.
 """
 
-from __future__ import print_function
 import numpy as np
 from keras.datasets import mnist
 
 import pescador
 
-# input image dimensions
-img_rows, img_cols = 28, 28
 
 ##############################################
 # Prepare Datasets
