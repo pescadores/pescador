@@ -40,7 +40,8 @@ def test_streamer_tuple(items):
 
 @pytest.mark.parametrize('n_max', [None, 10, 50, 100])
 @pytest.mark.parametrize('stream_size', [1, 2, 7])
-def test_streamer_finite(n_max, stream_size):
+@pytest.mark.parametrize('generate', [False, True])
+def test_streamer_finite(n_max, stream_size, generate):
     reference = list(T.finite_generator(50, size=stream_size))
 
     if n_max is not None:
@@ -48,8 +49,14 @@ def test_streamer_finite(n_max, stream_size):
 
     streamer = pescador.Streamer(T.finite_generator, 50, size=stream_size)
 
+    if generate:
+        gen = streamer.generate(max_batches=n_max)
+    else:
+        gen = streamer(max_batches=n_max)
+
     for i in range(3):
-        query = list(streamer.generate(max_batches=n_max))
+
+        query = list(gen)
         for b1, b2 in zip(reference, query):
             T.__eq_batch(b1, b2)
 
@@ -93,7 +100,8 @@ def test_streamer_in_streamer(n_max, stream_size):
             T.__eq_batch(b1, b2)
 
 
-def test_streamer_cycle():
+@pytest.mark.parametrize('generate', [False, True])
+def test_streamer_cycle(generate):
     """Test that a limited streamer will die and restart automatically."""
     stream_len = 10
     streamer = pescador.Streamer(T.finite_generator, stream_len)
@@ -108,7 +116,12 @@ def test_streamer_cycle():
     count_max = 5 * stream_len
 
     data_results = []
-    for i, x in enumerate(streamer.cycle()):
+    if generate:
+        gen = streamer.cycle()
+    else:
+        gen = streamer(cycle=True)
+
+    for i, x in enumerate(gen):
         data_results.append((isinstance(x, dict) and 'X' in x))
         if (i + 1) >= count_max:
             break

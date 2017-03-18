@@ -52,13 +52,23 @@ class Streamer(object):
     ...     for i in range(n):
     ...         yield {'X': np.random.randn(1, 3)}
     >>> GS = Streamer(my_generator, 5)
-    >>> for i in GS.generate():
+    >>> for i in GS():
     ...     print(i)
 
 
     Or with a maximum number of items
 
-    >>> for i in GS.generate(max_items=3):
+    >>> for i in GS(max_items=3):
+    ...     print(i)
+
+    Or infinitely many examples, restarting the generator as needed
+
+    >>> for i in GS.cycle():
+    ...     print(i)
+
+    An alternate interface for the same:
+
+    >>> for i in GS(cycle=True):
     ...     print(i)
     '''
 
@@ -149,7 +159,6 @@ class Streamer(object):
         batch
             Items from the contained generator.
         '''
-        # ??? What more does this need?
 
         while True:
             for item in self.generate():
@@ -206,3 +215,38 @@ class Streamer(object):
         else:
             for data in self.generate(**kwargs):
                 yield tuple(data[item] for item in items)
+
+    def __call__(self, max_batches=None, cycle=False):
+        '''
+        Parameters
+        ----------
+        max_batches : None or int > 0
+            Maximum number of batches to yield.
+            If `None`, exhaust the generator.
+            If the stream is finite, the generator will be
+            exhausted when it completes.
+            Call generate again, or use cycle to force an infinite stream.
+
+        cycle: bool
+            If `True`, cycle indefinitely.
+
+        Yields
+        ------
+        batch : dict
+            Items from the contained generator
+            If `max_batches` is an integer, then at most
+            `max_batches` are generated.
+
+        See Also
+        --------
+        generate
+        cycle
+        tuples
+        '''
+        if cycle:
+            gen = self.cycle()
+        else:
+            gen = self.generate(max_batches=max_batches)
+
+        for item in gen:
+            yield item

@@ -58,7 +58,7 @@ As a concrete example, we can simulate a mixture of noisy streams with differing
                          lam=64) # Use a poisson rate of 64
 
         # Fit the model to the stream, use at most 5000 batches
-        for batch in batch_stream.generate(max_batches=5000):
+        for batch in mux_stream(max_batches=5000):
             estimator.partial_fit(batch['X'], batch['Y'], classes=classes)
 
         # And report the accuracy

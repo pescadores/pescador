@@ -110,6 +110,6 @@ mux = pescador.mux.Mux(streams,
 # At this point, you can use the Mux as a streamer normally:
 
 
-for data in mux.generate():
+for data in mux():
     process(data)
 

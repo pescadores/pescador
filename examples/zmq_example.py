@@ -57,7 +57,7 @@ zs = pescador.ZMQStreamer(s)
 # Get batches from the stream as you would normally.
 t0 = time.time()
 batch_count = 0
-for batch in zs.generate(max_batches=n_test_batches):
+for batch in zs(max_batches=n_test_batches):
     batch_count += len(batch['X'])
     # Train your network, etc.
 
@@ -86,7 +86,7 @@ buffered_zmq = pescador.BufferedStreamer(zs, buffer_size)
 iter_count = 0
 batch_count = 0
 t0 = time.time()
-for batch in buffered_zmq.generate(max_batches=n_test_batches):
+for batch in buffered_zmq(max_batches=n_test_batches):
     iter_count += 1
     batch_count += len(batch['X'])
 

@@ -50,7 +50,7 @@ multiplexed streamer object as follows:
     # Draw on average 16 patches from each stream before deactivating
     mux_stream = pescador.Mux(streams, k=32, lam=16)
 
-    for batch in mux_stream.generate(max_batches=1000):
+    for batch in mux_stream(max_batches=1000):
         # DO LEARNING HERE
         pass
 
