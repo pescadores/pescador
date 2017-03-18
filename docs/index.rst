@@ -25,25 +25,30 @@ On top of this basic functionality, pescador provides the following tools:
 
 For examples of each of these use-cases, refer to the :ref:`Examples` section.
 
-API Reference
--------------
-.. toctree::
-    :maxdepth: 2
 
-    api
-
-
-.. _examples:
-
-Examples
---------
-
+Basic Usage
+--------------
 .. toctree::
     :maxdepth: 2
 
     example1
     example2
     example3
+    bufferedstreaming
+
+Examples
+--------
+.. toctree::
+    :maxdepth: 2
+
+    auto_examples/index
+
+API Reference
+-------------
+.. toctree::
+    :maxdepth: 2
+
+    api
 
 
 Changes

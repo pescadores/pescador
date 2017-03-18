@@ -36,6 +36,6 @@ setup(
         'numpy'
     ],
     extras_require={
-        'docs': ['numpydoc']
+        'docs': ['numpydoc', 'sphinx-gallery']
     }
 )

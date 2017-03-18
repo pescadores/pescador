@@ -1,2 +1,6 @@
+matplotlib
 numpydoc>=0.6
 six
+sphinx
+sphinx-gallery
+sphinx_rtd_theme
