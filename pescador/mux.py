@@ -142,7 +142,7 @@ class Mux(core.Streamer):
             self.stream_idxs_[idx] = self.rng.choice(
                 self.n_seeds, p=self.seed_distribution)
             self.streams_[idx], self.stream_weights_[idx] = (
-                self.generate_new_seed(self.stream_idxs_[idx]))
+                self.__new_seed(self.stream_idxs_[idx]))
 
         self.weight_norm_ = np.sum(self.stream_weights_)
 
@@ -204,7 +204,7 @@ class Mux(core.Streamer):
                             self.n_seeds, p=self.seed_distribution)
 
                         self.streams_[idx], self.stream_weights_[idx] = (
-                            self.generate_new_seed(self.stream_idxs_[idx]))
+                            self.__new_seed(self.stream_idxs_[idx]))
 
                         self.stream_counts_[idx] = 0
 
@@ -215,7 +215,7 @@ class Mux(core.Streamer):
 
                     self.weight_norm_ = np.sum(self.stream_weights_)
 
-    def generate_new_seed(self, idx):
+    def __new_seed(self, idx):
         '''Randomly select and create a stream from the pool.
 
         Parameters
