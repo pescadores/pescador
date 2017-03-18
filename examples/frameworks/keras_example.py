@@ -10,7 +10,6 @@ An example of how to use Pescador with Keras.
 """
 
 # Original Code source: https://github.com/fchollet/keras/blob/master/examples/mnist_cnn.py
-# author: Christopher Jacoby
 
 ##############################################
 # Setup and Definitions
@@ -96,6 +95,9 @@ def build_model(input_shape):
 ##############################################
 # Define Data Generators
 ##############################################
+# To add a little bit of complexity, and show a little of what you could
+# do with Keras, we'll add an additional generator which simply
+# adds a little gaussian noise to the data.
 
 
 def data_generator(X, y):
@@ -125,7 +127,9 @@ def noisy_generator(X, y, scale=1e-1):
 ##############################################
 # Put it all together
 ##############################################
-
+# They key method for interfacing with Keras is the `Streamer.tuples()`,
+# function of the streamer, which takes args of the batch key names to pass to
+# Keras, since Keras's `fit_generator` consumes tuples from the generator.
 
 input_shape, (X_train, Y_train), (X_test, Y_test) = setup_data()
 steps_per_epoch = len(X_train) // batch_size
