@@ -4,7 +4,7 @@ pescador
 [![Build Status](https://travis-ci.org/pescadores/pescador.svg?branch=master)](https://travis-ci.org/pescadores/pescador)
 [![Coverage Status](https://coveralls.io/repos/pescadores/pescador/badge.svg)](https://coveralls.io/r/pescadores/pescador)
 [![Documentation Status](https://readthedocs.org/projects/pescador/badge/?version=latest)](https://readthedocs.org/projects/pescador/?badge=latest)
-[![DOI](https://zenodo.org/badge/doi/10.5281/zenodo.32468.svg)](http://dx.doi.org/10.5281/zenodo.32468)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.400700.svg)](https://doi.org/10.5281/zenodo.400700)
 
 A sampling and buffering module for iterative learning.
 
