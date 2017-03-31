@@ -18,3 +18,7 @@ Pescador can be installed from PyPI through `pip`:
 ```
 pip install pescador
 ```
+or with `conda` using the `conda-forge` channel:
+```
+conda install -c conda-forge pescador
+```
