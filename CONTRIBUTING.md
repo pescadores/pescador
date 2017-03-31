@@ -52,8 +52,8 @@ tools:
 
 -  Code with good unittest coverage (at least 80%), check with:
 
-          $ pip install nose coverage
-          $ nosetests --with-coverage --cover-package=pescador -w tests/
+          $ pip install pytest pytest-cov
+          $ py.test
 
 -  No pyflakes warnings, check with:
 

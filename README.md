@@ -9,3 +9,12 @@ pescador
 A sampling and buffering module for iterative learning.
 
 Read the [documentation](http://pescador.readthedocs.org)
+
+
+Installation
+============
+
+Pescador can be installed from PyPI through `pip`:
+```
+pip install pescador
+```
