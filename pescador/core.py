@@ -8,6 +8,11 @@ from .exceptions import PescadorError
 
 class StreamActivator(object):
     def __init__(self, streamer):
+        for mname in ['activate', 'deactivate']:
+            if not hasattr(streamer, mname):
+                raise AttributeError(
+                    "`streamer` doesn't implement the Streamer interface: no "
+                    "attribute `{}`".format(mname))
         self.streamer = streamer
 
     def __enter__(self, *args, **kwargs):
