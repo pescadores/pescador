@@ -10,7 +10,7 @@ class StreamActivator(object):
     def __init__(self, streamer):
         for mname in ['activate', 'deactivate']:
             if not hasattr(streamer, mname):
-                raise AttributeError(
+                raise PescadorError(
                     "`streamer` doesn't implement the Streamer interface: no "
                     "attribute `{}`".format(mname))
         self.streamer = streamer
@@ -25,12 +25,12 @@ class StreamActivator(object):
 
 
 class Streamer(object):
-    '''A wrapper class for reusable generators.
+    '''A wrapper class for reusable iterators.
 
-    Wrapping generators/iterators within an object provides
+    Wrapping iterators/generators within an object provides
     two useful features:
 
-    1. Streamer objects can be serialized (as long as the generator can be)
+    1. Streamer objects can be serialized (as long as the iterator can be)
     2. Streamer objects can instantiate a generator multiple times.
 
     The first feature is important for parallelization (see `zmq_stream`),
@@ -40,67 +40,68 @@ class Streamer(object):
 
     Attributes
     ----------
-    generator : iterable or Streamer
-        A generator function or iterable collection to draw from.
-        May be another instance or subclass of Streamer.
+    iterator : iterator or generator
+        A callable iterator, function, or generator that yields stuff.
 
     args : list
     kwargs : dict
-        If `generator` is a function, then `args` and `kwargs`
+        If `iterator` is a function, then `args` and `kwargs`
         provide the parameters to the function.
 
     Examples
     --------
-    Generate batches of random 3-dimensional vectors
+    Generate random 3-dimensional vectors
 
     >>> def my_generator(n):
     ...     for i in range(n):
-    ...         yield {'X': np.random.randn(1, 3)}
-    >>> GS = Streamer(my_generator, 5)
-    >>> for i in GS():
+    ...         yield np.random.randn(1, 3)
+    >>> stream = Streamer(my_generator, 5)
+    >>> for i in stream:
     ...     print(i)
 
 
     Or with a maximum number of items
 
-    >>> for i in GS(max_items=3):
+    >>> for i in stream(max_items=3):
     ...     print(i)
 
     Or infinitely many examples, restarting the generator as needed
 
-    >>> for i in GS.cycle():
+    >>> for i in stream.cycle():
     ...     print(i)
 
     An alternate interface for the same:
 
-    >>> for i in GS(cycle=True):
+    >>> for i in stream(max_items=10, cycle=True):
     ...     print(i)
     '''
 
-    def __init__(self, streamer, *args, **kwargs):
+    def __init__(self, iterator, *args, **kwargs):
         '''Initializer
 
         Parameters
         ----------
-        streamer : iterable
-            Any generator function or iterable python object
+        iterator : callable
+            Any generator function or object that is iterable when
+            instantiated.
 
         args, kwargs
             Additional positional arguments or keyword arguments to pass
-            through to ``generator()``
+            through to ``iterator()``
 
         Raises
         ------
         PescadorError
-            If ``streamer`` is not a generator or an Iterable object.
+            If ``iterator`` is not a generator or an Iterable object.
         '''
 
-        if not (inspect.isgeneratorfunction(streamer) or
-                isinstance(streamer, (collections.Iterable, Streamer))):
-            raise PescadorError('streamer must be a generator, iterable, or '
+        if not (inspect.isgeneratorfunction(iterator) or
+                isinstance(iterator, (collections.Iterable, Streamer))):
+            raise PescadorError('`iterator` must be a generator, iterator, or '
                                 'Streamer')
 
-        self.streamer = streamer
+        # TODO: Button this up based on discussion of #75
+        self.streamer = iterator
         self.args = args
         self.kwargs = kwargs
         self.stream_ = None
@@ -114,6 +115,7 @@ class Streamer(object):
 
     def activate(self):
         """Activates the stream."""
+        # TODO: Button this up based on discussion of #75
         if six.callable(self.streamer):
             # If it's a function, create the stream.
             self.stream_ = self.streamer(*(self.args), **(self.kwargs))
@@ -123,51 +125,51 @@ class Streamer(object):
 
         else:
             # If it's iterable, use it directly.
+            # TODO: Remove this.
             self.stream_ = self.streamer
 
     def deactivate(self):
         self.stream_ = None
 
-    def generate(self, max_batches=None):
+    def generate(self, max_iter=None):
         '''Instantiate the generator
 
         Parameters
         ----------
-        max_batches : None or int > 0
-            Maximum number of batches to yield.
+        max_iter : None or int > 0
+            Maximum number of iterations to yield.
             If ``None``, exhaust the generator.
             If the stream is finite, the generator will be
             exhausted when it completes.
-            Call generate again, or use cycle to force an infinite stream.
 
         Yields
         ------
-        batch : dict
-            Items from the contained generator
-            If `max_batches` is an integer, then at most
-            `max_batches` are generated.
+        obj : Objects yielded by the iterator provided on init.
+
+        See Also
+        --------
+        cycle : force an infinite stream.
         '''
         with StreamActivator(self):
-            for n, x in enumerate(self.stream_):
-                if max_batches is not None and n >= max_batches:
+            for n, obj in enumerate(self.stream_):
+                if max_iter is not None and n >= max_iter:
                     break
-                yield x
+                yield obj
 
     def cycle(self):
         '''Generates from the streamer infinitely.
 
         This function will force an infinite stream, restarting
-        the generator even if a StopIteration is raised.
+        the iterator even if a StopIteration is raised.
 
         Yields
         ------
-        batch
-            Items from the contained generator.
+        obj : Objects yielded by the iterator provided on init.
         '''
 
         while True:
-            for item in self.generate():
-                yield item
+            for obj in self.generate():
+                yield obj
 
     def tuples(self, *items, **kwargs):
         '''Generate data in tuple-form instead of dicts.
@@ -209,7 +211,7 @@ class Streamer(object):
         generate
         cycle
         '''
-
+        # TODO: Remove from class, turn into transform
         if not items:
             raise PescadorError('Unable to generate tuples from '
                                 'an empty item set')
@@ -221,14 +223,15 @@ class Streamer(object):
             for data in self.generate(**kwargs):
                 yield tuple(data[item] for item in items)
 
-    def __call__(self, max_batches=None, cycle=False):
-        '''
+    def __call__(self, max_iter=None, cycle=False):
+        '''Convenience interface for interacting with the Streamer.
+
         Parameters
         ----------
-        max_batches : None or int > 0
-            Maximum number of batches to yield.
-            If `None`, exhaust the generator.
-            If the stream is finite, the generator will be
+        max_iter : None or int > 0
+            Maximum number of iterations to yield.
+            If `None`, exhaust the iterator.
+            If the stream is finite, the iterator will be
             exhausted when it completes.
             Call generate again, or use cycle to force an infinite stream.
 
@@ -237,10 +240,7 @@ class Streamer(object):
 
         Yields
         ------
-        batch : dict
-            Items from the contained generator
-            If `max_batches` is an integer, then at most
-            `max_batches` are generated.
+        obj : Objects yielded by the iterator provided on init.
 
         See Also
         --------
@@ -251,7 +251,10 @@ class Streamer(object):
         if cycle:
             gen = self.cycle()
         else:
-            gen = self.generate(max_batches=max_batches)
+            gen = self.generate(max_iter=max_iter)
 
-        for item in gen:
-            yield item
+        for obj in gen:
+            yield obj
+
+    def __iter__(self):
+        return self.generate()

@@ -25,6 +25,7 @@ class BufferedStreamer(core.Streamer):
     ...     # Work on a batch of N=10 examples
     ...     MY_PROCESS_FUNCTION(batch)
     """
+
     def __init__(self, streamer, buffer_size,
                  strict_batch_size=True):
         """
