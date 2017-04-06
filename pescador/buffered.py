@@ -76,13 +76,13 @@ class BufferedStreamer(core.Streamer):
                 yield batch
 
 
-def buffer_batch(generator, buffer_size):
+def buffer_batch(iterable, buffer_size):
     '''Buffer data samples from an iterable into one data object.
 
     Parameters
     ----------
-    generator : iterable
-        The generator to buffer
+    iterable : iterable
+        The iterable to buffer
 
     buffer_size : int > 0
         The number of examples to retain per batch.
@@ -96,7 +96,7 @@ def buffer_batch(generator, buffer_size):
     batches = []
     n = 0
 
-    for x in generator:
+    for x in iterable:
         batches.append(x)
         n += batch_length(x)
 

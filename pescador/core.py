@@ -25,12 +25,12 @@ class StreamActivator(object):
 
 
 class Streamer(object):
-    '''A wrapper class for reusable iterators.
+    '''A wrapper class for recycling generator functions.
 
-    Wrapping iterators/generators within an object provides
+    Wrapping generators within an object provides
     two useful features:
 
-    1. Streamer objects can be serialized (as long as the iterator can be)
+    1. Streamer objects can be serialized (as long as the generator can be)
     2. Streamer objects can instantiate a generator multiple times.
 
     The first feature is important for parallelization (see `zmq_stream`),
@@ -40,13 +40,12 @@ class Streamer(object):
 
     Attributes
     ----------
-    iterator : iterator or generator
-        A callable iterator, function, or generator that yields stuff.
+    generator : generator, function, or callable object
+        A callable object that returns an iterable type.
 
     args : list
     kwargs : dict
-        If `iterator` is a function, then `args` and `kwargs`
-        provide the parameters to the function.
+        Parameters to provide to `generator`.
 
     Examples
     --------
@@ -76,32 +75,32 @@ class Streamer(object):
     ...     print(i)
     '''
 
-    def __init__(self, iterator, *args, **kwargs):
+    def __init__(self, generator, *args, **kwargs):
         '''Initializer
 
         Parameters
         ----------
-        iterator : callable
+        generator : callable
             Any generator function or object that is iterable when
             instantiated.
 
         args, kwargs
             Additional positional arguments or keyword arguments to pass
-            through to ``iterator()``
+            through to ``generator()``
 
         Raises
         ------
         PescadorError
-            If ``iterator`` is not a generator or an Iterable object.
+            If ``generator`` is not a generator or an Iterable object.
         '''
 
-        if not (inspect.isgeneratorfunction(iterator) or
-                isinstance(iterator, (collections.Iterable, Streamer))):
-            raise PescadorError('`iterator` must be a generator, iterator, or '
-                                'Streamer')
+        if not (inspect.isgeneratorfunction(generator) or
+                isinstance(generator, (collections.Iterable, Streamer))):
+            raise PescadorError('`generator` must be a callable function that '
+                                'returns an iterable object.')
 
         # TODO: Button this up based on discussion of #75
-        self.streamer = iterator
+        self.streamer = generator
         self.args = args
         self.kwargs = kwargs
         self.stream_ = None
@@ -144,7 +143,7 @@ class Streamer(object):
 
         Yields
         ------
-        obj : Objects yielded by the iterator provided on init.
+        obj : Objects yielded by the generator provided on init.
 
         See Also
         --------
@@ -160,11 +159,11 @@ class Streamer(object):
         '''Generates from the streamer infinitely.
 
         This function will force an infinite stream, restarting
-        the iterator even if a StopIteration is raised.
+        the generator even if a StopIteration is raised.
 
         Yields
         ------
-        obj : Objects yielded by the iterator provided on init.
+        obj : Objects yielded by the generator provided on init.
         '''
 
         while True:
@@ -240,7 +239,7 @@ class Streamer(object):
 
         Yields
         ------
-        obj : Objects yielded by the iterator provided on init.
+        obj : Objects yielded by the generator provided on init.
 
         See Also
         --------
