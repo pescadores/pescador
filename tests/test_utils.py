@@ -26,7 +26,8 @@ def finite_generator(n, size=2, lag=None):
 
 
 def md_generator(dimension, n, size=2, items='X'):
-
+    """Produce `n` dicts of `dimension`-rank arrays under the names in `items`.
+    """
     shape = [size] * dimension
 
     M = len(items)

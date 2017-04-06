@@ -7,6 +7,7 @@ from . import core
 from .exceptions import PescadorError
 
 
+# TODO: Justify this class
 class BufferedStreamer(core.Streamer):
     """Buffers a stream into batches of examples
 
@@ -57,26 +58,26 @@ class BufferedStreamer(core.Streamer):
         """Activates the stream."""
         self.stream_ = self.streamer
 
-    def generate(self, max_batches=None):
+    def generate(self, max_iter=None):
         """Generate samples from the streamer.
 
         Parameters
         ----------
-        max_batches : int
-            For the BufferedStreamer, max_batches is the
+        max_iter : int
+            For the BufferedStreamer, max_iter is the
             number of *buffered* batches that are generated,
             not the number of individual samples.
         """
         with core.StreamActivator(self):
             for n, batch in enumerate(buffer_batch(self.stream_.generate(),
                                                    self.buffer_size)):
-                if max_batches is not None and n >= max_batches:
+                if max_iter is not None and n >= max_iter:
                     break
                 yield batch
 
 
 def buffer_batch(generator, buffer_size):
-    '''Buffer an iterable of batches into larger (or smaller) batches
+    '''Buffer data samples from an iterable into one data object.
 
     Parameters
     ----------
@@ -116,6 +117,7 @@ def buffer_batch(generator, buffer_size):
             yield batch
 
 
+# TODO: Justify this function.
 def __split_batches(batches, buffer_size):
     '''Split at most one batch off of a collection of batches.
 

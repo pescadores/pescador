@@ -81,7 +81,7 @@ def zmq_recv_batch(socket, flags=0, copy=True, track=False):
     return results
 
 
-def zmq_worker(port, streamer, terminate, copy=False, max_batches=None):
+def zmq_worker(port, streamer, terminate, copy=False, max_iter=None):
 
     context = zmq.Context()
     socket = context.socket(zmq.PAIR)
@@ -89,7 +89,7 @@ def zmq_worker(port, streamer, terminate, copy=False, max_batches=None):
 
     try:
         # Build the stream
-        for batch in streamer(max_batches=max_batches):
+        for batch in streamer(max_iter=max_iter):
             zmq_send_batch(socket, batch, copy=copy)
             if terminate.is_set():
                 break
@@ -121,6 +121,7 @@ class ZMQStreamer(Streamer):
     >>> for batch in Z():
     ...     MY_FUNCTION(batch)
     """
+
     def __init__(self, streamer,
                  min_port=49152, max_port=65535, max_tries=100,
                  copy=False, timeout=None):
@@ -129,9 +130,6 @@ class ZMQStreamer(Streamer):
         ----------
         streamer : `pescador.Streamer`
             The streamer object
-
-        max_batches : None or int > 0
-            Maximum number of batches to generate
 
         min_port : int > 0
         max_port : int > min_port
@@ -153,7 +151,7 @@ class ZMQStreamer(Streamer):
         self.copy = copy
         self.timeout = timeout
 
-    def generate(self, max_batches=None):
+    def generate(self, max_iter=None):
         """
         Note: A ZMQStreamer does not activate it's stream,
         but allows the zmq_worker to do that.
@@ -161,7 +159,7 @@ class ZMQStreamer(Streamer):
         Yields
         ------
         batch
-            Data drawn from `streamer(max_batches)`.
+            Data drawn from `streamer(max_iter)`.
         """
         context = zmq.Context()
 
@@ -181,7 +179,7 @@ class ZMQStreamer(Streamer):
             worker = mp.Process(target=SafeFunction(zmq_worker),
                                 args=[port, self.streamer, terminate],
                                 kwargs=dict(copy=self.copy,
-                                            max_batches=max_batches))
+                                            max_iter=max_iter))
 
             worker.daemon = True
             worker.start()
@@ -193,6 +191,7 @@ class ZMQStreamer(Streamer):
         except StopIteration:
             pass
 
+        # TODO: Fix bare except
         except:
             six.reraise(*sys.exc_info())
 
