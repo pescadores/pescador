@@ -139,7 +139,7 @@ def test_mux_bad_pool():
                  for _ in range(5)]
 
         # 5 seeds, 10 weights, should trigger an error
-        M = pescador.Mux(seeds, None, pool_weights=np.random.randn(10))
+        pescador.Mux(seeds, None, pool_weights=np.random.randn(10))
 
 
 def test_mux_bad_weights():
@@ -148,4 +148,4 @@ def test_mux_bad_weights():
                  for _ in range(5)]
 
         # 5 seeds, all-zeros weight vector should trigger an error
-        M = pescador.Mux(seeds, None, pool_weights=np.zeros(5))
+        pescador.Mux(seeds, None, pool_weights=np.zeros(5))

@@ -9,7 +9,7 @@ from .exceptions import PescadorError
 
 class Mux(core.Streamer):
     '''Stochastic multiplexor for Streamers
-    
+
     Examples
     --------
     >>> # Create a collection of streamers
@@ -153,19 +153,19 @@ class Mux(core.Streamer):
         self.stream_idxs_ = None
         self.weight_norm_ = None
 
-    def generate(self, max_batches=None):
+    def generate(self, max_iter=None):
         with core.StreamActivator(self):
 
             # Main sampling loop
             n = 0
 
-            if max_batches is None:
-                max_batches = np.inf
+            if max_iter is None:
+                max_iter = np.inf
 
-            while n < max_batches and self.weight_norm_ > 0.0:
+            while n < max_iter and self.weight_norm_ > 0.0:
                 # Pick a stream from the active set
                 idx = self.rng.choice(self.k, p=(self.stream_weights_ /
-                                                  self.weight_norm_))
+                                                 self.weight_norm_))
 
                 # Can we sample from it?
                 try:
@@ -244,5 +244,5 @@ class Mux(core.Streamer):
             if (self.seed_distribution > 0).any():
                 self.seed_distribution[:] /= np.sum(self.seed_distribution)
 
-        return (self.seed_pool[idx].generate(max_batches=n_stream),
+        return (self.seed_pool[idx].generate(max_iter=n_stream),
                 self.pool_weights[idx])
