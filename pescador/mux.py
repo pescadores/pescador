@@ -19,24 +19,26 @@ class Mux(core.Streamer):
     >>> mux = pescador.Mux(seeds, k=3)
     >>> for batch in mux():
     ...     MY_FUNCTION(batch)
+
+    Mux([stream, range(8), stream2])
     '''
 
-    def __init__(self, seed_pool, k,
-                 lam=256.0, pool_weights=None, with_replacement=True,
-                 prune_empty_seeds=True, revive=False,
+    def __init__(self, streamers, k,
+                 lam=256.0, weights=None, with_replacement=True,
+                 prune_empty_streams=True, revive=False,
                  random_state=None):
-        """Given an array of Streamer objects, do the following:
+        """Given an array (pool) of streamer types, do the following:
 
-        1. Select ``k`` seeds at random to activate
-        2. Assign each activated seed a sample count ~ Poisson(lam)
+        1. Select ``k`` streams at random to iterate from
+        2. Assign each activated stream a sample count ~ Poisson(lam)
         3. Yield samples from the streams by randomly multiplexing
            from the active set.
-        4. When a stream is exhausted, select a new one from the pool.
+        4. When a stream is exhausted, select a new one from `streamers`.
 
         Parameters
         ----------
-        seed_pool : iterable of Streamer
-            The collection of Streamer objects
+        streamers : iterable of streamers
+            The collection of streamer-type objects
 
         k : int > 0
             The number of streams to keep active at any time.
@@ -46,32 +48,32 @@ class Mux(core.Streamer):
             for individual streams.
             If ``None``, sample infinitely from each stream.
 
-        pool_weights : np.ndarray or None
-            Optional weighting for ``seed_pool``.
+        weights : np.ndarray or None
+            Optional weighting for ``streamers``.
             If ``None``, then weights are assumed to be uniform.
-            Otherwise, ``pool_weights[i]`` defines the sampling proportion
-            of ``seed_pool[i]``.
+            Otherwise, ``weights[i]`` defines the sampling proportion
+            of ``streamers[i]``.
 
-            Must have the same length as ``seed_pool``.
+            Must have the same length as ``streamers``.
 
         with_replacement : bool
-            Sample Streamers with replacement.  This allows a single stream to
+            Sample streamers with replacement.  This allows a single stream to
             be used multiple times (even simultaneously).
-            If ``False``, then each Streamer is consumed at most once and never
+            If ``False``, then each streamer is consumed at most once and never
             revisited.
 
-        prune_empty_seeds : bool
-            Disable seeds from the pool that produced no data.
-            If ``True``, Streamers that previously produced no data are never
+        prune_empty_streams : bool
+            Disable streamers that produce no data.
+            If ``True``, streamers that previously produced no data are never
             revisited.
             Note that this may be undesireable for streams where past emptiness
             may not imply future emptiness.
 
         revive: bool
             If ``with_replacement`` is ``False``, setting ``revive=True``
-            will re-insert previously exhausted seeds into the candidate set.
+            will re-insert previously exhausted streams into the candidate set.
 
-            This configuration allows a seed to be active at most once at any
+            This configuration allows a stream to be active at most once at any
             time.
 
         random_state : None, int, or np.random.RandomState
@@ -84,13 +86,13 @@ class Mux(core.Streamer):
             If None, the random number generator is the RandomState instance
             used by np.random.
         """
-        self.seed_pool = seed_pool
-        self.n_seeds = len(seed_pool)
+        self.streamers = streamers
+        self.n_streams = len(streamers)
         self.k = k
         self.lam = lam
-        self.pool_weights = pool_weights
+        self.weights = weights
         self.with_replacement = with_replacement
-        self.prune_empty_seeds = prune_empty_seeds
+        self.prune_empty_streams = prune_empty_streams
         self.revive = revive
 
         self.deactivate()
@@ -104,30 +106,29 @@ class Mux(core.Streamer):
         else:
             raise PescadorError('Invalid random_state={}'.format(random_state))
 
-        if not self.n_seeds:
-            raise PescadorError('Cannot mux an empty seed-pool')
+        if not self.n_streams:
+            raise PescadorError('Cannot mux an empty collection')
 
         # Set up the sampling distribution over streams
-        self.seed_distribution = 1. / self.n_seeds * np.ones(self.n_seeds)
+        self.distribution = 1. / self.n_streams * np.ones(self.n_streams)
 
-        if self.pool_weights is None:
-            self.pool_weights = self.seed_distribution.copy()
+        if self.weights is None:
+            self.weights = self.distribution.copy()
 
-        self.pool_weights = np.atleast_1d(self.pool_weights)
+        self.weights = np.atleast_1d(self.weights)
 
-        if len(self.pool_weights) != len(self.seed_pool):
-            raise PescadorError('pool_weights must be the same '
-                                'length as seed_pool')
+        if len(self.weights) != len(self.streamers):
+            raise PescadorError('`weights` must be the same '
+                                'length as `streamers`')
 
-        if not (self.pool_weights > 0.0).any():
-            raise PescadorError('pool_weights must contain at least '
+        if not (self.weights > 0.0).any():
+            raise PescadorError('`weights` must contain at least '
                                 'one positive value')
 
-        self.pool_weights /= np.sum(self.pool_weights)
+        self.weights /= np.sum(self.weights)
 
     def activate(self):
-        """Activates the seed pool"""
-        # Instantiate the pool
+        """Activates a number of streams"""
         self.streams_ = [None] * self.k
 
         self.stream_weights_ = np.zeros(self.k)
@@ -136,13 +137,13 @@ class Mux(core.Streamer):
 
         for idx in range(self.k):
 
-            if not (self.seed_distribution > 0).any():
+            if not (self.distribution > 0).any():
                 break
 
             self.stream_idxs_[idx] = self.rng.choice(
-                self.n_seeds, p=self.seed_distribution)
+                self.n_streams, p=self.distribution)
             self.streams_[idx], self.stream_weights_[idx] = (
-                self.__new_seed(self.stream_idxs_[idx]))
+                self.__new_stream(self.stream_idxs_[idx]))
 
         self.weight_norm_ = np.sum(self.stream_weights_)
 
@@ -153,7 +154,7 @@ class Mux(core.Streamer):
         self.stream_idxs_ = None
         self.weight_norm_ = None
 
-    def generate(self, max_iter=None):
+    def iterate(self, max_iter=None):
         with core.StreamActivator(self):
 
             # Main sampling loop
@@ -179,32 +180,31 @@ class Mux(core.Streamer):
                 except StopIteration:
                     # Oops, this one's exhausted.
 
-                    if (self.prune_empty_seeds and
+                    if (self.prune_empty_streams and
                             self.stream_counts_[idx] == 0):
                         # If we're disabling empty seeds, see if this stream
                         # produced data
-                        self.seed_distribution[self.stream_idxs_[idx]] = 0.0
+                        self.distribution[self.stream_idxs_[idx]] = 0.0
 
                     if self.revive and not self.with_replacement:
                         # If we need to revive a seed, give it the max
                         # current probability
-                        if self.seed_distribution.any():
-                            self.seed_distribution[self.stream_idxs_[idx]] = (
-                                np.max(self.seed_distribution))
+                        if self.distribution.any():
+                            self.distribution[self.stream_idxs_[idx]] = (
+                                np.max(self.distribution))
                         else:
-                            self.seed_distribution[self.stream_idxs_[idx]] = 1.0
+                            self.distribution[self.stream_idxs_[idx]] = 1.0
 
-                    if (self.seed_distribution > 0).any():
+                    if (self.distribution > 0).any():
                         # Replace it and move on if there are still seeds
                         # in the pool.
-                        self.seed_distribution[:] /= np.sum(
-                            self.seed_distribution)
+                        self.distribution[:] /= np.sum(self.distribution)
 
                         self.stream_idxs_[idx] = self.rng.choice(
-                            self.n_seeds, p=self.seed_distribution)
+                            self.n_streams, p=self.distribution)
 
                         self.streams_[idx], self.stream_weights_[idx] = (
-                            self.__new_seed(self.stream_idxs_[idx]))
+                            self.__new_stream(self.stream_idxs_[idx]))
 
                         self.stream_counts_[idx] = 0
 
@@ -215,21 +215,21 @@ class Mux(core.Streamer):
 
                     self.weight_norm_ = np.sum(self.stream_weights_)
 
-    def __new_seed(self, idx):
-        '''Randomly select and create a stream from the pool.
+    def __new_stream(self, idx):
+        '''Randomly select and create a stream.
 
         Parameters
         ----------
         idx : int
-            The seed index to replace
+            The stream index to replace
         '''
-        if len(self.seed_pool) != len(self.pool_weights):
-            raise PescadorError('seed_pool must have the same '
-                                'length as pool_weights')
+        if len(self.streamers) != len(self.weights):
+            raise PescadorError('`streamers` must have the same '
+                                'length as `weights`')
 
-        if len(self.seed_pool) != len(self.seed_distribution):
-            raise PescadorError('seed_pool must have the same '
-                                'length as seed_distribution')
+        if len(self.streamers) != len(self.distribution):
+            raise PescadorError('`streamers` must have the same '
+                                'length as `distribution`')
 
         # instantiate
         if self.lam is not None:
@@ -239,10 +239,10 @@ class Mux(core.Streamer):
 
         # If we're sampling without replacement, zero this one out
         if not self.with_replacement:
-            self.seed_distribution[idx] = 0.0
+            self.distribution[idx] = 0.0
 
-            if (self.seed_distribution > 0).any():
-                self.seed_distribution[:] /= np.sum(self.seed_distribution)
+            if (self.distribution > 0).any():
+                self.distribution[:] /= np.sum(self.distribution)
 
-        return (self.seed_pool[idx].generate(max_iter=n_stream),
-                self.pool_weights[idx])
+        return (self.streamers[idx].iterate(max_iter=n_stream),
+                self.weights[idx])
