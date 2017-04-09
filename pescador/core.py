@@ -98,8 +98,8 @@ class Streamer(object):
 
         if not (inspect.isgeneratorfunction(streamer) or
                 isinstance(streamer, (collections.Iterable, Streamer))):
-            raise PescadorError('`streamer` must be a callable function that '
-                                'returns an iterable object.')
+            raise PescadorError('`streamer` must be an iterable or callable '
+                                'function that returns an iterable object.')
 
         self.streamer = streamer
         self.args = args
