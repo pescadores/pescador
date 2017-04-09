@@ -21,7 +21,7 @@ def test_streamer_list():
     streamer = pescador.core.Streamer(T.finite_generator, n_items)
 
     # Test generate interface
-    actual1 = list(streamer.generate())
+    actual1 = list(streamer.iterate())
     assert len(expected) == len(actual1) == n_items
     for b1, b2 in zip(expected, actual1):
         T.__eq_batch(b1, b2)
@@ -63,7 +63,7 @@ def test_streamer_finite(n_max, stream_size, generate):
     streamer = pescador.core.Streamer(T.finite_generator, 50, size=stream_size)
 
     if generate:
-        gen = streamer.generate(max_iter=n_max)
+        gen = streamer.iterate(max_iter=n_max)
     else:
         gen = streamer(max_iter=n_max)
 
@@ -86,7 +86,7 @@ def test_streamer_infinite(n_max, stream_size):
     streamer = pescador.core.Streamer(T.infinite_generator, size=stream_size)
 
     for i in range(3):
-        query = list(streamer.generate(max_iter=n_max))
+        query = list(streamer.iterate(max_iter=n_max))
 
         for b1, b2 in zip(reference, query):
             T.__eq_batch(b1, b2)
@@ -107,7 +107,7 @@ def test_streamer_in_streamer(n_max, stream_size):
     streamer2 = pescador.core.Streamer(streamer)
 
     for i in range(3):
-        query = list(streamer2.generate(max_iter=n_max))
+        query = list(streamer2.iterate(max_iter=n_max))
 
         for b1, b2 in zip(reference, query):
             T.__eq_batch(b1, b2)
@@ -121,7 +121,7 @@ def test_streamer_cycle(generate):
     assert streamer.stream_ is None
 
     # Exhaust the stream once.
-    query = list(streamer.generate())
+    query = list(streamer.iterate())
     assert stream_len == len(query)
 
     # Now, generate from it infinitely using cycle.
@@ -152,7 +152,7 @@ def test_streamer_cycle_tuples(items):
     assert streamer.stream_ is None
 
     # Exhaust the stream once.
-    query = list(streamer.generate())
+    query = list(streamer.iterate())
     assert stream_len == len(query)
 
     # Now, generate from it infinitely using cycle.
