@@ -5,9 +5,10 @@ import six
 
 from . import core
 from .exceptions import PescadorError
+from .util import deprecated
 
 
-# TODO: ejhumphrey proposes nuking this class; deprecation template to follow?
+# TODO: How to deprecate a class?
 class BufferedStreamer(core.Streamer):
     """Buffers a stream into batches of examples
 
@@ -58,6 +59,7 @@ class BufferedStreamer(core.Streamer):
         """Activates the stream."""
         self.stream_ = self.streamer
 
+    # @deprecated: s/max_batches/max_iter
     def iterate(self, max_iter=None):
         """Generate samples from the streamer.
 
@@ -76,13 +78,15 @@ class BufferedStreamer(core.Streamer):
                 yield batch
 
 
-def buffer_batch(streamer, buffer_size):
-    '''Buffer data samples from an streamer into one data object.
+# TODO: Decorate with @moved once `pescador.transforms` is introduced.
+# @deprecated: s/generator/stream
+def buffer_batch(stream, buffer_size):
+    '''Buffer data samples from an iterable stream into one data object.
 
     Parameters
     ----------
-    streamer : streamer
-        The streamer to buffer
+    stream : stream
+        The iterable stream to buffer
 
     buffer_size : int > 0
         The number of examples to retain per batch.
@@ -96,7 +100,7 @@ def buffer_batch(streamer, buffer_size):
     batches = []
     n = 0
 
-    for x in streamer:
+    for x in stream:
         batches.append(x)
         n += batch_length(x)
 
@@ -117,7 +121,7 @@ def buffer_batch(streamer, buffer_size):
             yield batch
 
 
-# TODO: Deprecate this function.
+@deprecated('1.0', '2.0')
 def __split_batches(batches, buffer_size):
     '''Split at most one batch off of a collection of batches.
 

@@ -23,6 +23,11 @@ class Mux(core.Streamer):
     Mux([stream, range(8), stream2])
     '''
 
+    # @deprecated:
+    #   s/seed_pool/streamers
+    #   s/lam/rate
+    #   s/pool_weights/weights
+    #   s/prune_empty_seeds/prune_empty_streams
     def __init__(self, streamers, k,
                  lam=256.0, weights=None, with_replacement=True,
                  prune_empty_streams=True, revive=False,
@@ -154,6 +159,7 @@ class Mux(core.Streamer):
         self.stream_idxs_ = None
         self.weight_norm_ = None
 
+    # @deprecated: s/generate/iterate, s/max_batches/max_iter
     def iterate(self, max_iter=None):
         with core.StreamActivator(self):
 

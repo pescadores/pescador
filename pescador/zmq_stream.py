@@ -152,6 +152,7 @@ class ZMQStreamer(Streamer):
         self.copy = copy
         self.timeout = timeout
 
+    # @deprecated: s/generate/iterate, s/max_batches/max_iter
     def iterate(self, max_iter=None):
         """
         Note: A ZMQStreamer does not activate its stream,

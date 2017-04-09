@@ -4,15 +4,13 @@ import collections
 import inspect
 import six
 from .exceptions import PescadorError
+from .util import Deprecated, rename_kw
 
 
 class StreamActivator(object):
     def __init__(self, streamer):
-        for mname in ['activate', 'deactivate']:
-            if not hasattr(streamer, mname):
-                raise PescadorError(
-                    "`streamer` doesn't implement the Streamer interface: no "
-                    "attribute `{}`".format(mname))
+        if not isinstance(streamer, Streamer):
+            raise PescadorError("`streamer` must be / inherit from Streamer")
         self.streamer = streamer
 
     def __enter__(self, *args, **kwargs):
@@ -126,6 +124,11 @@ class Streamer(object):
     def deactivate(self):
         self.stream_ = None
 
+    # @deprecated? s/generate/iterate, s/max_batches/max_iter
+    def generate(self, max_iter=None):
+        return self.iterate(max_iter=max_iter)
+
+    # @deprecated? s/max_batches/max_iter
     def iterate(self, max_iter=None):
         '''Instantiate an iterator.
 
@@ -164,8 +167,7 @@ class Streamer(object):
             for obj in self:
                 yield obj
 
-    # TODO: ejhumphrey would like to deprecate this class method and turn it
-    #       into a "transform". @bmcfee please advise? example to follow?
+    # @deprecated
     def tuples(self, *items, **kwargs):
         '''Generate data in tuple-form instead of dicts.
 
@@ -217,6 +219,7 @@ class Streamer(object):
             for data in self.iterate(**kwargs):
                 yield tuple(data[item] for item in items)
 
+    # @deprecated? s/max_batches/max_iter
     def __call__(self, max_iter=None, cycle=False):
         '''Convenience interface for interacting with the Streamer.
 
