@@ -85,6 +85,7 @@ def zmq_worker(port, streamer, terminate, copy=False, max_iter=None):
 
     context = zmq.Context()
     socket = context.socket(zmq.PAIR)
+    # TODO: Open this up to support different hosts.
     socket.connect('tcp://localhost:{:d}'.format(port))
 
     try:
@@ -118,8 +119,8 @@ class ZMQStreamer(Streamer):
     >>> # Wrap the streamer in a ZMQ streamer
     >>> Z = pescador.ZMQStreamer(S)
     >>> # Process as normal
-    >>> for batch in Z():
-    ...     MY_FUNCTION(batch)
+    >>> for data in Z:
+    ...     MY_FUNCTION(data)
     """
 
     def __init__(self, streamer,
@@ -151,14 +152,14 @@ class ZMQStreamer(Streamer):
         self.copy = copy
         self.timeout = timeout
 
-    def generate(self, max_iter=None):
+    def iterate(self, max_iter=None):
         """
-        Note: A ZMQStreamer does not activate it's stream,
+        Note: A ZMQStreamer does not activate its stream,
         but allows the zmq_worker to do that.
 
         Yields
         ------
-        batch
+        data : dict
             Data drawn from `streamer(max_iter)`.
         """
         context = zmq.Context()

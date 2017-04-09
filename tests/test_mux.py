@@ -13,8 +13,8 @@ def test_mux_single():
     stream = pescador.Streamer(reference)
 
     mux = pescador.mux.Mux([stream], 1, with_replacement=False)
-    estimate = mux.iterate()
-    assert list(reference) == list(estimate)
+    estimate = list(mux)
+    assert reference == estimate
 
 
 @pytest.mark.parametrize('items',
@@ -24,7 +24,7 @@ def test_mux_single():
 def test_mux_single_tuple(items):
 
     stream = pescador.Streamer(T.md_generator, 2, 50, items=items)
-    reference = list(stream.iterate())
+    reference = list(stream)
 
     mux = pescador.mux.Mux([stream], 1, with_replacement=False)
     estimate = list(mux.tuples(*items))
@@ -38,7 +38,7 @@ def test_mux_single_tuple(items):
 
 def test_mux_empty():
     with pytest.raises(pescador.PescadorError):
-        list(pescador.mux.Mux([], 1).iterate())
+        list(pescador.mux.Mux([], 1))
 
 
 @pytest.mark.parametrize('weight', [0.0, 0.5])
@@ -50,11 +50,11 @@ def test_mux_weighted(weight):
     mux = pescador.mux.Mux([stream, stream2], 2,
                            weights=[1.0, weight],
                            with_replacement=False)
-    estimate = mux.iterate()
+    estimate = list(mux)
     if weight == 0.0:
-        assert list(reference) == list(estimate)
+        assert reference == estimate
     else:
-        assert list(reference) != list(estimate)
+        assert reference != estimate
 
 
 # This should give us all the reference before all the noise
@@ -67,8 +67,8 @@ def test_mux_rare(weight):
     mux = pescador.mux.Mux([stream, stream2], 2,
                            weights=weight,
                            with_replacement=False)
-    estimate = mux.iterate()
-    assert (list(reference) + list(noise)) == list(estimate)
+    estimate = list(mux)
+    assert (reference + noise) == estimate
 
 
 def test_empty_streams():
@@ -83,10 +83,9 @@ def test_empty_streams():
     mux = pescador.mux.Mux([reference, empty], 2, lam=None,
                            with_replacement=False,
                            weights=[1e-10, 1e10])
-    estimate = mux.iterate(10)
-    estimate = list(estimate)
+    estimate = list(mux.iterate(10))
 
-    ref = list(reference.iterate())
+    ref = list(reference)
     assert len(ref) == len(estimate)
     for b1, b2 in zip(ref, estimate):
         T.__eq_batch(b1, b2)
