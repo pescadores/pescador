@@ -7,7 +7,7 @@ from . import core
 from .exceptions import PescadorError
 
 
-# TODO: Justify this class
+# TODO: ejhumphrey proposes nuking this class; deprecation template to follow?
 class BufferedStreamer(core.Streamer):
     """Buffers a stream into batches of examples
 
@@ -58,7 +58,7 @@ class BufferedStreamer(core.Streamer):
         """Activates the stream."""
         self.stream_ = self.streamer
 
-    def generate(self, max_iter=None):
+    def iterate(self, max_iter=None):
         """Generate samples from the streamer.
 
         Parameters
@@ -69,20 +69,20 @@ class BufferedStreamer(core.Streamer):
             not the number of individual samples.
         """
         with core.StreamActivator(self):
-            for n, batch in enumerate(buffer_batch(self.stream_.generate(),
+            for n, batch in enumerate(buffer_batch(self.stream_.iterate(),
                                                    self.buffer_size)):
                 if max_iter is not None and n >= max_iter:
                     break
                 yield batch
 
 
-def buffer_batch(iterable, buffer_size):
-    '''Buffer data samples from an iterable into one data object.
+def buffer_batch(streamer, buffer_size):
+    '''Buffer data samples from an streamer into one data object.
 
     Parameters
     ----------
-    iterable : iterable
-        The iterable to buffer
+    streamer : streamer
+        The streamer to buffer
 
     buffer_size : int > 0
         The number of examples to retain per batch.
@@ -96,7 +96,7 @@ def buffer_batch(iterable, buffer_size):
     batches = []
     n = 0
 
-    for x in iterable:
+    for x in streamer:
         batches.append(x)
         n += batch_length(x)
 
@@ -117,7 +117,7 @@ def buffer_batch(iterable, buffer_size):
             yield batch
 
 
-# TODO: Justify this function.
+# TODO: Deprecate this function.
 def __split_batches(batches, buffer_size):
     '''Split at most one batch off of a collection of batches.
 

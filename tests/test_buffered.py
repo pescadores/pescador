@@ -25,7 +25,7 @@ def test_buffer_streamer(dimension, batch_size, buf_size):
                                    size=batch_size)
     estimate = pescador.BufferedStreamer(gen_stream, buf_size)
 
-    estimate = list(__serialize_batches(estimate.generate()))
+    estimate = list(__serialize_batches(estimate.iterate()))
 
     T.__eq_lists(reference, estimate)
 
@@ -44,7 +44,7 @@ def test_buffer_streamer_tuple(dimension, batch_size, buf_size, items):
 
     buf = pescador.BufferedStreamer(gen_stream, buf_size)
     estimate = list(buf.tuples(*items))
-    reference = list(buf.generate())
+    reference = list(buf.iterate())
 
     for b, t in zip(reference, estimate):
         assert isinstance(t, tuple)
