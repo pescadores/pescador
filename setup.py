@@ -33,7 +33,8 @@ setup(
         'joblib>=0.9',
         'six',
         'pyzmq',
-        'numpy'
+        'numpy',
+        'decorator'
     ],
     extras_require={
         'docs': ['numpydoc', 'sphinx-gallery']
