@@ -1,14 +1,13 @@
 #!/usr/bin/env python
 '''Buffered streamers'''
 import numpy as np
-import six
+from warnings import warn
 
 from . import core
-from .exceptions import PescadorError
-from .util import deprecated
+from .maps import buffer_stream
+from . import util
 
 
-# TODO: How to deprecate a class?
 class BufferedStreamer(core.Streamer):
     """Buffers a stream into batches of examples
 
@@ -49,6 +48,12 @@ class BufferedStreamer(core.Streamer):
              completing teh last batch, will just return the number
              of samples currently in the buffer.
         """
+        warn('`BufferedStreamer` is deprecated in 1.1.0 '
+             'This functionality is superseded by the generator function '
+             '`pescador.buffer_data` in 2.0.0, which can be used with '
+             '`pescador.Streamer` to similar ends.'
+             'Use this idiom instead to maintain forwards compatibility.',
+             DeprecationWarning)
         self.streamer = streamer
         if not isinstance(streamer, core.Streamer):
             self.streamer = core.Streamer(streamer)
@@ -59,8 +64,7 @@ class BufferedStreamer(core.Streamer):
         """Activates the stream."""
         self.stream_ = self.streamer
 
-    # @deprecated: s/max_batches/max_iter
-    def iterate(self, max_iter=None):
+    def iterate(self, max_iter=None, partial=True):
         """Generate samples from the streamer.
 
         Parameters
@@ -69,59 +73,20 @@ class BufferedStreamer(core.Streamer):
             For the BufferedStreamer, max_iter is the
             number of *buffered* batches that are generated,
             not the number of individual samples.
+
+        partial : bool, default=True
+            Return buffers smaller than the requested size.
         """
         with core.StreamActivator(self):
-            for n, batch in enumerate(buffer_batch(self.stream_.iterate(),
-                                                   self.buffer_size)):
+            for n, batch in enumerate(buffer_stream(self.stream_,
+                                                    self.buffer_size,
+                                                    partial=partial)):
                 if max_iter is not None and n >= max_iter:
                     break
                 yield batch
 
 
-# TODO: Decorate with @moved once `pescador.transforms` is introduced.
-# @deprecated: s/generator/stream
-def buffer_batch(stream, buffer_size):
-    '''Buffer data samples from an iterable stream into one data object.
-
-    Parameters
-    ----------
-    stream : stream
-        The iterable stream to buffer
-
-    buffer_size : int > 0
-        The number of examples to retain per batch.
-
-    Yields
-    ------
-    batch
-        A batch of size at most `buffer_size`
-    '''
-
-    batches = []
-    n = 0
-
-    for x in stream:
-        batches.append(x)
-        n += batch_length(x)
-
-        if n < buffer_size:
-            continue
-
-        batch, batches = __split_batches(batches, buffer_size)
-
-        if batch is not None:
-            yield batch
-            batch = None
-            n = 0
-
-    # Run out the remaining samples
-    while batches:
-        batch, batches = __split_batches(batches, buffer_size)
-        if batch is not None:
-            yield batch
-
-
-@deprecated('1.0', '2.0')
+@util.deprecated('1.1', '2.0')
 def __split_batches(batches, buffer_size):
     '''Split at most one batch off of a collection of batches.
 
@@ -181,33 +146,8 @@ def __split_batches(batches, buffer_size):
     return batch, batches
 
 
-def batch_length(batch):
-    '''Determine the number of samples in a batch.
+batch_length = util.moved('pescador.util.batch_length',
+                          '1.1', '2.0')(util.batch_length)
 
-    Parameters
-    ----------
-    batch : dict
-        A batch dictionary.  Each value must implement `len`.
-        All values must have the same `len`.
-
-    Returns
-    -------
-    n : int >= 0 or None
-        The number of samples in this batch.
-        If the batch has no fields, n is None.
-
-    Raises
-    ------
-    PescadorError
-        If some two values have unequal length
-    '''
-    n = None
-
-    for value in six.itervalues(batch):
-        if n is None:
-            n = len(value)
-
-        elif len(value) != n:
-            raise PescadorError('Unequal field lengths')
-
-    return n
+buffer_batch = util.moved('pescador.maps.buffer_stream',
+                          '1.1', '2.0')(buffer_stream)
