@@ -33,7 +33,7 @@ def md_generator(dimension, n, size=2, items='X'):
     M = len(items)
     for i in range(n):
 
-        yield {item: i * M * np.ones(shape)[np.newaxis] + j
+        yield {item: i * M * np.ones(shape) + j
                for j, item in enumerate(items)}
 
 
