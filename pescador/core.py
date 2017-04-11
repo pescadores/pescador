@@ -3,6 +3,8 @@
 import collections
 import inspect
 import six
+from warnings import warn
+
 from .exceptions import PescadorError
 from .util import Deprecated, rename_kw
 
@@ -124,11 +126,15 @@ class Streamer(object):
     def deactivate(self):
         self.stream_ = None
 
-    # @deprecated? s/generate/iterate, s/max_batches/max_iter
-    def generate(self, max_iter=None):
-        return self.iterate(max_iter=max_iter)
+    def generate(self, max_batches=None):
+        warn('`Streamer.generate(max_batches)` is deprecated in 1.1.0 '
+             'This method will become `Streamer.iterate(max_iter)` in 2.0.0. '
+             'Consider using this method instead, or iterating the Streamer '
+             'directly (preferred), e.g. `for x in streamer:`, to maintain '
+             'forwards compatibility.',
+             DeprecationWarning)
+        return self.iterate(max_iter=max_batches)
 
-    # @deprecated? s/max_batches/max_iter
     def iterate(self, max_iter=None):
         '''Instantiate an iterator.
 
@@ -167,7 +173,6 @@ class Streamer(object):
             for obj in self:
                 yield obj
 
-    # @deprecated
     def tuples(self, *items, **kwargs):
         '''Generate data in tuple-form instead of dicts.
 
@@ -208,6 +213,10 @@ class Streamer(object):
         generate
         cycle
         '''
+        warn('`Streamer.tuples()` is deprecated in 1.1.0 '
+             'This functionality is moved to `pescador.tuples` in 2.0.0. '
+             'Consider using this method to maintain forwards compatibility.',
+             DeprecationWarning)
         if not items:
             raise PescadorError('Unable to generate tuples from '
                                 'an empty item set')
@@ -219,8 +228,7 @@ class Streamer(object):
             for data in self.iterate(**kwargs):
                 yield tuple(data[item] for item in items)
 
-    # @deprecated? s/max_batches/max_iter
-    def __call__(self, max_iter=None, cycle=False):
+    def __call__(self, max_iter=None, cycle=False, max_batches=Deprecated()):
         '''Convenience interface for interacting with the Streamer.
 
         TODO: max_iter > len(self.stream_) is incompatible with cycle.
@@ -236,6 +244,12 @@ class Streamer(object):
         cycle: bool
             If `True`, cycle indefinitely.
 
+        max_batches : None or int > 0
+            .. warning:: This parameter name was deprecated in pescador 1.1
+            Use the `max_iter` parameter instead.
+            The `max_batches` parameter will be removed in pescador 2.0.0.
+
+
         Yields
         ------
         obj : Objects yielded by the generator provided on init.
@@ -244,8 +258,10 @@ class Streamer(object):
         --------
         iterate
         cycle
-        tuples
         '''
+        max_iter = rename_kw('max_batches', max_batches,
+                             'max_iter', max_iter,
+                             '1.1.0', '2.0.0')
         if cycle:
             gen = self.cycle()
         else:
