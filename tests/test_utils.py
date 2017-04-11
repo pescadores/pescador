@@ -1,6 +1,10 @@
+import pytest
+
+import numpy as np
 import six
 import time
-import numpy as np
+
+import pescador.util
 
 
 def __eq_batch(b1, b2):
@@ -50,3 +54,16 @@ def __zip_generator(n, size1, size2):
     for b1, b2 in zip(finite_generator(n, size=size1),
                       finite_generator(n, size=size2)):
         yield dict(X=b1['X'], Y=b2['X'])
+
+
+@pytest.mark.parametrize(
+    'n1,n2', [pytest.mark.xfail((5, 10), raises=pescador.util.PescadorError),
+              pytest.mark.xfail((5, 15), raises=pescador.util.PescadorError),
+              pytest.mark.xfail((10, 5), raises=pescador.util.PescadorError),
+              pytest.mark.xfail((15, 5), raises=pescador.util.PescadorError),
+              (5, 5), (10, 10), (15, 15)])
+def test_batch_length(n1, n2):
+    generator, n = __zip_generator(3, n1, n2), n1
+
+    for batch in generator:
+        assert pescador.util.batch_length(batch) == n

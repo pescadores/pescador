@@ -7,6 +7,8 @@ import inspect
 import six
 import warnings
 
+from .exceptions import PescadorError
+
 
 class Deprecated(object):
     '''A dummy class to catch usage of deprecated variable names'''
@@ -114,3 +116,35 @@ def deprecated(version, version_removed):
         return func(*args, **kwargs)
 
     return decorator(__wrapper)
+
+
+def batch_length(batch):
+    '''Determine the number of samples in a batch.
+
+    Parameters
+    ----------
+    batch : dict
+        A batch dictionary.  Each value must implement `len`.
+        All values must have the same `len`.
+
+    Returns
+    -------
+    n : int >= 0 or None
+        The number of samples in this batch.
+        If the batch has no fields, n is None.
+
+    Raises
+    ------
+    PescadorError
+        If some two values have unequal length
+    '''
+    n = None
+
+    for value in six.itervalues(batch):
+        if n is None:
+            n = len(value)
+
+        elif len(value) != n:
+            raise PescadorError('Unequal field lengths')
+
+    return n
