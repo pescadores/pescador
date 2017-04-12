@@ -148,3 +148,22 @@ def test_mux_bad_weights():
 
         # 5 streamers, all-zeros weight vector should trigger an error
         pescador.Mux(streamers, None, weights=np.zeros(5))
+
+
+def test_mux_of_muxes():
+    # Check on Issue #79
+    abc = pescador.Streamer('abc')
+    xyz = pescador.Streamer('xyz')
+    mux1 = pescador.Mux([abc, xyz], k=2, lam=None,
+                        prune_empty_streams=False, revive=True)
+    assert set('abcxyz') == set(list(mux1.iterate(max_iter=50)))
+
+    n123 = pescador.Streamer('123')
+    n456 = pescador.Streamer('456')
+    mux2 = pescador.Mux([n123, n456], k=2, lam=None,
+                        prune_empty_streams=False, revive=True)
+    assert set('123456') == set(list(mux2.iterate(max_iter=50)))
+
+    mux3 = pescador.Mux([mux1, mux2], k=2, lam=None,
+                        prune_empty_streams=False, revive=True)
+    assert set('abcxyz123456') == set(list(mux3.iterate(max_iter=50)))
