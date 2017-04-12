@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-'''ZMQ-based stream multiplexing'''
+'''ZMQ-based data streaming'''
 
 import multiprocessing as mp
 import zmq
@@ -32,23 +32,23 @@ if six.PY3:
     buffer = memoryview
 
 
-def zmq_send_batch(socket, batch, flags=0, copy=True, track=False):
-    """send a numpy array with metadata"""
+def zmq_send_data(socket, data, flags=0, copy=True, track=False):
+    """Send data, e.g. {key: np.ndarray}, with metadata"""
 
     header, payload = [], []
 
-    for key in sorted(batch.keys()):
-        data = batch[key]
+    for key in sorted(data.keys()):
+        arr = data[key]
 
-        if not isinstance(data, np.ndarray):
+        if not isinstance(arr, np.ndarray):
             raise PescadorError('Only ndarray types can be serialized')
 
-        header.append(dict(dtype=str(data.dtype),
-                           shape=data.shape,
+        header.append(dict(dtype=str(arr.dtype),
+                           shape=arr.shape,
                            key=key,
-                           aligned=data.flags['ALIGNED']))
+                           aligned=arr.flags['ALIGNED']))
         # Force contiguity
-        payload.append(data)
+        payload.append(arr)
 
     # Send the header
     msg = [json.dumps(header).encode('ascii')]
@@ -57,10 +57,10 @@ def zmq_send_batch(socket, batch, flags=0, copy=True, track=False):
     return socket.send_multipart(msg, flags, copy=copy, track=track)
 
 
-def zmq_recv_batch(socket, flags=0, copy=True, track=False):
-    """recv a batch"""
+def zmq_recv_data(socket, flags=0, copy=True, track=False):
+    """Receive data over a socket."""
 
-    results = dict()
+    data = dict()
 
     msg = socket.recv_multipart(flags=flags, copy=copy, track=track)
 
@@ -70,15 +70,15 @@ def zmq_recv_batch(socket, flags=0, copy=True, track=False):
         raise StopIteration
 
     for header, payload in zip(headers, msg[1:]):
-        results[header['key']] = np.frombuffer(buffer(payload),
-                                               dtype=header['dtype'])
-        results[header['key']].shape = header['shape']
+        data[header['key']] = np.frombuffer(buffer(payload),
+                                            dtype=header['dtype'])
+        data[header['key']].shape = header['shape']
         if six.PY2:
             # Legacy python won't let us preserve alignment, skip this step
             continue
-        results[header['key']].flags['ALIGNED'] = header['aligned']
+        data[header['key']].flags['ALIGNED'] = header['aligned']
 
-    return results
+    return data
 
 
 def zmq_worker(port, streamer, terminate, copy=False, max_iter=None):
@@ -90,14 +90,14 @@ def zmq_worker(port, streamer, terminate, copy=False, max_iter=None):
 
     try:
         # Build the stream
-        for batch in streamer(max_iter=max_iter):
-            zmq_send_batch(socket, batch, copy=copy)
+        for data in streamer(max_iter=max_iter):
+            zmq_send_data(socket, data, copy=copy)
             if terminate.is_set():
                 break
 
     finally:
         # send an empty payload to kill
-        zmq_send_batch(socket, {})
+        zmq_send_data(socket, {})
         context.destroy()
 
 
@@ -152,7 +152,6 @@ class ZMQStreamer(Streamer):
         self.copy = copy
         self.timeout = timeout
 
-    # @deprecated: s/generate/iterate, s/max_batches/max_iter
     def iterate(self, max_iter=None):
         """
         Note: A ZMQStreamer does not activate its stream,
@@ -188,7 +187,7 @@ class ZMQStreamer(Streamer):
 
             # Yield from the queue as long as it's open
             while True:
-                yield zmq_recv_batch(socket)
+                yield zmq_recv_data(socket)
 
         except StopIteration:
             pass

@@ -90,5 +90,17 @@ def test_zmq_early_stop():
     zmq_stream = pescador.ZMQStreamer(stream)
 
     # Only sample five batches
-    for item in zip(zmq_stream, range(5)):
-        pass
+    assert len([x for x in zip(zmq_stream, range(5))]) == 5
+
+
+def test_zmq_buffer():
+    n_samples = 50
+    stream = pescador.Streamer(T.md_generator, dimension=2, n=n_samples,
+                               size=64, items=['X', 'Y'])
+
+    buff_size = 10
+    buff_stream = pescador.Streamer(pescador.buffer_stream, stream, buff_size)
+    zmq_stream = pescador.ZMQStreamer(buff_stream)
+
+    outputs = [x for x in zmq_stream]
+    assert len(outputs) == int(n_samples) / buff_size
