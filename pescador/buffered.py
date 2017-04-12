@@ -86,66 +86,6 @@ class BufferedStreamer(core.Streamer):
                 yield batch
 
 
-@util.deprecated('1.1', '2.0')
-def __split_batches(batches, buffer_size):
-    '''Split at most one batch off of a collection of batches.
-
-    Parameters
-    ----------
-    batches : list
-        List of batch objects
-
-    buffer_size : int > 0 or None
-        Size of the desired buffer.
-        If None, the entire stream is exhausted.
-
-    Returns
-    -------
-    batch, remaining_batches
-        One batch of size up to buffer_size,
-        and all remaining batches.
-
-    '''
-
-    batch_size = 0
-    batch_data = []
-
-    # First, pull off all the candidate batches
-    while batches and (buffer_size is None or
-                       batch_size < buffer_size):
-        batch_data.append(batches.pop(0))
-        batch_size += batch_length(batch_data[-1])
-
-    # Merge the batches
-    batch = dict()
-    residual = dict()
-
-    has_residual = False
-    has_data = False
-
-    for key in batch_data[0].keys():
-        batch[key] = np.concatenate([data[key] for data in batch_data])
-
-        residual[key] = batch[key][buffer_size:]
-
-        if len(residual[key]):
-            has_residual = True
-
-        # Clip to the appropriate size
-        batch[key] = batch[key][:buffer_size]
-
-        if len(batch[key]):
-            has_data = True
-
-    if has_residual:
-        batches.insert(0, residual)
-
-    if not has_data:
-        batch = None
-
-    return batch, batches
-
-
 batch_length = util.moved('pescador.util.batch_length',
                           '1.1', '2.0')(util.batch_length)
 

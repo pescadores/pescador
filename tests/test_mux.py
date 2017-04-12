@@ -1,5 +1,6 @@
 import pytest
 
+import collections
 import numpy as np
 
 import pescador
@@ -150,24 +151,67 @@ def test_mux_bad_weights():
         pescador.Mux(streamers, None, weights=np.zeros(5))
 
 
-def test_mux_of_muxes():
+def test_mux_of_muxes_itered():
     # Check on Issue #79
     abc = pescador.Streamer('abc')
     xyz = pescador.Streamer('xyz')
     mux1 = pescador.Mux([abc, xyz], k=10, rate=None,
                         prune_empty_streams=False, revive=True,
                         random_state=135)
-    assert set('abcxyz') == set(mux1.iterate(max_iter=100))
+    samples1 = mux1.iterate(max_iter=1000)
+    count1 = collections.Counter(samples1)
+    print(count1)
+    assert set('abcxyz') == set(count1.keys())
 
     n123 = pescador.Streamer('123')
     n456 = pescador.Streamer('456')
     mux2 = pescador.Mux([n123, n456], k=10, rate=None,
                         prune_empty_streams=False, revive=True,
                         random_state=246)
-    assert set('123456') == set(mux2.iterate(max_iter=100))
+    samples2 = mux2.iterate(max_iter=1000)
+    count2 = collections.Counter(samples2)
+    print(count2)
+    assert set('123456') == set(count2.keys())
 
     # Note that (random_state=987, k=2) fails.
     mux3 = pescador.Mux([mux1, mux2], k=10, rate=None,
                         prune_empty_streams=False, revive=True,
                         random_state=987)
-    assert set('abcxyz123456') == set(mux3.iterate(max_iter=100))
+    samples3 = mux3.iterate(max_iter=1000)
+    count3 = collections.Counter(samples3)
+    print(count3)
+    assert set('abcxyz123456') == set(count3.keys())
+
+
+def test_mux_of_muxes_single():
+    # Check on Issue #79
+    abc = pescador.Streamer('abc')
+    xyz = pescador.Streamer('xyz')
+    mux1 = pescador.Mux([abc, xyz], k=2, rate=None, revive=True,
+                        with_replacement=False,
+                        prune_empty_streams=False)
+
+    n123 = pescador.Streamer('123')
+    n456 = pescador.Streamer('456')
+    mux2 = pescador.Mux([n123, n456], k=2, rate=None, revive=True,
+                        with_replacement=False,
+                        prune_empty_streams=False)
+
+    mux3 = pescador.Mux([mux1, mux2], k=2, rate=None,
+                        with_replacement=False, revive=True,
+                        prune_empty_streams=False)
+    samples3 = list(mux3.iterate(max_iter=10000))
+    count3 = collections.Counter(samples3)
+    print(samples3[:10], count3)
+    assert set('abcxyz123456') == set(count3.keys())
+
+
+def test_critical_mux():
+    # Check on Issue #80
+    chars = 'abcde'
+    streamers = [pescador.Streamer(x * 5) for x in chars]
+    mux = pescador.Mux(streamers, k=len(chars), rate=None,
+                       with_replacement=False, revive=True,
+                       prune_empty_streams=False, random_state=135)
+    samples = mux.iterate(max_iter=1000)
+    print(collections.Counter(samples))

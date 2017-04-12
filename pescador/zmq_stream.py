@@ -192,8 +192,8 @@ class ZMQStreamer(Streamer):
         except StopIteration:
             pass
 
-        # TODO: Fix bare except
         except:
+            # pylint: disable-msg=W0702
             six.reraise(*sys.exc_info())
 
         finally:

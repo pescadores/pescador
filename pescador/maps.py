@@ -56,7 +56,7 @@ def buffer_stream(stream, buffer_size, partial=False,
             continue
         try:
             yield __stack_data(data)
-        except TypeError:
+        except (TypeError, AttributeError):
             raise PescadorError("Malformed data stream: {}".format(data))
         finally:
             data = []

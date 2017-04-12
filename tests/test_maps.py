@@ -32,6 +32,10 @@ def test_buffer_stream():
     for exp, obs in zip(expected, outputs):
         T.__eq_batch(exp, obs)
 
+    with pytest.raises(pescador.maps.PescadorError):
+        for not_data in pescador.maps.buffer_stream([1, 2, 3, 4], 2):
+            pass
+
 
 def test_keras_tuples():
     data = [{"foo": np.array([n]), "bar": np.array([n / 2.]),
