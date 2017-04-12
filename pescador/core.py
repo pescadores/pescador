@@ -249,7 +249,6 @@ class Streamer(object):
             Use the `max_iter` parameter instead.
             The `max_batches` parameter will be removed in pescador 2.0.0.
 
-
         Yields
         ------
         obj : Objects yielded by the generator provided on init.
