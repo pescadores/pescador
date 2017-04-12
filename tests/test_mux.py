@@ -80,7 +80,7 @@ def test_empty_streams():
     reference = pescador.Streamer(T.finite_generator, 10)
     empty = pescador.Streamer(__empty)
 
-    mux = pescador.mux.Mux([reference, empty], 2, lam=None,
+    mux = pescador.mux.Mux([reference, empty], 2, rate=None,
                            with_replacement=False,
                            weights=[1e-10, 1e10])
     estimate = list(mux.iterate(10))
@@ -94,18 +94,18 @@ def test_empty_streams():
 @pytest.mark.parametrize('n_streams', [1, 2, 4])
 @pytest.mark.parametrize('n_samples', [10, 20, 80])
 @pytest.mark.parametrize('k', [1, 2, 4])
-@pytest.mark.parametrize('lam', [1.0, 2.0, 8.0])
+@pytest.mark.parametrize('rate', [1.0, 2.0, 8.0])
 @pytest.mark.parametrize('random_state',
                          [None,
                           1000,
                           np.random.RandomState(seed=1000),
                           pytest.mark.xfail('foo',
                                             raises=pescador.PescadorError)])
-def test_mux_replacement(n_streams, n_samples, k, lam, random_state):
+def test_mux_replacement(n_streams, n_samples, k, rate, random_state):
     streamers = [pescador.Streamer(T.infinite_generator)
                  for _ in range(n_streams)]
 
-    mux = pescador.mux.Mux(streamers, k, lam=lam, random_state=random_state)
+    mux = pescador.mux.Mux(streamers, k, rate=rate, random_state=random_state)
 
     estimate = list(mux.iterate(n_samples))
 
@@ -116,12 +116,12 @@ def test_mux_replacement(n_streams, n_samples, k, lam, random_state):
 @pytest.mark.parametrize('n_streams', [1, 2, 4])
 @pytest.mark.parametrize('n_samples', [512])
 @pytest.mark.parametrize('k', [1, 2, 4])
-@pytest.mark.parametrize('lam', [1.0, 2.0, 4.0])
-def test_mux_revive(n_streams, n_samples, k, lam):
+@pytest.mark.parametrize('rate', [1.0, 2.0, 4.0])
+def test_mux_revive(n_streams, n_samples, k, rate):
     streamers = [pescador.Streamer(T.finite_generator, 10)
                  for _ in range(n_streams)]
 
-    mux = pescador.mux.Mux(streamers, k, lam=lam,
+    mux = pescador.mux.Mux(streamers, k, rate=rate,
                            with_replacement=False,
                            revive=True)
 
@@ -154,19 +154,18 @@ def test_mux_of_muxes():
     # Check on Issue #79
     abc = pescador.Streamer('abc')
     xyz = pescador.Streamer('xyz')
-    mux1 = pescador.Mux([abc, xyz], k=2, lam=None,
-                        prune_empty_streams=False, revive=True,
-                        random_state=134)
+    mux1 = pescador.Mux([abc, xyz], k=2, rate=None,
+                        prune_empty_streams=False, revive=True)
     assert set('abcxyz') == set(mux1.iterate(max_iter=50))
 
     n123 = pescador.Streamer('123')
     n456 = pescador.Streamer('456')
-    mux2 = pescador.Mux([n123, n456], k=2, lam=None,
-                        prune_empty_streams=False, revive=True,
-                        random_state=245)
+    mux2 = pescador.Mux([n123, n456], k=2, rate=None,
+                        prune_empty_streams=False, revive=True)
     assert set('123456') == set(mux2.iterate(max_iter=50))
 
-    mux3 = pescador.Mux([mux1, mux2], k=2, lam=None,
+    # Note that (random_state=987, k=2) fails.
+    mux3 = pescador.Mux([mux1, mux2], k=10, rate=None,
                         prune_empty_streams=False, revive=True,
-                        random_state=983)  # =987 fails?
+                        random_state=987)
     assert set('abcxyz123456') == set(mux3.iterate(max_iter=50))

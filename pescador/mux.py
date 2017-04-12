@@ -29,7 +29,7 @@ class Mux(core.Streamer):
     #   s/pool_weights/weights
     #   s/prune_empty_seeds/prune_empty_streams
     def __init__(self, streamers, k,
-                 lam=256.0, weights=None, with_replacement=True,
+                 rate=256.0, weights=None, with_replacement=True,
                  prune_empty_streams=True, revive=False,
                  random_state=None):
         """Given an array (pool) of streamer types, do the following:
@@ -94,7 +94,7 @@ class Mux(core.Streamer):
         self.streamers = streamers
         self.n_streams = len(streamers)
         self.k = k
-        self.lam = lam
+        self.rate = rate
         self.weights = weights
         self.with_replacement = with_replacement
         self.prune_empty_streams = prune_empty_streams
@@ -159,7 +159,6 @@ class Mux(core.Streamer):
         self.stream_idxs_ = None
         self.weight_norm_ = None
 
-    # @deprecated: s/generate/iterate, s/max_batches/max_iter
     def iterate(self, max_iter=None):
         with core.StreamActivator(self):
 
@@ -238,8 +237,8 @@ class Mux(core.Streamer):
                                 'length as `distribution`')
 
         # instantiate
-        if self.lam is not None:
-            n_stream = 1 + self.rng.poisson(lam=self.lam)
+        if self.rate is not None:
+            n_stream = 1 + self.rng.poisson(lam=self.rate)
         else:
             n_stream = None
 
