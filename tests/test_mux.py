@@ -154,18 +154,20 @@ def test_mux_of_muxes():
     # Check on Issue #79
     abc = pescador.Streamer('abc')
     xyz = pescador.Streamer('xyz')
-    mux1 = pescador.Mux([abc, xyz], k=5, rate=None,
-                        prune_empty_streams=False, revive=True)
-    assert set('abcxyz') == set(mux1.iterate(max_iter=50))
+    mux1 = pescador.Mux([abc, xyz], k=10, rate=None,
+                        prune_empty_streams=False, revive=True,
+                        random_state=135)
+    assert set('abcxyz') == set(mux1.iterate(max_iter=100))
 
     n123 = pescador.Streamer('123')
     n456 = pescador.Streamer('456')
-    mux2 = pescador.Mux([n123, n456], k=5, rate=None,
-                        prune_empty_streams=False, revive=True)
-    assert set('123456') == set(mux2.iterate(max_iter=50))
+    mux2 = pescador.Mux([n123, n456], k=10, rate=None,
+                        prune_empty_streams=False, revive=True,
+                        random_state=246)
+    assert set('123456') == set(mux2.iterate(max_iter=100))
 
     # Note that (random_state=987, k=2) fails.
     mux3 = pescador.Mux([mux1, mux2], k=10, rate=None,
                         prune_empty_streams=False, revive=True,
                         random_state=987)
-    assert set('abcxyz123456') == set(mux3.iterate(max_iter=50))
+    assert set('abcxyz123456') == set(mux3.iterate(max_iter=100))
