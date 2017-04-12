@@ -5,6 +5,8 @@ import numpy as np
 from .exceptions import PescadorError
 from . import util
 
+__all__ = ['buffer_stream']
+
 
 def __stack_data(data):
     output = dict()
