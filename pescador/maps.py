@@ -6,7 +6,7 @@ import six
 from .exceptions import PescadorError
 from . import util
 
-__all__ = ['buffer_stream']
+__all__ = ['buffer_stream', 'keras_tuples']
 
 
 def __stack_data(data):
