@@ -3,6 +3,7 @@ import pytest
 import numpy as np
 import six
 import time
+import warnings
 
 import pescador.util
 
@@ -67,3 +68,89 @@ def test_batch_length(n1, n2):
 
     for batch in generator:
         assert pescador.util.batch_length(batch) == n
+
+
+def test_warning_deprecated():
+
+    @pescador.util.deprecated('old_version', 'new_version')
+    def __dummy():
+        return True
+
+    warnings.resetwarnings()
+    warnings.simplefilter('always')
+    with warnings.catch_warnings(record=True) as out:
+        x = __dummy()
+
+        # Make sure we still get the right value
+        assert x is True
+
+        # And that the warning triggered
+        assert len(out) > 0
+
+        # And that the category is correct
+        assert out[0].category is DeprecationWarning
+
+        # And that it says the right thing (roughly)
+        assert 'deprecated' in str(out[0].message).lower()
+
+
+def test_warning_moved():
+
+    @pescador.util.moved('from', 'old_version', 'new_version')
+    def __dummy():
+        return True
+
+    warnings.resetwarnings()
+    warnings.simplefilter('always')
+    with warnings.catch_warnings(record=True) as out:
+        x = __dummy()
+
+        # Make sure we still get the right value
+        assert x is True
+
+        # And that the warning triggered
+        assert len(out) > 0
+
+        # And that the category is correct
+        assert out[0].category is DeprecationWarning
+
+        # And that it says the right thing (roughly)
+        assert 'moved' in str(out[0].message).lower()
+
+
+def test_warning_rename_kw_pass():
+    warnings.resetwarnings()
+    warnings.simplefilter('always')
+
+    ov = pescador.util.Deprecated()
+    nv = 23
+
+    with warnings.catch_warnings(record=True) as out:
+        v = pescador.util.rename_kw('old', ov, 'new', nv, '0', '1')
+
+        assert v == nv
+
+        # Make sure no warning triggered
+        assert len(out) == 0
+
+
+def test_warning_rename_kw_fail():
+    warnings.resetwarnings()
+    warnings.simplefilter('always')
+
+    ov = 27
+    nv = 23
+
+    with warnings.catch_warnings(record=True) as out:
+        v = pescador.util.rename_kw('old', ov, 'new', nv, '0', '1')
+
+        assert v == ov
+
+        # Make sure the warning triggered
+        assert len(out) > 0
+
+        # And that the category is correct
+        assert out[0].category is DeprecationWarning
+
+        # And that it says the right thing (roughly)
+        assert 'renamed' in str(out[0].message).lower()

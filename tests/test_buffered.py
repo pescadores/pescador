@@ -1,9 +1,10 @@
 #!/usr/bin/env python
 
 import pytest
-import pescador
 import numpy as np
 
+import pescador
+import pescador.buffered
 import test_utils as T
 
 
@@ -30,6 +31,10 @@ def test_buffer_streamer(dimension, batch_size, buf_size):
     estimate = list(__unpack_stream(estimate))
 
     T.__eq_lists(reference, estimate)
+
+    estimate = pescador.BufferedStreamer(gen_stream, buf_size)
+
+    assert len(list(estimate.iterate(max_iter=2))) <= 2
 
 
 @pytest.mark.parametrize('items',
