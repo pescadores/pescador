@@ -6,10 +6,9 @@ A Keras Example
 
 An example of how to use Pescador with Keras.
 
-3/18/2017: Updated to Keras 2.0 API.
+Original Code source:
+https://github.com/fchollet/keras/blob/master/examples/mnist_cnn.py
 """
-
-# Original Code source: https://github.com/fchollet/keras/blob/master/examples/mnist_cnn.py
 
 ##############################################
 # Setup and Definitions
@@ -39,7 +38,20 @@ img_rows, img_cols = 28, 28
 ##############################################
 
 def setup_data():
-    # the data, shuffled and split between train and test sets
+    """Load and shape data for training with Keras + Pescador.
+
+    Returns
+    -------
+    input_shape : tuple, len=3
+        Shape of each sample; adapts to channel configuration of Keras.
+
+    X_train, y_train : np.ndarrays
+        Images and labels for training.
+
+    X_test, y_test : np.ndarrays
+        Images and labels for test.
+    """
+    # The data, shuffled and split between train and test sets
     (x_train, y_train), (x_test, y_test) = mnist.load_data()
 
     if K.image_data_format() == 'channels_first':
@@ -65,12 +77,24 @@ def setup_data():
 
     return input_shape, (x_train, y_train), (x_test, y_test)
 
+
 ##############################################
 # Setup Keras model
 ##############################################
 
-
 def build_model(input_shape):
+    """Create a compiled Keras model.
+
+    Parameters
+    ----------
+    input_shape : tuple, len=3
+        Shape of each image sample.
+
+    Returns
+    -------
+    model : keras.Model
+        Constructed model.
+    """
     model = Sequential()
 
     model.add(Conv2D(32, kernel_size=(3, 3),
@@ -93,71 +117,99 @@ def build_model(input_shape):
 
 
 ##############################################
-# Define Data Generators
+# Define Data Sampler
 ##############################################
-# To add a little bit of complexity, and show a little of what you could
-# do with Keras, we'll add an additional generator which simply
-# adds a little Gaussian noise to the data.
 
+def sampler(X, y):
+    '''A basic generator for sampling data.
 
-def data_generator(X, y):
-    '''A basic generator for the data.'''
+    Parameters
+    ----------
+    X : np.ndarray, len=n_samples, ndim=4
+        Image data.
+
+    y : np.ndarray, len=n_samples, ndim=2
+        One-hot encoded class vectors.
+
+    Yields
+    ------
+    data : dict
+        Single image sample, like {X: np.ndarray, y: np.ndarray}
+    '''
     X = np.atleast_2d(X)
-    # y's are binary vectors, and should be of shape (1, 10) after this.
+    # y's are binary vectors, and should be of shape (10,) after this.
     y = np.atleast_2d(y)
 
     n = X.shape[0]
 
     while True:
         i = np.random.randint(0, n)
-        yield {'X': X[np.newaxis, i], 'y': y[np.newaxis, i]}
+        yield {'X': X[i], 'y': y[i]}
 
 
-def noisy_generator(X, y, scale=1e-1):
-    '''A modified version of the original generator which adds gaussian
-    noise to the original sample.
+##############################################
+# Define a Custom Map Function
+##############################################
+
+def additive_noise(stream, key='X', scale=1e-1):
+    '''Add noise to a data stream.
+
+    Parameters
+    ----------
+    stream : iterable
+        A stream that yields data objects.
+
+    key : string, default='X'
+        Name of the field to add noise.
+
+    scale : float, default=0.1
+        Scale factor for gaussian noise.
+
+    Yields
+    ------
+    data : dict
+        Updated data objects in the stream.
     '''
-    noise_shape = X.shape[1:]
-    for sample in data_generator(X, y):
+    for data in stream:
+        noise_shape = data[key].shape
         noise = scale * np.random.randn(*noise_shape)
-
-        yield {'X': sample['X'] + noise, 'y': sample['y']}
+        data[key] = data[key] + noise
+        yield data
 
 
 ##############################################
 # Put it all together
 ##############################################
-# They key method for interfacing with Keras is the `Streamer.tuples()`,
-# function of the streamer, which takes args of the batch key names to pass to
-# Keras, since Keras's `fit_generator` consumes tuples from the generator.
-
 input_shape, (X_train, Y_train), (X_test, Y_test) = setup_data()
 steps_per_epoch = len(X_train) // batch_size
 
 # Create two streams from the same data, where one of the streams
 # adds a small amount of Gaussian noise. You could easily perform
-# other data augmentations using the same basic strategy.
-basic_stream = pescador.Streamer(data_generator, X_train, Y_train)
-noisy_stream = pescador.Streamer(noisy_generator, X_train, Y_train)
+# other data augmentations using the same 'map' strategy.
+stream = pescador.Streamer(sampler, X_train, Y_train)
+noisy_stream = pescador.Streamer(additive_noise, stream, 'X')
 
-# Mux the two streams together.
-mux = pescador.mux.Mux([basic_stream, noisy_stream],
-                       # Two streams, always active.
-                       2,
-                       # We want to sample from each stream infinitely.
-                       lam=None)
+# Multiplex the two streamers together.
+mux = pescador.Mux([stream, noisy_stream],
+                   # Two streams, always active.
+                   k=2,
+                   # We want to sample from each stream infinitely.
+                   rate=None)
 
-# Generate batches from the stream
-training_streamer = pescador.BufferedStreamer(mux, batch_size)
+# Buffer the stream into minibatches.
+batches = pescador.buffer_stream(mux, batch_size)
 
 model = build_model(input_shape)
-model.fit_generator(
-    training_streamer.tuples('X', 'y', cycle=True),
-    steps_per_epoch=steps_per_epoch,
-    epochs=epochs,
-    verbose=1,
-    validation_data=(X_test, Y_test))
-
-score = model.evaluate(X_test, Y_test, verbose=0)
-print('Test score:', score[0])
-print('Test accuracy:', score[1])
+try:
+    model.fit_generator(
+        pescador.tuples(batches, 'X', 'y'),
+        steps_per_epoch=steps_per_epoch,
+        epochs=epochs,
+        verbose=1,
+        validation_data=(X_test, Y_test))
+except KeyboardInterrupt:
+    print("Stopping early")
+finally:
+    scores = model.evaluate(X_test, Y_test, verbose=0)
+    for val, name in zip(scores, model.metrics_names):
+        print('Test {}: {:0.4f}'.format(name, val))
