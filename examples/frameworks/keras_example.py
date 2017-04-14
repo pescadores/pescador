@@ -15,13 +15,14 @@ https://github.com/fchollet/keras/blob/master/examples/mnist_cnn.py
 ##############################################
 
 from __future__ import print_function
-import numpy as np
+import datetime
 import keras
 from keras.datasets import mnist
 from keras.models import Sequential
 from keras.layers import Dense, Dropout, Flatten
 from keras.layers import Conv2D, MaxPooling2D
 from keras import backend as K
+import numpy as np
 
 import pescador
 
@@ -201,6 +202,7 @@ batches = pescador.buffer_stream(mux, batch_size)
 
 model = build_model(input_shape)
 try:
+    print("Start time: {}".format(datetime.datetime.now()))
     model.fit_generator(
         pescador.tuples(batches, 'X', 'y'),
         steps_per_epoch=steps_per_epoch,
@@ -210,6 +212,7 @@ try:
 except KeyboardInterrupt:
     print("Stopping early")
 finally:
+    print("Finished: {}".format(datetime.datetime.now()))
     scores = model.evaluate(X_test, Y_test, verbose=0)
     for val, name in zip(scores, model.metrics_names):
         print('Test {}: {:0.4f}'.format(name, val))
