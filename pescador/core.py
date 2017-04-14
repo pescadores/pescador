@@ -125,8 +125,8 @@ class Streamer(object):
         self.stream_ = None
 
     def generate(self, max_batches=None):
-        warn('`Streamer.generate(max_batches)` is deprecated in 1.1.0 '
-             'This method will become `Streamer.iterate(max_iter)` in 2.0.0. '
+        warn('`Streamer.generate(max_batches)` is deprecated in 1.1 '
+             'This method will become `Streamer.iterate(max_iter)` in 2.0. '
              'Consider using this method instead, or iterating the Streamer '
              'directly (preferred), e.g. `for x in streamer:`, to maintain '
              'forwards compatibility.',
@@ -212,8 +212,8 @@ class Streamer(object):
         tuples
         keras_tuples
         '''
-        warn('`Streamer.tuples()` is deprecated in 1.1.0 '
-             'This functionality is moved to `pescador.tuples` in 2.0.0. '
+        warn('`Streamer.tuples()` is deprecated in 1.1 '
+             'This functionality is moved to `pescador.tuples` in 2.0. '
              'Consider using this method to maintain forwards compatibility.',
              DeprecationWarning)
         if not items:
@@ -246,7 +246,7 @@ class Streamer(object):
         max_batches : None or int > 0
             .. warning:: This parameter name was deprecated in pescador 1.1
             Use the `max_iter` parameter instead.
-            The `max_batches` parameter will be removed in pescador 2.0.0.
+            The `max_batches` parameter will be removed in pescador 2.0.
 
         Yields
         ------
@@ -259,7 +259,7 @@ class Streamer(object):
         '''
         max_iter = rename_kw('max_batches', max_batches,
                              'max_iter', max_iter,
-                             '1.1.0', '2.0.0')
+                             '1.1', '2.0')
         if cycle:
             gen = self.cycle()
         else:

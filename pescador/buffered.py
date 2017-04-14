@@ -47,9 +47,9 @@ class BufferedStreamer(core.Streamer):
              completing teh last batch, will just return the number
              of samples currently in the buffer.
         """
-        warn('`BufferedStreamer` is deprecated in 1.1.0 '
+        warn('`BufferedStreamer` is deprecated in 1.1 '
              'This functionality is superseded by the generator function '
-             '`pescador.buffer_data` in 2.0.0, which can be used with '
+             '`pescador.buffer_data` in 2.0, which can be used with '
              '`pescador.Streamer` to similar ends.'
              'Use this idiom instead to maintain forwards compatibility.',
              DeprecationWarning)

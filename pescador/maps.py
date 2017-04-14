@@ -32,9 +32,9 @@ def buffer_stream(stream, buffer_size, partial=False,
         If True, yield a final partial batch on under-run.
 
     generator : stream
-        .. warning:: This parameter name was deprecated in pescador 1.1.0
+        .. warning:: This parameter name was deprecated in pescador 1.1
             Use the `stream` parameter instead.
-            The `generator` parameter will be removed in pescador 2.0.0.
+            The `generator` parameter will be removed in pescador 2.0.
     Yields
     ------
     batch
@@ -47,7 +47,7 @@ def buffer_stream(stream, buffer_size, partial=False,
 
     stream = util.rename_kw('generator', generator,
                             'stream', stream,
-                            '1.1.0', '2.0.0')
+                            '1.1', '2.0')
 
     data = []
     n = 0

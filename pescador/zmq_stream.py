@@ -21,7 +21,7 @@ except ImportError:
     from joblib._parallel_backends import SafeFunction
 
 from .core import Streamer
-from .exceptions import PescadorError
+from .exceptions import DataError
 
 
 __all__ = ['ZMQStreamer']
@@ -41,7 +41,7 @@ def zmq_send_data(socket, data, flags=0, copy=True, track=False):
         arr = data[key]
 
         if not isinstance(arr, np.ndarray):
-            raise PescadorError('Only ndarray types can be serialized')
+            raise DataError('Only ndarray types can be serialized')
 
         header.append(dict(dtype=str(arr.dtype),
                            shape=arr.shape,

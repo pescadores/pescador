@@ -94,37 +94,37 @@ class Mux(core.Streamer):
         seed_pool : iterable of streamers
             .. warning:: This parameter name was deprecated in pescador 1.1
             Use the `streamers` parameter instead.
-            The `seed_pool` parameter will be removed in pescador 2.0.0.
+            The `seed_pool` parameter will be removed in pescador 2.0.
 
         lam : float > 0.0
             .. warning:: This parameter name was deprecated in pescador 1.1
             Use the `rate` parameter instead.
-            The `lam` parameter will be removed in pescador 2.0.0.
+            The `lam` parameter will be removed in pescador 2.0.
 
         pool_weights : np.ndarray or None
             .. warning:: This parameter name was deprecated in pescador 1.1
             Use the `weights` parameter instead.
-            The `pool_weights` parameter will be removed in pescador 2.0.0.
+            The `pool_weights` parameter will be removed in pescador 2.0.
 
         prune_empty_seeds : bool
             .. warning:: This parameter name was deprecated in pescador 1.1
             Use the `prune_empty_streams` parameter instead.
             The `prune_empty_seeds` parameter will be removed in
-            pescador 2.0.0.
+            pescador 2.0.
         """
         streamers = rename_kw('seed_pool', seed_pool,
                               'streamers', streamers,
-                              '1.1.0', '2.0.0')
+                              '1.1', '2.0')
         rate = rename_kw('lam', lam,
                          'rate', rate,
-                         '1.1.0', '2.0.0')
+                         '1.1', '2.0')
         weights = rename_kw('pool_weights', pool_weights,
                             'weights', weights,
-                            '1.1.0', '2.0.0')
+                            '1.1', '2.0')
         prune_empty_streams = rename_kw(
             'prune_empty_seeds', prune_empty_seeds,
             'prune_empty_streams', prune_empty_streams,
-            '1.1.0', '2.0.0')
+            '1.1', '2.0')
         self.streamers = streamers
         self.n_streams = len(streamers)
         self.k = k
