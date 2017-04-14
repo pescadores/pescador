@@ -61,14 +61,14 @@ def npz_generator(npz_path):
     """Generate data from an npz file."""
     npz_data = np.load(npz_path)
     X = npz_data['X']
-    # y's are binary vectors, and should be of shape (1, 10) after this.
+    # y's are binary vectors, and should be of shape (10,) after this.
     y = npz_data['Y']
 
     n = X.shape[0]
 
     while True:
         i = np.random.randint(0, n)
-        yield {'X': X[np.newaxis, i], 'Y': y[np.newaxis, i]}
+        yield {'X': X[i], 'Y': y[i]}
 
 
 streams = [pescador.Streamer(npz_generator, x) for x in datasets]
@@ -80,28 +80,28 @@ streams = [pescador.Streamer(npz_generator, x) for x in datasets]
 # If you can easily fit all the datasets in memory and you want to
 # sample from then equally, you would set up your Mux as follows:
 
-mux = pescador.mux.Mux(streams,
-                       # Three streams, always active.
-                       k=len(streams),
-                       # We want to sample from each stream infinitely,
-                       # so we turn off the lam parameter, which
-                       # controls how long to sample from each stream.
-                       lam=None)
+mux = pescador.Mux(streams,
+                   # Three streams, always active.
+                   k=len(streams),
+                   # We want to sample from each stream infinitely,
+                   # so we turn off the rate parameter, which
+                   # controls how long to sample from each stream.
+                   rate=None)
 
 
 ##############################################
 # Option 2: Sample from one at a time.
 ##############################################
 # Another approach might be to restrict sampling to one stream at a time.
-# Now, the lam parameter controls (statistically) how long to sample
+# Now, the rate parameter controls (statistically) how long to sample
 # from a stream before activating a new stream.
 
-mux = pescador.mux.Mux(streams,
-                       # Only allow one active stream
-                       k=1,
-                       # Sample on average 1000 samples from a stream before
-                       # moving onto another one.
-                       lam=1000)
+mux = pescador.Mux(streams,
+                   # Only allow one active stream
+                   k=1,
+                   # Sample on average 1000 samples from a stream before
+                   # moving onto another one.
+                   rate=1000)
 
 
 ##############################################
@@ -109,7 +109,5 @@ mux = pescador.mux.Mux(streams,
 ##############################################
 # At this point, you can use the Mux as a streamer normally:
 
-
-for data in mux():
-    process(data)
-
+for data in mux(max_iter=10):
+    print(dict((k, v.shape) for k, v in data.items()))
