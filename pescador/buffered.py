@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 '''Buffered streamers'''
-import numpy as np
 from warnings import warn
 
 from . import core
@@ -22,7 +21,7 @@ class BufferedStreamer(core.Streamer):
     >>> # A buffered streamer will combine N iterates into a single batch
     >>> N = 10
     >>> B = pescador.BufferedStreamer(my_generator, N)
-    >>> for batch in B():
+    >>> for batch in B:
     ...     # Work on a batch of N=10 examples
     ...     MY_PROCESS_FUNCTION(batch)
     """

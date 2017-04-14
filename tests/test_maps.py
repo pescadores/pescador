@@ -32,31 +32,71 @@ def test_buffer_stream():
     for exp, obs in zip(expected, outputs):
         T.__eq_batch(exp, obs)
 
-    with pytest.raises(pescador.maps.PescadorError):
+    with pytest.raises(pescador.maps.DataError):
         for not_data in pescador.maps.buffer_stream([1, 2, 3, 4], 2):
             pass
 
 
-def test_keras_tuples():
-    data = [{"foo": np.array([n]), "bar": np.array([n / 2.]),
+@pytest.fixture
+def sample_data():
+    return [{"foo": np.array([n]), "bar": np.array([n / 2.]),
              "whiz": np.array([2 * n]), "bang": np.array([n ** 2])}
             for n in range(10)]
 
-    stream = pescador.maps.keras_tuples(data, inputs="foo", outputs="bar")
+
+def test_tuples(sample_data):
+
+    stream = pescador.maps.tuples(sample_data, "foo", "bar")
     for n, (x, y) in enumerate(stream):
         assert n == x == y * 2
 
-    stream = pescador.maps.keras_tuples(data, outputs="whiz")
+    stream = pescador.maps.tuples(sample_data, "whiz")
+    for n, (x,) in enumerate(stream):
+        assert n == x / 2.
+
+    with pytest.raises(pescador.maps.PescadorError):
+        for x in pescador.maps.tuples(sample_data):
+            pass
+
+    with pytest.raises(pescador.maps.DataError):
+        for x in pescador.maps.tuples([1, 2, 3], 'baz'):
+            pass
+
+    with pytest.raises(KeyError):
+        for x in pescador.maps.tuples(sample_data, 'apple'):
+            pass
+
+
+def test_keras_tuples(sample_data):
+
+    stream = pescador.maps.keras_tuples(sample_data, inputs="foo",
+                                        outputs="bar")
+    for n, (x, y) in enumerate(stream):
+        assert n == x == y * 2
+
+    stream = pescador.maps.keras_tuples(sample_data, outputs="whiz")
     for n, (x, y) in enumerate(stream):
         assert n == y / 2.
         assert x is None
 
-    stream = pescador.maps.keras_tuples(data, inputs="bang")
+    stream = pescador.maps.keras_tuples(sample_data, inputs="bang")
     for n, (x, y) in enumerate(stream):
         assert n == x ** 0.5
         assert y is None
 
-    stream = pescador.maps.keras_tuples(data, inputs=["foo", "bang"],
+    stream = pescador.maps.keras_tuples(sample_data, inputs=["foo", "bang"],
                                         outputs=["bar", "whiz"])
     for n, (x, y) in enumerate(stream):
         assert len(x) == len(y) == 2
+
+    with pytest.raises(pescador.maps.PescadorError):
+        for x in pescador.maps.keras_tuples(sample_data):
+            pass
+
+    with pytest.raises(pescador.maps.DataError):
+        for x in pescador.maps.keras_tuples([1, 2, 3], 'baz'):
+            pass
+
+    with pytest.raises(KeyError):
+        for x in pescador.maps.keras_tuples(sample_data, 'apple'):
+            pass

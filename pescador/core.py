@@ -73,8 +73,6 @@ class Streamer(object):
 
     >>> for i in stream(cycle=True):
     ...     print(i)  # Displays 0, 1, 2, 3, 4, 0, 1, 2, ...
-
-    NOTE: We don't use cycle because it's a closure and can't be serialized.
     '''
 
     def __init__(self, streamer, *args, **kwargs):
@@ -210,8 +208,9 @@ class Streamer(object):
 
         See Also
         --------
-        generate
         cycle
+        tuples
+        keras_tuples
         '''
         warn('`Streamer.tuples()` is deprecated in 1.1.0 '
              'This functionality is moved to `pescador.tuples` in 2.0.0. '

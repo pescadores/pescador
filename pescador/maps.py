@@ -3,7 +3,7 @@
 import numpy as np
 import six
 
-from .exceptions import PescadorError
+from .exceptions import DataError, PescadorError
 from . import util
 
 __all__ = ['buffer_stream', 'keras_tuples']
@@ -39,6 +39,10 @@ def buffer_stream(stream, buffer_size, partial=False,
     ------
     batch
         A batch of size at most `buffer_size`
+
+    Raises
+    ------
+    DataError if the stream contains items that are not data-like.
     '''
 
     stream = util.rename_kw('generator', generator,
@@ -57,13 +61,44 @@ def buffer_stream(stream, buffer_size, partial=False,
         try:
             yield __stack_data(data)
         except (TypeError, AttributeError):
-            raise PescadorError("Malformed data stream: {}".format(data))
+            raise DataError("Malformed data stream: {}".format(data))
         finally:
             data = []
             n = 0
 
     if data and partial:
         yield __stack_data(data)
+
+
+def tuples(stream, *keys):
+    """Reformat data as tuples.
+
+    Parameters
+    ----------
+    stream : iterable
+        Stream of data objects.
+
+    *keys : strings
+        Keys to use for ordering data.
+
+    Yields
+    ------
+    items : tuple of np.ndarrays
+        Data object reformated as a tuple.
+
+    Raises
+    ------
+    DataError if the stream contains items that are not data-like.
+    KeyError if a data object does not contain the requested key.
+    """
+    if not keys:
+        raise PescadorError('Unable to generate tuples from '
+                            'an empty item set')
+    for data in stream:
+        try:
+            yield tuple(data[key] for key in keys)
+        except TypeError:
+            raise DataError("Malformed data stream: {}".format(data))
 
 
 def keras_tuples(stream, inputs=None, outputs=None):
@@ -94,6 +129,10 @@ def keras_tuples(stream, inputs=None, outputs=None):
         If `outputs` is a string, `y` is a single np.ndarray.
         If `outputs` is an iterable of strings, `y` is a list of np.ndarrays.
         If `outputs` is a null type, `y` is None.
+
+    Raises
+    ------
+    DataError if the stream contains items that are not data-like.
     """
     if inputs and isinstance(inputs, six.string_types):
         inputs = [inputs]
@@ -117,4 +156,4 @@ def keras_tuples(stream, inputs=None, outputs=None):
 
             yield (x, y)
         except TypeError:
-            raise PescadorError("Malformed data stream: {}".format(data))
+            raise DataError("Malformed data stream: {}".format(data))
