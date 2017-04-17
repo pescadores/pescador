@@ -84,6 +84,11 @@ def test_keras_tuples(sample_data):
         assert n == x ** 0.5
         assert y is None
 
+    stream = pescador.maps.keras_tuples(sample_data, inputs=["bang"])
+    for n, (x, y) in enumerate(stream):
+        assert n == x[0] ** 0.5
+        assert y is None
+
     stream = pescador.maps.keras_tuples(sample_data, inputs=["foo", "bang"],
                                         outputs=["bar", "whiz"])
     for n, (x, y) in enumerate(stream):

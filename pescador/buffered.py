@@ -74,7 +74,7 @@ class BufferedStreamer(core.Streamer):
             not the number of individual samples.
 
         partial : bool, default=True
-            Return buffers smaller than the requested size.
+            If True, will return a final batch smaller than the requested size.
         """
         with core.StreamActivator(self):
             for n, batch in enumerate(buffer_stream(self.stream_,

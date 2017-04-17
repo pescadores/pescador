@@ -134,10 +134,13 @@ def keras_tuples(stream, inputs=None, outputs=None):
     ------
     DataError if the stream contains items that are not data-like.
     """
+    flatten_inputs, flatten_outputs = False, False
     if inputs and isinstance(inputs, six.string_types):
         inputs = [inputs]
+        flatten_inputs = True
     if outputs and isinstance(outputs, six.string_types):
         outputs = [outputs]
+        flatten_outputs = True
 
     inputs, outputs = (inputs or []), (outputs or [])
     if not inputs + outputs:
@@ -147,11 +150,11 @@ def keras_tuples(stream, inputs=None, outputs=None):
     for data in stream:
         try:
             x = list(data[key] for key in inputs) or None
-            if len(inputs) == 1:
+            if len(inputs) == 1 and flatten_inputs:
                 x = x[0]
 
             y = list(data[key] for key in outputs) or None
-            if len(outputs) == 1:
+            if len(outputs) == 1 and flatten_outputs:
                 y = y[0]
 
             yield (x, y)

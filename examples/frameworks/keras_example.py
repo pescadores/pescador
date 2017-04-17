@@ -139,7 +139,7 @@ def sampler(X, y):
     '''
     X = np.atleast_2d(X)
     # y's are binary vectors, and should be of shape (10,) after this.
-    y = np.atleast_2d(y)
+    y = np.atleast_1d(y)
 
     n = X.shape[0]
 

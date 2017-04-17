@@ -61,7 +61,7 @@ def npz_generator(npz_path):
     """Generate data from an npz file."""
     npz_data = np.load(npz_path)
     X = npz_data['X']
-    # y's are binary vectors, and should be of shape (10,) after this.
+    # Y is a binary maxtrix with shape=(n, k), each y will have shape=(k,)
     y = npz_data['Y']
 
     n = X.shape[0]

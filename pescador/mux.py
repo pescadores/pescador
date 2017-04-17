@@ -48,7 +48,7 @@ class Mux(core.Streamer):
         k : int > 0
             The number of streams to keep active at any time.
 
-        lam : float > 0 or None
+        rate : float > 0 or None
             Rate parameter for the Poisson distribution governing sample counts
             for individual streams.
             If ``None``, sample infinitely from each stream.

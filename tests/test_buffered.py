@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# TODO: Remove these tests with the `buffered.py` submodule at 2.0 release.
 
 import pytest
 import numpy as np
@@ -11,7 +12,7 @@ import test_utils as T
 @pytest.mark.parametrize('dimension', [1, 2, 3])
 @pytest.mark.parametrize('batch_size', [1, 2, 5, 17])
 @pytest.mark.parametrize('buf_size', [1, 2, 5, 17, 100])
-def test_buffer_streamer(dimension, batch_size, buf_size):
+def test_BufferedStreamer(dimension, batch_size, buf_size):
 
     key = 'X'
 
@@ -44,7 +45,7 @@ def test_buffer_streamer(dimension, batch_size, buf_size):
 @pytest.mark.parametrize('dimension', [1, 2, 3])
 @pytest.mark.parametrize('batch_size', [1, 2, 5, 17])
 @pytest.mark.parametrize('buf_size', [1, 2, 5, 17, 100])
-def test_buffer_streamer_tuple(dimension, batch_size, buf_size, items):
+def test_BufferedStreamer_tuples(dimension, batch_size, buf_size, items):
 
     gen_stream = pescador.Streamer(T.md_generator, dimension, 50,
                                    size=batch_size, items=items)
