@@ -2,6 +2,7 @@ import pytest
 
 import collections
 import numpy as np
+import random
 
 import pescador
 import pescador.mux
@@ -215,3 +216,32 @@ def test_critical_mux():
                        prune_empty_streams=False, random_state=135)
     samples = mux.iterate(max_iter=1000)
     print(collections.Counter(samples))
+
+
+def test_critical_mux_of_rate_limited_muxes():
+    # Check on Issue #79
+    def _choice(vals):
+        while True:
+            yield random.choice(vals)
+
+    ab = pescador.Streamer(_choice, 'ab')
+    cd = pescador.Streamer(_choice, 'cd')
+    ef = pescador.Streamer(_choice, 'ef')
+    mux1 = pescador.Mux([ab, cd, ef], k=1, rate=2,
+                        with_replacement=False, revive=True)
+
+    gh = pescador.Streamer(_choice, 'gh')
+    ij = pescador.Streamer(_choice, 'ij')
+    kl = pescador.Streamer(_choice, 'kl')
+
+    mux2 = pescador.Mux([gh, ij, kl], k=1, rate=2,
+                        with_replacement=False, revive=True)
+
+    mux3 = pescador.Mux([mux1, mux2], k=2, rate=None,
+                        with_replacement=False, revive=True)
+    samples = list(mux3.iterate(max_iter=10000))
+    count = collections.Counter(samples)
+    max_count, min_count = max(count.values()), min(count.values())
+    assert (max_count - min_count) / max_count < 0.2
+    print(count)
+    assert set('abcdefghijkl') == set(count.keys())
