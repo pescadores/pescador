@@ -300,3 +300,14 @@ def test_sampled_mux_of_muxes():
     assert set('abcdefghijkl') == set(count3.keys())
     max_count, min_count = max(count3.values()), min(count3.values())
     assert (max_count - min_count) / max_count < 0.2
+
+
+@pytest.mark.timeout(1.0)
+@pytest.mark.xfail(reason="Empty streams cause inf loop (#87)")
+def test_mux_inf_loop():
+    s1 = pescador.Streamer([])
+    s2 = pescador.Streamer([])
+    mux = pescador.Mux([s1, s2], k=2, rate=None, revive=True,
+                       with_replacement=False, random_state=1234)
+
+    assert len(list(mux(max_iter=100))) == 0

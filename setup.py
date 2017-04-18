@@ -37,6 +37,7 @@ setup(
         'decorator'
     ],
     extras_require={
-        'docs': ['numpydoc', 'sphinx-gallery']
+        'docs': ['numpydoc', 'sphinx-gallery'],
+        'tests': ['pytest-timeout']
     }
 )
