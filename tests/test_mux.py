@@ -1,6 +1,7 @@
 import pytest
 
 import collections
+import itertools
 import numpy as np
 import random
 
@@ -245,3 +246,49 @@ def test_critical_mux_of_rate_limited_muxes():
     assert (max_count - min_count) / max_count < 0.2
     print(count)
     assert set('abcdefghijkl') == set(count.keys())
+
+
+@pytest.mark.xfail(reason="Mux.distribution is not getting reset for "
+                          "subsequent calls to Mux.iterate. Issue #TBD")
+def test_sampled_mux_of_muxes():
+
+    def _cycle(values):
+        while True:
+            for v in values:
+                yield v
+
+    # Build some sample streams
+    ab = pescador.Streamer(_cycle, 'ab')
+    cd = pescador.Streamer(_cycle, 'cd')
+    ef = pescador.Streamer(_cycle, 'ef')
+    mux1 = pescador.Mux([ab, cd, ef], k=3, rate=None,
+                        with_replacement=False, revive=False)
+
+    # And inspect the first mux
+    samples1 = list(mux1(max_iter=6 * 10))
+    count1 = collections.Counter(samples1)
+    print(count1)
+    assert set(count1.keys()) == set('abcdef')
+
+    # Build another set of streams
+    gh = pescador.Streamer(_cycle, 'gh')
+    ij = pescador.Streamer(_cycle, 'ij')
+    kl = pescador.Streamer(_cycle, 'kl')
+    mux2 = pescador.Mux([gh, ij, kl], k=3, rate=None,
+                        with_replacement=False, revive=False)
+
+    # And inspect the second mux
+    samples2 = list(mux2(max_iter=6 * 10))
+    count2 = collections.Counter(samples2)
+    print(count2)
+    assert set(count2.keys()) == set('ghijkl')
+
+    # Merge the muxes together.
+    mux3 = pescador.Mux([mux1, mux2], k=2, rate=None,
+                        with_replacement=False, revive=False)
+    samples3 = list(mux3.iterate(max_iter=10000))
+    count3 = collections.Counter(samples3)
+    print(count3)
+    assert set('abcdefghijkl') == set(count3.keys())
+    max_count, min_count = max(count3.values()), min(count3.values())
+    assert (max_count - min_count) / max_count < 0.2
