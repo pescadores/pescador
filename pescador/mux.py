@@ -172,6 +172,7 @@ class Mux(core.Streamer):
 
         self.stream_weights_ = np.zeros(self.k)
         self.stream_counts_ = np.zeros(self.k, dtype=int)
+        # Array of pointers into `self.streamers`
         self.stream_idxs_ = np.zeros(self.k, dtype=int)
 
         for idx in range(self.k):
@@ -179,6 +180,9 @@ class Mux(core.Streamer):
             if not (self.distribution > 0).any():
                 break
 
+            # TODO: Stream uniqueness can't be guaranteed here.
+            # Other machinery necessary to impose permutation, this is
+            # implicitly `with_replacement`
             self.stream_idxs_[idx] = self.rng.choice(
                 self.n_streams, p=self.distribution)
             self.streams_[idx], self.stream_weights_[idx] = (
@@ -248,6 +252,8 @@ class Mux(core.Streamer):
                         self.stream_counts_[idx] = 0
 
                     else:
+                        # TODO: If not (self.distribution > 0).any(), shouldn't
+                        #       StopIteration be reraised?
                         # Otherwise, this one's exhausted.
                         # Set its probability to 0
                         self.stream_weights_[idx] = 0.0
@@ -259,7 +265,7 @@ class Mux(core.Streamer):
 
         Parameters
         ----------
-        idx : int
+        idx : int, [0:n_streams - 1]
             The stream index to replace
         '''
         if len(self.streamers) != len(self.weights):

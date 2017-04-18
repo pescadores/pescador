@@ -227,14 +227,14 @@ def test_critical_mux_of_rate_limited_muxes():
     ab = pescador.Streamer(_choice, 'ab')
     cd = pescador.Streamer(_choice, 'cd')
     ef = pescador.Streamer(_choice, 'ef')
-    mux1 = pescador.Mux([ab, cd, ef], k=1, rate=2,
+    mux1 = pescador.Mux([ab, cd, ef], k=2, rate=2,
                         with_replacement=False, revive=True)
 
     gh = pescador.Streamer(_choice, 'gh')
     ij = pescador.Streamer(_choice, 'ij')
     kl = pescador.Streamer(_choice, 'kl')
 
-    mux2 = pescador.Mux([gh, ij, kl], k=1, rate=2,
+    mux2 = pescador.Mux([gh, ij, kl], k=2, rate=2,
                         with_replacement=False, revive=True)
 
     mux3 = pescador.Mux([mux1, mux2], k=2, rate=None,
