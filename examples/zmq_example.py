@@ -13,30 +13,67 @@ import numpy as np
 import pescador
 import time
 
+
 ##############################################
-# Batch Generator
+# Computational Load
 ##############################################
-# As always, you have to start with a generator function, which yields
-# some simple batches. Since this is a toy example, we're just
-# yielding some random numbers of the appropriate shape.
-#
-# It is important to remember that the first dimension is always the "samples
-# dimension" (batch size), since the BufferedStreamer will concatenate batch
-# components together along this dimension. Therefore, we have to force the
-# target to be of 2 dimensions.
+# Often, the act of generating samples will be computationally
+# expensive, place a heavy load on disk I/O, or both. Here, we
+# can mimic costly processing by doing a bunch of pointless math
+# on an array.
+
+def costly_function(X, n_ops=100):
+    for n in range(n_ops):
+        if (n % 2):
+            X = X ** 3.0
+        else:
+            X = X ** (1. / 3)
+    return X
 
 
-def batch_gen():
-    """
+##############################################
+# Sample Generator
+##############################################
+# Here we define a sampler function that yields
+# some simple data. We'll run some computation on the inside to
+# slow things down a bit.
+
+def data_gen(n_ops=100):
+    """Yield data, while optionally burning compute cycles.
+
+    Parameters
+    ----------
+    n_ops : int, default=100
+        Number of operations to run between yielding data.
+
     Returns
     -------
-    batch_dict : dict
-        A batch which looks like it might come from some
-        machine learning problem, with X as Features, and Y as targets.
+    data : dict
+        A object which looks like it might come from some
+        machine learning problem, with X as features, and y as targets.
     """
     while True:
-        yield dict(X=np.random.random((1, 10)),
-                   Y=np.atleast_2d(np.random.randint(10)))
+        X = np.random.uniform(size=(64, 64))
+        yield dict(X=costly_function(X, n_ops),
+                   y=np.random.randint(10, size=(1,)))
+
+
+def timed_sampling(stream, n_iter, desc):
+    start_time = time.time()
+    for data in stream(max_iter=n_iter):
+        costly_function(data['X'])
+
+    duration = time.time() - start_time
+    print("{} :: Average time per iteration: {:0.3f} sec"
+          .format(desc, duration / max_iter))
+
+
+max_iter = 1e2
+
+# Construct a streamer
+stream = pescador.Streamer(data_gen)
+timed_sampling(stream, max_iter, 'Single-threaded')
+# Single-threaded :: Average time per iteration: 0.024 sec
 
 
 ##############################################
@@ -46,57 +83,26 @@ def batch_gen():
 # Streamer. We leave it to your imagination to decide what you would actually
 # do with the batches you receive here.
 
-n_test_batches = 1e3
+# Wrap the streamer in a ZMQ streamer
+zstream = pescador.ZMQStreamer(stream)
+timed_sampling(zstream, max_iter, 'ZMQ')
+# ZMQ :: Average time per iteration: 0.012 sec
 
-# Construct a streamer
-s = pescador.Streamer(batch_gen)
-
-# Wrap teh streamer in a ZMQ streamer
-zs = pescador.ZMQStreamer(s)
-
-# Get batches from the stream as you would normally.
-t0 = time.time()
-batch_count = 0
-for batch in zs(max_batches=n_test_batches):
-    batch_count += len(batch['X'])
-    # Train your network, etc.
-
-
-duration = time.time() - t0
-print("Generated {} samples from ZMQ\n\t"
-      "in {:.5f}s ({:.5f} / sample)".format(
-          batch_count, duration, duration / batch_count))
-
-# Outputs:
-# > Generated 1000 samples from ZMQ
-# >   in 0.57073s (0.00057 / sample)
 
 ##############################################
-# Buffering ZMQ
+# ZMQ with Map Functions
 ##############################################
-# You could also wrap the ZMQStreamer in a BufferedStreamer, to produce
-# "mini-batches" for training, etc.
-#
-# Note: You could put the BufferedStreamer before or after the ZMQStreamer;
-# it sould work both ways.
-buffer_size = 10
-buffered_zmq = pescador.BufferedStreamer(zs, buffer_size)
+# You will also likely want to buffer samples for building mini-batches. Here,
+# we demonstrate best practices for using map functions in a stream pipeline.
+
+buffer_size = 16
 
 # Get batches from the stream as you would normally.
-iter_count = 0
-batch_count = 0
-t0 = time.time()
-for batch in buffered_zmq(max_batches=n_test_batches):
-    iter_count += 1
-    batch_count += len(batch['X'])
+batches = pescador.Streamer(pescador.buffer_stream, stream, buffer_size)
+timed_sampling(batches, max_iter, 'Single-threaded Batches')
+# Single-threaded Batches :: Average time per iteration: 0.392 sec
 
-duration = time.time() - t0
-print("Generated {} batches of {} samples from Buffered ZMQ Streamer"
-      "\n\tin {:.5f}s ({:.5f} / sample)".format(iter_count,
-                                                batch_count,
-                                                duration,
-                                                duration / batch_count))
 
-# Outputs
-# > Generated 1000 batches of 10000 samples from Buffered ZMQ Streamer
-# >     in 1.69138s (0.00017 / sample)
+zstream = pescador.ZMQStreamer(batches)
+timed_sampling(zstream, max_iter, 'ZMQ Batches')
+# ZMQ Batches :: Average time per iteration: 0.196 sec

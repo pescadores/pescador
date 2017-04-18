@@ -20,7 +20,7 @@ src="$HOME/env/miniconda$TRAVIS_PYTHON_VERSION"
 if [ ! -f "$HOME/env/miniconda.sh" ]; then
     mkdir -p $HOME/env
     pushd $HOME/env
-    
+
         # Download miniconda packages
         wget http://repo.continuum.io/miniconda/Miniconda-3.16.0-Linux-x86_64.sh -O miniconda.sh;
 
