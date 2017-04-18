@@ -248,8 +248,16 @@ def test_critical_mux_of_rate_limited_muxes():
     assert set('abcdefghijkl') == set(count.keys())
 
 
-@pytest.mark.xfail(reason="Mux.distribution is not getting reset for "
-                          "subsequent calls to Mux.iterate. Issue #TBD")
+@pytest.mark.xfail(reason="Mux.iterate cannot return multiple iterators (#86)")
+def test_restart_mux():
+    s1 = pescador.Streamer('abc')
+    s2 = pescador.Streamer('def')
+    mux = pescador.Mux([s1, s2], k=2, rate=None, revive=True,
+                       with_replacement=False, random_state=1234)
+    assert list(mux(max_iter=100)) == list(mux(max_iter=100))
+
+
+@pytest.mark.xfail(reason="Mux.iterate cannot return multiple iterators (#86)")
 def test_sampled_mux_of_muxes():
 
     def _cycle(values):
