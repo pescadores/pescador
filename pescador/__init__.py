@@ -4,6 +4,7 @@
 from .exceptions import *
 from .core import *
 from .buffered import *
+from .maps import *
 from .mux import *
 from .zmq_stream import *
 

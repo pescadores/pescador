@@ -1,23 +1,53 @@
 #!/usr/bin/env python
-'''Test the streamer object for reusable generators'''
+'''Test the streamer object for reusable iterators'''
 from __future__ import print_function
 import pytest
 
 import warnings
 warnings.simplefilter('always')
 
-import pescador
+import pescador.core
 import test_utils as T
 
 
-def test_streamer_list():
+def test_StreamActivator():
+    with pytest.raises(pescador.core.PescadorError):
+        pescador.core.StreamActivator(range)
 
-    reference = list(T.finite_generator(10))
 
-    query = list(pescador.Streamer(reference, 10).generate())
+def test_streamer_iterable():
+    n_items = 10
+    expected = list(range(n_items))
+    streamer = pescador.core.Streamer(expected)
 
-    assert len(reference) == len(query)
-    for b1, b2 in zip(reference, query):
+    # Test generate interface
+    actual1 = list(streamer)
+    assert len(expected) == len(actual1) == n_items
+    for b1, b2 in zip(expected, actual1):
+        assert b1 == b2
+
+    # Test __iter__ interface
+    actual2 = list(streamer)
+    assert len(expected) == len(actual2) == n_items
+    for b1, b2 in zip(expected, actual2):
+        assert b1 == b2
+
+
+def test_streamer_generator_func():
+    n_items = 10
+    expected = list(T.finite_generator(n_items))
+    streamer = pescador.core.Streamer(T.finite_generator, n_items)
+
+    # Test generate interface
+    actual1 = list(streamer)
+    assert len(expected) == len(actual1) == n_items
+    for b1, b2 in zip(expected, actual1):
+        T.__eq_batch(b1, b2)
+
+    # Test __iter__ interface
+    actual2 = list(streamer)
+    assert len(expected) == len(actual2) == n_items
+    for b1, b2 in zip(expected, actual2):
         T.__eq_batch(b1, b2)
 
 
@@ -27,10 +57,11 @@ def test_streamer_list():
                                             raises=pescador.PescadorError)])
 def test_streamer_tuple(items):
 
-    reference = [tuple(batch[it] for it in items)
-                 for batch in T.__zip_generator(10, 2, 3)]
+    reference = [tuple(obj[it] for it in items)
+                 for obj in T.__zip_generator(10, 2, 3)]
 
-    query = list(pescador.Streamer(T.__zip_generator, 10, 2, 3).tuples(*items))
+    streamer = pescador.core.Streamer(T.__zip_generator, 10, 2, 3)
+    query = list(streamer.tuples(*items))
 
     assert len(reference) == len(query)
     for b1, b2 in zip(reference, query):
@@ -47,12 +78,12 @@ def test_streamer_finite(n_max, stream_size, generate):
     if n_max is not None:
         reference = reference[:n_max]
 
-    streamer = pescador.Streamer(T.finite_generator, 50, size=stream_size)
+    streamer = pescador.core.Streamer(T.finite_generator, 50, size=stream_size)
 
     if generate:
-        gen = streamer.generate(max_batches=n_max)
+        gen = streamer.iterate(max_iter=n_max)
     else:
-        gen = streamer(max_batches=n_max)
+        gen = streamer(max_iter=n_max)
 
     for i in range(3):
 
@@ -70,10 +101,10 @@ def test_streamer_infinite(n_max, stream_size):
             break
         reference.append(data)
 
-    streamer = pescador.Streamer(T.infinite_generator, size=stream_size)
+    streamer = pescador.core.Streamer(T.infinite_generator, size=stream_size)
 
     for i in range(3):
-        query = list(streamer.generate(max_batches=n_max))
+        query = list(streamer.iterate(max_iter=n_max))
 
         for b1, b2 in zip(reference, query):
             T.__eq_batch(b1, b2)
@@ -89,12 +120,12 @@ def test_streamer_in_streamer(n_max, stream_size):
             break
         reference.append(data)
 
-    streamer = pescador.Streamer(T.infinite_generator, size=stream_size)
+    streamer = pescador.core.Streamer(T.infinite_generator, size=stream_size)
 
-    streamer2 = pescador.Streamer(streamer)
+    streamer2 = pescador.core.Streamer(streamer)
 
     for i in range(3):
-        query = list(streamer2.generate(max_batches=n_max))
+        query = list(streamer2.iterate(max_iter=n_max))
 
         for b1, b2 in zip(reference, query):
             T.__eq_batch(b1, b2)
@@ -104,11 +135,11 @@ def test_streamer_in_streamer(n_max, stream_size):
 def test_streamer_cycle(generate):
     """Test that a limited streamer will die and restart automatically."""
     stream_len = 10
-    streamer = pescador.Streamer(T.finite_generator, stream_len)
+    streamer = pescador.core.Streamer(T.finite_generator, stream_len)
     assert streamer.stream_ is None
 
     # Exhaust the stream once.
-    query = list(streamer.generate())
+    query = list(streamer)
     assert stream_len == len(query)
 
     # Now, generate from it infinitely using cycle.
@@ -128,18 +159,18 @@ def test_streamer_cycle(generate):
     assert (len(data_results) == count_max and all(data_results))
 
 
-@pytest.mark.parametrize('items',
-                         [['X'], ['Y'], ['X', 'Y'], ['Y', 'X'],
-                          pytest.mark.xfail([],
-                                            raises=pescador.PescadorError)])
+@pytest.mark.parametrize(
+    'items',
+    [['X'], ['Y'], ['X', 'Y'], ['Y', 'X'],
+     pytest.mark.xfail([], raises=pescador.core.PescadorError)])
 def test_streamer_cycle_tuples(items):
     """Test that a limited streamer will die and restart automatically."""
     stream_len = 10
-    streamer = pescador.Streamer(T.__zip_generator, 10, 2, 3)
+    streamer = pescador.core.Streamer(T.__zip_generator, 10, 2, 3)
     assert streamer.stream_ is None
 
     # Exhaust the stream once.
-    query = list(streamer.generate())
+    query = list(streamer)
     assert stream_len == len(query)
 
     # Now, generate from it infinitely using cycle.
@@ -160,5 +191,5 @@ def test_streamer_bad_function():
     def __fail():
         return 6
 
-    with pytest.raises(pescador.PescadorError):
+    with pytest.raises(pescador.core.PescadorError):
         pescador.Streamer(__fail)

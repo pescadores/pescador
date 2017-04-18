@@ -23,7 +23,7 @@ before_install:
 
 install:
     # install your own package into the environment
-    - pip install -e .
+    - pip install -e .[tests]
 
 script:
     - py.test -v --cov-report= --cov=pescador tests/
