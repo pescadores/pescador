@@ -180,9 +180,6 @@ class Mux(core.Streamer):
             if not (self.distribution > 0).any():
                 break
 
-            # TODO: Stream uniqueness can't be guaranteed here.
-            # Other machinery necessary to impose permutation, this is
-            # implicitly `with_replacement`
             self.stream_idxs_[idx] = self.rng.choice(
                 self.n_streams, p=self.distribution)
             self.streams_[idx], self.stream_weights_[idx] = (
