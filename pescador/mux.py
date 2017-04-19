@@ -148,11 +148,8 @@ class Mux(core.Streamer):
         if not self.n_streams:
             raise PescadorError('Cannot mux an empty collection')
 
-        # Set up the sampling distribution over streams
-        self.distribution = 1. / self.n_streams * np.ones(self.n_streams)
-
         if self.weights is None:
-            self.weights = self.distribution.copy()
+            self.weights = 1. / self.n_streams * np.ones(self.n_streams)
 
         self.weights = np.atleast_1d(self.weights)
 
@@ -168,6 +165,8 @@ class Mux(core.Streamer):
 
     def activate(self):
         """Activates a number of streams"""
+        self.distribution_ = 1. / self.n_streams * np.ones(self.n_streams)
+
         self.streams_ = [None] * self.k
 
         self.stream_weights_ = np.zeros(self.k)
@@ -177,11 +176,11 @@ class Mux(core.Streamer):
 
         for idx in range(self.k):
 
-            if not (self.distribution > 0).any():
+            if not (self.distribution_ > 0).any():
                 break
 
             self.stream_idxs_[idx] = self.rng.choice(
-                self.n_streams, p=self.distribution)
+                self.n_streams, p=self.distribution_)
             self.streams_[idx], self.stream_weights_[idx] = (
                 self.__new_stream(self.stream_idxs_[idx]))
 
@@ -224,24 +223,24 @@ class Mux(core.Streamer):
                             self.stream_counts_[idx] == 0):
                         # If we're disabling empty seeds, see if this stream
                         # produced data
-                        self.distribution[self.stream_idxs_[idx]] = 0.0
+                        self.distribution_[self.stream_idxs_[idx]] = 0.0
 
                     if self.revive and not self.with_replacement:
                         # If we need to revive a seed, give it the max
                         # current probability
-                        if self.distribution.any():
-                            self.distribution[self.stream_idxs_[idx]] = (
-                                np.max(self.distribution))
+                        if self.distribution_.any():
+                            self.distribution_[self.stream_idxs_[idx]] = (
+                                np.max(self.distribution_))
                         else:
-                            self.distribution[self.stream_idxs_[idx]] = 1.0
+                            self.distribution_[self.stream_idxs_[idx]] = 1.0
 
-                    if (self.distribution > 0).any():
+                    if (self.distribution_ > 0).any():
                         # Replace it and move on if there are still seeds
                         # in the pool.
-                        self.distribution[:] /= np.sum(self.distribution)
+                        self.distribution_[:] /= np.sum(self.distribution_)
 
                         self.stream_idxs_[idx] = self.rng.choice(
-                            self.n_streams, p=self.distribution)
+                            self.n_streams, p=self.distribution_)
 
                         self.streams_[idx], self.stream_weights_[idx] = (
                             self.__new_stream(self.stream_idxs_[idx]))
@@ -249,8 +248,6 @@ class Mux(core.Streamer):
                         self.stream_counts_[idx] = 0
 
                     else:
-                        # TODO: If not (self.distribution > 0).any(), shouldn't
-                        #       StopIteration be reraised?
                         # Otherwise, this one's exhausted.
                         # Set its probability to 0
                         self.stream_weights_[idx] = 0.0
@@ -269,7 +266,7 @@ class Mux(core.Streamer):
             raise PescadorError('`streamers` must have the same '
                                 'length as `weights`')
 
-        if len(self.streamers) != len(self.distribution):
+        if len(self.streamers) != len(self.distribution_):
             raise PescadorError('`streamers` must have the same '
                                 'length as `distribution`')
 
@@ -281,10 +278,10 @@ class Mux(core.Streamer):
 
         # If we're sampling without replacement, zero this one out
         if not self.with_replacement:
-            self.distribution[idx] = 0.0
+            self.distribution_[idx] = 0.0
 
-            if (self.distribution > 0).any():
-                self.distribution[:] /= np.sum(self.distribution)
+            if (self.distribution_ > 0).any():
+                self.distribution_[:] /= np.sum(self.distribution_)
 
         return (self.streamers[idx].iterate(max_iter=n_stream),
                 self.weights[idx])
