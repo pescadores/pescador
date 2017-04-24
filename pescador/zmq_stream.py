@@ -125,7 +125,7 @@ class ZMQStreamer(Streamer):
 
     def __init__(self, streamer,
                  min_port=49152, max_port=65535, max_tries=100,
-                 copy=False, timeout=None):
+                 copy=False, timeout=5):
         '''
         Parameters
         ----------
@@ -143,7 +143,9 @@ class ZMQStreamer(Streamer):
             Set `True` to enable data copying
 
         timeout : [optional] number > 0
-            Maximum time (in seconds) to wait before killing subprocesses
+            Maximum time (in seconds) to wait before killing subprocesses.
+            If `None`, then the streamer will wait indefinitely for
+            subprocesses to terminate.
         '''
         self.streamer = streamer
         self.min_port = min_port
