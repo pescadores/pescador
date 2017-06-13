@@ -182,7 +182,7 @@ class Mux(core.Streamer):
             self.stream_idxs_[idx] = self.rng.choice(
                 self.n_streams, p=self.distribution_)
             self.streams_[idx], self.stream_weights_[idx] = (
-                self.__new_stream(self.stream_idxs_[idx]))
+                self._new_stream(self.stream_idxs_[idx]))
 
         self.weight_norm_ = np.sum(self.stream_weights_)
 
@@ -243,7 +243,7 @@ class Mux(core.Streamer):
                             self.n_streams, p=self.distribution_)
 
                         self.streams_[idx], self.stream_weights_[idx] = (
-                            self.__new_stream(self.stream_idxs_[idx]))
+                            self._new_stream(self.stream_idxs_[idx]))
 
                         self.stream_counts_[idx] = 0
 
@@ -254,7 +254,7 @@ class Mux(core.Streamer):
 
                     self.weight_norm_ = np.sum(self.stream_weights_)
 
-    def __new_stream(self, idx):
+    def _new_stream(self, idx):
         '''Randomly select and create a stream.
 
         Parameters
@@ -285,3 +285,144 @@ class Mux(core.Streamer):
 
         return (self.streamers[idx].iterate(max_iter=n_stream),
                 self.weights[idx])
+
+
+class ShuffledMux(Mux):
+    """A variation on a mux, which takes N streamers, and samples
+    from them equally, guaranteeing all N streamers to be "active",
+    unlike the base Mux, which randomly chooses streams when activating.
+
+    TODO Better name / more general approach for this.
+    """
+    def __init__(self, streamers):
+        super(ShuffledMux, self).__init__(
+            streamers, k=len(streamers),
+            revive=True, rate=None)
+
+    def activate(self):
+        """Activates a number of streams"""
+        self.distribution_ = 1. / self.n_streams * np.ones(self.n_streams)
+
+        self.streams_ = [None] * self.k
+
+        self.stream_weights_ = np.zeros(self.k)
+        self.stream_counts_ = np.zeros(self.k, dtype=int)
+        # Array of pointers into `self.streamers`
+        self.stream_idxs_ = np.arange(self.k, dtype=int)
+
+        for idx in range(self.k):
+
+            if not (self.distribution_ > 0).any():
+                break
+
+            self.streams_[idx], self.stream_weights_[idx] = (
+                self._new_stream(self.stream_idxs_[idx]))
+
+        self.weight_norm_ = np.sum(self.stream_weights_)
+
+
+class BaseMux(core.Streamer):
+    """BaseMux defines the interface to a Mux. Fundamentally, a Mux
+    is a container for multiple Streamers, which selects a Sample from one of
+    its streamers at every iteration.
+
+    A Mux has the following fundamental behaviors:
+
+     * When "activated", choose a subset of available streamers to stream from
+       (the "active substreams")
+     * When a sample is pulled from the mux, choose which active substream to
+       stream from.
+     * Handles exhaustion of streams (restarting, replacing, ...)
+
+    """
+    def __init__(self, streamers, weights=None, random_state=None):
+        """
+        Parameters
+        ----------
+        streamers : iterable of streamers
+            The collection of streamer-type objects
+
+        weights : np.ndarray or None
+            Optional weighting for ``streamers``.
+            If ``None``, then weights are assumed to be uniform.
+            Otherwise, ``weights[i]`` defines the sampling proportion
+            of ``streamers[i]``.
+
+            Must have the same length as ``streamers``.
+
+        random_state : None, int, or np.random.RandomState
+            If int, random_state is the seed used by the random number
+            generator;
+
+            If RandomState instance, random_state is the random number
+            generator;
+
+            If None, the random number generator is the RandomState instance
+            used by np.random.
+        """
+        pass
+
+    def activate(self):
+        """Activates the mux as a streamer, choosing which substreams to
+        select as active."""
+        pass
+
+    def deactivate(self):
+        """Reset the Mux state."""
+        pass
+
+    def iterate(self, max_iter=None):
+        """Yields items from the mux."""
+        pass
+
+    def _activate_substreams(self):
+        """Chooses substreams to activate."""
+        pass
+
+    def _next_stream(self):
+        """Returns the stream index for the next sample"""
+        pass
+
+    def _new_stream(self, idx):
+        '''Randomly select and create a stream.
+
+        Parameters
+        ----------
+        idx : int, [0:n_streams - 1]
+            The stream index to replace
+        '''
+        pass
+
+
+class PoissonMux(BaseMux):
+    """A Mux mux which chooses it's active streams randomly.
+    Note: with a Poisson Mux, all streams are not necessarily guaranteed
+    to be active.
+    """
+    def __init__(self, streamers, mode="with_replacement",
+                 weights=None, random_state=None,):
+        """
+        Parameters
+        ----------
+        mode : ["with_replacement", "single_active", "exhaustive"]
+            with_replacement
+                Streams are sampled independently and indefinitely; a single
+                stream may be active multiple times.
+
+            single_active
+                
+
+            exhaustive
+                Run every selected stream once to exhaustion.
+        """
+        pass
+
+
+class ShuffledMux(BaseMux):
+    """A Mux which guarantees that all substreams are activated."""
+    def __init__(self, mode=""):
+        """
+        Parameters
+        ----------
+        mode : ["permuted", "roundrobin"]
+        """
