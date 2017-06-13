@@ -71,8 +71,11 @@ class Mux(core.Streamer):
             Disable streamers that produce no data.
             If ``True``, streamers that previously produced no data are never
             revisited.
-            Note that this may be undesireable for streams where past emptiness
+            Note:
+            1. This may be undesireable for streams where past emptiness
             may not imply future emptiness.
+            2. Failure to prune truly empty streams with `revive=True` can
+            result in infinite looping behavior. Disable with caution.
 
         revive: bool
             If ``with_replacement`` is ``False``, setting ``revive=True``
@@ -166,6 +169,7 @@ class Mux(core.Streamer):
     def activate(self):
         """Activates a number of streams"""
         self.distribution_ = 1. / self.n_streams * np.ones(self.n_streams)
+        self.valid_streams_ = np.ones(self.n_streams, dtype=bool)
 
         self.streams_ = [None] * self.k
 
@@ -222,8 +226,9 @@ class Mux(core.Streamer):
                     if (self.prune_empty_streams and
                             self.stream_counts_[idx] == 0):
                         # If we're disabling empty seeds, see if this stream
-                        # produced data
+                        # produced data; if it didn't, turn it off.
                         self.distribution_[self.stream_idxs_[idx]] = 0.0
+                        self.valid_streams_[self.stream_idxs_[idx]] = False
 
                     if self.revive and not self.with_replacement:
                         # If we need to revive a seed, give it the max
@@ -253,6 +258,10 @@ class Mux(core.Streamer):
                         self.stream_weights_[idx] = 0.0
 
                     self.weight_norm_ = np.sum(self.stream_weights_)
+
+                # If everything has been pruned, kill the while loop
+                if not self.valid_streams_.any():
+                    break
 
     def __new_stream(self, idx):
         '''Randomly select and create a stream.
