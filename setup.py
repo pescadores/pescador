@@ -38,6 +38,6 @@ setup(
     ],
     extras_require={
         'docs': ['numpydoc', 'sphinx-gallery'],
-        'tests': ['pytest-timeout', 'colorama', 'pandas']
+        'tests': ['pytest-timeout', 'click', 'colorama', 'pandas']
     }
 )
