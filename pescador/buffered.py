@@ -8,7 +8,9 @@ from . import util
 
 
 class BufferedStreamer(core.Streamer):
-    """Buffers a stream into batches of examples
+    """Deprecated in 1.1. Will be removed in 2.0.
+
+    Buffers a stream into batches of examples.
 
     Examples
     --------
