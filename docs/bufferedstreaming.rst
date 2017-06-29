@@ -3,7 +3,7 @@
 Buffered Streaming
 ==================
 
-In a machine learning setting, it is common to train a model with multiple input datapoints simultaneously, in what are commonly referred to as "minibatches". To achieve this, pescador provides the :ref:`BufferedStreamer`, which will "buffer" your batches into fixed batch sizes.
+In a machine learning setting, it is common to train a model with multiple input datapoints simultaneously, in what are commonly referred to as "minibatches". To achieve this, pescador provides the :ref:`buffer_stream` map transformer, which will "buffer" your batches into fixed batch sizes.
 
 Following up on the first example, we use the `noisy_samples` generator.
 
@@ -17,16 +17,33 @@ Following up on the first example, we use the `noisy_samples` generator.
 
     minibatch_size = 128
     # Wrap your streamer
-    buffered_streamer = pescador.BufferedStreamer(streamer, minibatch_size)
+    buffered_sample_gen = pescador.buffer_stream(streamer, minibatch_size)
 
     # Generate batches in exactly the same way as you would from the base streamer
-    for batch in buffered_streamer():
+    for batch in buffered_sample_gen:
         ...
 
-A few important points to note about using :ref:`BufferedStreamer`:
 
-    - :ref:`BufferedStreamer` will concatenate your arrays, such that the first dimension contains the number of batches (`minibatch_size` in the above example.
 
-    - Each key in the batches generated will be concatenated (across all the batches buffered).
+A few important points to note about using :ref:`buffer_stream`:
 
-    - A consequence of this is that you must make sure that your generators yield batches such that every key contains arrays shaped (N, ...), where N is the number of batches generated.
+    - :ref:`bufer_stream` will concatenate your arrays, adding a new sample dimension such that the first dimension contains the number of batches (`minibatch_size` in the above example.
+
+    - Each key in the batches generated will be concatenated (across all the samples buffered).
+
+    - `buffer_stream`, like all `pescador.map` transformers, returns a *generator*, not a Streamer. So, if you still want it to behave like a streamer, you have to wrap it in a streamer. Following up on the previous example:
+
+.. code-block:: python
+    :linenos:
+    
+    batch_streamer = pescador.Stream(buffered_sample_gen)
+
+    # Generate batches as a streamer:
+    for batch in batch_streamer:
+        # batch['X'].shape == (minibatch_size, ...)
+        # batch['Y'].shape == (minibatch_size,)
+        ...
+
+
+    # Or, another way:
+    batch_streamer = pescador.Streamer(pescador.buffer_stream, streamer, minibatch_size)
