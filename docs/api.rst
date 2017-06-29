@@ -14,16 +14,6 @@ Streamer
     :inherited-members:
     :special-members: __call__
 
-
-.. _BufferedStreamer:
-
-Buffered Streamers
-------------------
-.. autoclass:: BufferedStreamer
-    :inherited-members:
-    :special-members: __call__
-
-
 .. _Mux:
 
 Multiplexing
@@ -32,6 +22,10 @@ Multiplexing
     :inherited-members:
     :special-members: __call__
 
+Maps (Transformers)
+------------------
+.. automodule:: pescador.maps
+    :members:
 
 .. _ZMQStreamer:
 
