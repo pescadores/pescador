@@ -1,5 +1,10 @@
 #!/usr/bin/env python
-'''Map functions'''
+'''Map functions perform operations on a stream.
+
+Important note: map functions return a *generator*, not another streamer
+Streamer, so if you need it to behave like a Streamer, you have to wrap
+the function in a streamer again.
+'''
 import numpy as np
 import six
 
@@ -42,7 +47,8 @@ def buffer_stream(stream, buffer_size, partial=False,
 
     Raises
     ------
-    DataError if the stream contains items that are not data-like.
+    DataError
+        If the stream contains items that are not data-like.
     '''
 
     stream = util.rename_kw('generator', generator,
@@ -88,8 +94,10 @@ def tuples(stream, *keys):
 
     Raises
     ------
-    DataError if the stream contains items that are not data-like.
-    KeyError if a data object does not contain the requested key.
+    DataError
+        If the stream contains items that are not data-like.
+    KeyError
+        If a data object does not contain the requested key.
     """
     if not keys:
         raise PescadorError('Unable to generate tuples from '
@@ -132,7 +140,8 @@ def keras_tuples(stream, inputs=None, outputs=None):
 
     Raises
     ------
-    DataError if the stream contains items that are not data-like.
+    DataError
+        If the stream contains items that are not data-like.
     """
     flatten_inputs, flatten_outputs = False, False
     if inputs and isinstance(inputs, six.string_types):
