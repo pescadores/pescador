@@ -19,9 +19,11 @@ The basic use case is as follows:
 
 On top of this basic functionality, pescador provides the following tools:
 
-    - Buffering of sampled data into fixed-size batches (see :ref:`BufferedStreamer`)
-    - Multiplexing multiple data streams with dynamic (see :ref:`Mux`)
+    - A :ref:`Streamer` allows you to turn a finite-lifecycle generator into an infinte stream with `cycle()`, by automatically restarting the generator if it completes.
+    - Multiplexing multiple data streams (see :ref:`Mux`)
+    - Transform or modify streams with Maps (see :ref:`Processing Data Streams`)
     - Parallel processing (see :ref:`ZMQStreamer`)
+    - Buffering of sampled data into fixed-size batches (see :ref:`buffer_stream`)
 
 For examples of each of these use-cases, refer to the :ref:`Examples` section.
 
@@ -29,7 +31,7 @@ For examples of each of these use-cases, refer to the :ref:`Examples` section.
 Definitions
 -----------
 
-Pescador is designed with the following notions in mind, with references to relevant documentation where appropriate:
+Pescador is designed with the following core principles:
 
 1. An "iterator" is an object that produces a sequence of data, i.e. via `__next__` / `next()`. (`Glossary definition <https://docs.python.org/3/glossary.html#term-iterator>`_, `Iterator Types <https://docs.python.org/3/library/stdtypes.html#typeiter>`_)
 

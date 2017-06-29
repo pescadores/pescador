@@ -3,14 +3,7 @@
 Sampling from disk
 ==================
 
-A common use case for `pescador` is to sample data from a large collection of existing archives.
-As a concrete example, consider the problem of fitting a statistical model to a large
-corpus of musical recordings.
-When the corpus is sufficiently large, it is impossible to fit the entire set in memory
-while estimating the model parameters.
-Instead, one can pre-process each song to store pre-computed features (and, optionally,
-target labels) in a *numpy zip* `NPZ` archive.
-The problem then becomes sampling data from a collection of `NPZ` archives.
+A common use case for `pescador` is to sample data from a large collection of existing archives. As a concrete example, consider the problem of fitting a statistical model to a large corpus of musical recordings. When the corpus is sufficiently large, it is impossible to fit the entire set in memory while estimating the model parameters. Instead, one can pre-process each song to store pre-computed features (and, optionally, target labels) in a *numpy zip* `NPZ` archive. The problem then becomes sampling data from a collection of `NPZ` archives.
 
 Here, we will assume that the pre-processing has already been done so that each `NPZ` file contains a numpy array of features `X` and labels `Y`.
 We will define infinite samplers that pull `n` examples per iterate.
@@ -37,8 +30,7 @@ We will define infinite samplers that pull `n` examples per iterate.
                 yield dict(X=data['X'][idx:idx + n],
                            Y=data['Y'][idx:idx + n])
 
-Applying the `sample_npz` function above to a list of `npz_files`, we can make a
-multiplexed streamer object as follows:
+Applying the `sample_npz` function above to a list of `npz_files`, we can make a multiplexed streamer object as follows:
 
 .. code-block:: python
 
@@ -48,9 +40,9 @@ multiplexed streamer object as follows:
 
     # Keep 32 streams alive at once
     # Draw on average 16 patches from each stream before deactivating
-    mux_stream = pescador.Mux(streams, k=32, lam=16)
+    mux_stream = pescador.Mux(streams, k=32, rate=16)
 
-    for batch in mux_stream(max_batches=1000):
+    for batch in mux_stream(max_iter=1000):
         # DO LEARNING HERE
         pass
 
@@ -58,10 +50,7 @@ multiplexed streamer object as follows:
 Memory-mapping
 --------------
 
-The `NPZ` file format requires loading the entire contents of each archive into memory.
-This can lead to high memory consumption when the number of active streams is large.
-Note also that memory usage for each `NPZ` file will persist for as long as there is a reference to its contents.
-This can be circumvented, at the cost of some latency, by copying data within the streamer function:
+The `NPZ` file format requires loading the entire contents of each archive into memory. This can lead to high memory consumption when the number of active streams is large. Note also that memory usage for each `NPZ` file will persist for as long as there is a reference to its contents. This can be circumvented, at the cost of some latency, by copying data within the streamer function:
 
 .. code-block:: python
 
@@ -105,3 +94,7 @@ Alternatively, *memory-mapping* can be used to only load data as needed, but req
     streams = [pescador.Streamer(sample_npz, npy_x, npy_y n)
                for (npy_x, npy_y) in zip(npy_x_files, npy_y_files)]
 
+    # Then construct the `Mux` from the streams, as above
+    mux_streame = pescador.Mux(streams, k=32, rate=16)
+
+    ...
