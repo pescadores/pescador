@@ -65,6 +65,9 @@ import matplotlib.pyplot as plt
 from glob import glob
 autosummary_generate = glob('*.rst')
 
+# Include the __init__ doc as well as the class
+autoclass_content = 'both'
+
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
 
