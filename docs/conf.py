@@ -56,6 +56,7 @@ sphinx_gallery_conf = {
         'theano': 'http://deeplearning.net/software/theano/'
     },
     'default_thumb_file': 'noun_199.png',
+    'backreferences_dir': False,
 }
 
 import matplotlib as mpl

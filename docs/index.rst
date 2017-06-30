@@ -21,9 +21,9 @@ On top of this basic functionality, pescador provides the following tools:
 
     - A :ref:`Streamer` allows you to turn a finite-lifecycle generator into an infinte stream with `cycle()`, by automatically restarting the generator if it completes.
     - Multiplexing multiple data streams (see :ref:`Mux`)
-    - Transform or modify streams with Maps (see :ref:`Processing Data Streams`)
+    - Transform or modify streams with Maps (see :ref:`processing-data-streams`)
     - Parallel processing (see :ref:`ZMQStreamer`)
-    - Buffering of sampled data into fixed-size batches (see :ref:`buffer_stream`)
+    - Buffering of sampled data into fixed-size batches (see :ref:`pescador.maps.buffer_stream`)
 
 For examples of each of these use-cases, refer to the :ref:`Examples` section.
 
@@ -33,18 +33,20 @@ Definitions
 
 Pescador is designed with the following core principles:
 
-1. An "iterator" is an object that produces a sequence of data, i.e. via `__next__` / `next()`. (`Glossary definition <https://docs.python.org/3/glossary.html#term-iterator>`_, `Iterator Types <https://docs.python.org/3/library/stdtypes.html#typeiter>`_)
+1. An "iterator" is an object that produces a sequence of data, i.e. via `__next__` / `next()`. (`iterator definition <https://docs.python.org/3/glossary.html#term-iterator>`_, `Iterator Types <https://docs.python.org/3/library/stdtypes.html#typeiter>`_)
 
-2. An "iterable" is an object that can produce iterators, i.e. via `__iter__` / `iter()`. (`Glossary definition <https://docs.python.org/3/glossary.html#term-iterable>`_)
+2. An "iterable" is an object that can produce iterators, i.e. via `__iter__` / `iter()`. (`iterable definition <https://docs.python.org/3/glossary.html#term-iterable>`_)
 
 3. A "stream" is the sequence of objects produced by an iterator.
 
-4. A "generator" (or more precisely "generator function") is a callable object that returns a single generator iterator. (`Glossary definition <https://docs.python.org/3/glossary.html#term-generator>`_)
+4. A "generator" (or more precisely "generator function") is a callable object that returns a single generator iterator. (`generator definition <https://docs.python.org/3/glossary.html#term-generator>`_)
 
 For example:
     - `range` is an iterable function
     - `range(8)` is an iterable, and its iterator produces the stream (consecutively) `0, 1, 2, 3, ...`
 
+
+.. _streaming-data:
 
 Streaming Data
 --------------
@@ -60,7 +62,7 @@ Streaming Data
 
     - A `Streamer` should not modify objects in its stream.
 
-    - In the spirit of encapsulation, the modification of data streams is achieved through separate functionality (see :ref:`Processing Data Streams`)
+    - In the spirit of encapsulation, the modification of data streams is achieved through separate functionality (see :ref:`processing-data-streams`)
 
 
 Multiplexing Data Streams
@@ -71,8 +73,10 @@ Multiplexing Data Streams
 
 3. A `Mux` is initialized with a container of one or more iterables, and parameters to control the stochastic behavior of the object.
 
-4. As a subclass of `Streamer`, a `Mux` also transparently yields the stream flowing through it, i.e. :ref:`Streaming Data`-4.
+4. As a subclass of `Streamer`, a `Mux` also transparently yields the stream flowing through it, i.e. :ref:`streaming-data`.
 
+
+.. _processing-data-streams:
 
 Processing Data Streams
 -----------------------

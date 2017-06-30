@@ -4,6 +4,13 @@
 Important note: map functions return a *generator*, not another streamer
 Streamer, so if you need it to behave like a Streamer, you have to wrap
 the function in a streamer again.
+
+.. autosummary::
+    :toctree: generated/
+
+    buffer_stream
+    tuples
+    keras_tuples
 '''
 import numpy as np
 import six

@@ -1,7 +1,7 @@
 .. _example1:
 
 Basic example
-==============
+=============
 
 This document will walk through the basics of using pescador to stream samples from a generator.
 
@@ -9,7 +9,7 @@ Our running example will be learning from an infinite stream of stochastically p
 
 
 Sample generators
-----------------
+-----------------
 Streamers are intended to transparently pass data without modifying them. However, Pescador assumes that Streamers produce output in
 a particular format.  Specifically, a data is expected to be a python dictionary where each value contains a `np.ndarray`. For an unsupervised learning (e.g., SKLearn/`MiniBatchKMeans`), the data might contain only one
 key: `X`.  For supervised learning (e.g., SGDClassifier), valid data would contain both `X` and `Y` keys, both of equal length.
@@ -95,7 +95,7 @@ Finally, because `iterate()` is such a common operation with streamer objects, a
 Iterating over any of these would then look like the following:
 
 .. code-block:: python
-    ::linenos:
+    :linenos:
 
     for sample in streamer.iterate():
         # do something

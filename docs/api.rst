@@ -10,7 +10,7 @@ API Reference
 
 Streamer
 --------
-.. autoclass:: Streamer
+.. autoclass:: pescador.Streamer
     :inherited-members:
     :special-members: __call__
 
@@ -18,20 +18,19 @@ Streamer
 
 Multiplexing
 ------------
-.. autoclass:: Mux
+.. autoclass:: pescador.Mux
     :inherited-members:
     :special-members: __call__
 
 Maps (Transformers)
-------------------
+-------------------
 .. automodule:: pescador.maps
-    :members:
 
 .. _ZMQStreamer:
 
 Parallel streaming
 ------------------
-.. autoclass:: ZMQStreamer
+.. autoclass:: pescador.ZMQStreamer
     :inherited-members:
     :special-members: __call__
 
