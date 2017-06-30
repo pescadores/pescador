@@ -59,20 +59,24 @@ class Streamer(object):
     >>> for i in stream:
     ...     print(i)  # Displays 0, 1, 2, 3, 4
 
+
     Or with a maximum number of items
 
     >>> for i in stream(max_items=3):
     ...     print(i)  # Displays 0, 1, 2
+
 
     Or infinitely many examples, restarting the generator as needed
 
     >>> for i in stream.cycle():
     ...     print(i)  # Displays 0, 1, 2, 3, 4, 0, 1, 2, ...
 
+
     An alternate interface for the same:
 
     >>> for i in stream(cycle=True):
     ...     print(i)  # Displays 0, 1, 2, 3, 4, 0, 1, 2, ...
+
     '''
 
     def __init__(self, streamer, *args, **kwargs):
@@ -92,6 +96,7 @@ class Streamer(object):
         ------
         PescadorError
             If ``streamer`` is not a generator or an Iterable object.
+
         '''
 
         if not (inspect.isgeneratorfunction(streamer) or
@@ -149,6 +154,7 @@ class Streamer(object):
         See Also
         --------
         cycle : force an infinite stream.
+
         '''
         with StreamActivator(self):
             for n, obj in enumerate(self.stream_):
@@ -211,6 +217,7 @@ class Streamer(object):
         cycle
         tuples
         keras_tuples
+
         '''
         warn('`Streamer.tuples()` is deprecated in 1.1 '
              'This functionality is moved to `pescador.tuples` in 2.0. '
@@ -245,8 +252,8 @@ class Streamer(object):
 
         max_batches : None or int > 0
             .. warning:: This parameter name was deprecated in pescador 1.1
-            Use the `max_iter` parameter instead.
-            The `max_batches` parameter will be removed in pescador 2.0.
+                Use the `max_iter` parameter instead.
+                The `max_batches` parameter will be removed in pescador 2.0.
 
         Yields
         ------
