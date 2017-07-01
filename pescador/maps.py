@@ -1,9 +1,9 @@
 #!/usr/bin/env python
 '''Map functions perform operations on a stream.
 
-Important note: map functions return a *generator*, not another streamer
+Important note: map functions return a *generator*, not another
 Streamer, so if you need it to behave like a Streamer, you have to wrap
-the function in a streamer again.
+the function in a Streamer again.
 
 .. autosummary::
     :toctree: generated/

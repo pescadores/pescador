@@ -42,7 +42,8 @@ As a concrete example, we can simulate a mixture of noisy streams with differing
 
     classes = np.unique(Y)
 
-    for train, test in ShuffleSplit(len(X), n_splits=1, test_size=0.1):
+    rs = ShuffleSplit(n_splits=1, test_size=0.1)
+    for train, test in rs.split(X):
 
         # Instantiate a linear classifier
         estimator = SGDClassifier()
@@ -54,7 +55,7 @@ As a concrete example, we can simulate a mixture of noisy streams with differing
         # Build a mux stream, keeping 3 streams alive at once
         mux_stream = Mux(streams,
                          k=3,    # Keep 3 streams alive at once
-                         lam=64) # Use a poisson rate of 64
+                         rate=64) # Use a poisson rate of 64
 
         # Fit the model to the stream, use at most 5000 samples
         for sample in mux_stream(max_iter=5000):

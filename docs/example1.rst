@@ -40,7 +40,7 @@ Here's a simple example generator that draws random samples of data from the Iri
         sample : dict
             sample['X'] is an `np.ndarray` of shape `(d,)`
 
-            sample[Y'] is a scalar `np.ndarray` of shape `(,)`
+            sample['Y'] is a scalar `np.ndarray` of shape `(,)`
         '''
 
 
@@ -62,7 +62,7 @@ Streamers
 Generators in python have a couple of limitations for common stream learning pipelines.  First, once instantiated, a generator cannot be "restarted".  Second, an instantiated generator cannot be serialized
 directly, so they are difficult to use in distributed computation environments.
 
-Pescador provides the `Streamer` object to circumvent these issues.  `Streamer` simply provides an object container for an uninstantiated generator (and its parameters), and an access method `generate()`.  Calling `generate()` multiple times on a `Streamer` object is equivalent to restarting the generator, and can therefore be used to simply implement multiple pass streams.  Similarly, because `Streamer` can be serialized, it is simple to pass a streamer object to a separate process for parallel computation.
+Pescador provides the `Streamer` class to circumvent these issues.  `Streamer` simply provides an object container for an uninstantiated generator (and its parameters), and an access method `generate()`.  Calling `generate()` multiple times on a `Streamer` object is equivalent to restarting the generator, and can therefore be used to simply implement multiple pass streams.  Similarly, because `Streamer` can be serialized, it is simple to pass a streamer object to a separate process for parallel computation.
 
 Here's a simple example, using the generator from the previous section.
 
