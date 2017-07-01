@@ -67,7 +67,7 @@ Streaming Data
 
 Multiplexing Data Streams
 -------------------------
-1. Pescador defines an object called a `Mux` for the purposes of stochastically multiplexing streams of data.
+1. Pescador defines an object called a `Mux` for the purposes of multiplexing streams of data.
 
 2. `Mux` inherits from `Streamer`, which makes it both iterable and recomposable, e.g. one can construct arbitrary trees of data streams.
 

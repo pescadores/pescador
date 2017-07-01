@@ -41,7 +41,7 @@ A few important points to note about using :ref:`pescador.maps.buffer_stream`:
     # Generate batches as a streamer:
     for batch in batch_streamer:
         # batch['X'].shape == (minibatch_size, ...)
-        # batch['Y'].shape == (minibatch_size,)
+        # batch['Y'].shape == (minibatch_size, 1)
         ...
 
 
