@@ -300,8 +300,9 @@ def test_sampled_mux_of_muxes():
     assert (max_count - min_count) / max_count < 0.2
 
 
+# Note: `timeout` is necessary to break the infinite loop in the event a change
+# causes this test to fail.
 @pytest.mark.timeout(1.0)
-@pytest.mark.xfail(reason="Empty streams cause inf loop (#87)")
 def test_mux_inf_loop():
     s1 = pescador.Streamer([])
     s2 = pescador.Streamer([])
