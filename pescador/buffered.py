@@ -8,7 +8,7 @@ from . import util
 
 
 class BufferedStreamer(core.Streamer):
-    """Buffers a stream into batches of examples
+    """Buffers a stream into batches of examples.
 
     Examples
     --------

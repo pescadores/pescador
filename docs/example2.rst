@@ -7,8 +7,7 @@ We will assume a working understanding of the simple example in the previous sec
 Stream re-use and multiplexing
 ==============================
 
-The `Mux` streamer provides a powerful interface for randomly interleaving samples from multiple input streams. 
-`Mux` can also dynamically activate and deactivate individual `Streamers`, which allows it to operate on a bounded subset of streams at any given time.
+The `Mux` streamer provides a powerful interface for randomly interleaving samples from multiple input streams. `Mux` can also dynamically activate and deactivate individual `Streamers`, which allows it to operate on a bounded subset of streams at any given time.
 
 As a concrete example, we can simulate a mixture of noisy streams with differing variances.
 
@@ -26,14 +25,14 @@ As a concrete example, we can simulate a mixture of noisy streams with differing
 
     from pescador import Streamer, Mux
 
-    def noisy_samples(X, Y, batch_size=16, sigma=1.0):
+    def noisy_samples(X, Y, sigma=1.0):
         '''Copied over from the previous example'''
         n, d = X.shape
 
         while True:
-            i = np.random.randint(0, n, size=batch_size)
+            i = np.random.randint(0, n, size=1)
 
-            noise = sigma * np.random.randn(batch_size, d)
+            noise = sigma * np.random.randn(1, d)
 
             yield dict(X=X[i] + noise, Y=Y[i])
 
@@ -43,7 +42,8 @@ As a concrete example, we can simulate a mixture of noisy streams with differing
 
     classes = np.unique(Y)
 
-    for train, test in ShuffleSplit(len(X), n_splits=1, test_size=0.1):
+    rs = ShuffleSplit(n_splits=1, test_size=0.1)
+    for train, test in rs.split(X):
 
         # Instantiate a linear classifier
         estimator = SGDClassifier()
@@ -55,28 +55,25 @@ As a concrete example, we can simulate a mixture of noisy streams with differing
         # Build a mux stream, keeping 3 streams alive at once
         mux_stream = Mux(streams,
                          k=3,    # Keep 3 streams alive at once
-                         lam=64) # Use a poisson rate of 64
+                         rate=64) # Use a poisson rate of 64
 
-        # Fit the model to the stream, use at most 5000 batches
-        for batch in mux_stream(max_batches=5000):
-            estimator.partial_fit(batch['X'], batch['Y'], classes=classes)
+        # Fit the model to the stream, use at most 5000 samples
+        for sample in mux_stream(max_iter=5000):
+            estimator.partial_fit(sample['X'], sample['Y'], classes=classes)
 
         # And report the accuracy
         Ypred = estimator.predict(X[test])
         print('Test accuracy: {:.3f}'.format(accuracy_score(Y[test], Ypred)))
 
 
-In the above example, each `Streamer` in `streams` can make infinitely many samples.
-The `lam=64` argument to `Mux` says that each stream should produce some `n` batches, where `n` is sampled from a Poisson distribution of rate `lam`.
-When a stream exceeds its bound, it is deactivated, and a new streamer is activated to fill its place.
+In the above example, each `Streamer` in `streams` can make infinitely many samples. The `rate=64` argument to `Mux` says that each stream should produce some `n` samples, where `n` is sampled from a Poisson distribution of rate `rate`. When a stream exceeds its bound, it is deactivated, and a new streamer is activated to fill its place.
 
-Setting `lam=None` disables the random stream bounding, and `mux()` simply runs each active stream until
-exhaustion.
+Setting `rate=None` disables the random stream bounding, and `mux()` simply runs each active stream until exhaustion.
 
 The `Mux` streamer can sampled with or without replacement from its input streams, according to the `with_replacement` option.
 Setting this parameter to `False` means that each stream can be active at most once.
 
-Streams can also be sampled with non-uniform weighting by specifying a vector of `pool_weights`.
+Streams can also be sampled with non-uniform weighting by specifying a vector of `weights`.
 
-Finally, exhausted streams can be removed by setting `prune_empty_seeds` to `True`.
+Finally, exhausted streams can be removed by setting `prune_empty_streams` to `True`.
 If `False`, then exhausted streams may be reactivated at any time.

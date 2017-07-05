@@ -96,24 +96,24 @@ class Mux(core.Streamer):
 
         seed_pool : iterable of streamers
             .. warning:: This parameter name was deprecated in pescador 1.1
-            Use the `streamers` parameter instead.
-            The `seed_pool` parameter will be removed in pescador 2.0.
+                Use the `streamers` parameter instead.
+                The `seed_pool` parameter will be removed in pescador 2.0.
 
         lam : float > 0.0
             .. warning:: This parameter name was deprecated in pescador 1.1
-            Use the `rate` parameter instead.
-            The `lam` parameter will be removed in pescador 2.0.
+                Use the `rate` parameter instead.
+                The `lam` parameter will be removed in pescador 2.0.
 
         pool_weights : np.ndarray or None
             .. warning:: This parameter name was deprecated in pescador 1.1
-            Use the `weights` parameter instead.
-            The `pool_weights` parameter will be removed in pescador 2.0.
+                Use the `weights` parameter instead.
+                The `pool_weights` parameter will be removed in pescador 2.0.
 
         prune_empty_seeds : bool
             .. warning:: This parameter name was deprecated in pescador 1.1
-            Use the `prune_empty_streams` parameter instead.
-            The `prune_empty_seeds` parameter will be removed in
-            pescador 2.0.
+                Use the `prune_empty_streams` parameter instead.
+                The `prune_empty_seeds` parameter will be removed in
+                pescador 2.0.
         """
         streamers = rename_kw('seed_pool', seed_pool,
                               'streamers', streamers,

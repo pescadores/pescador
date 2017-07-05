@@ -56,6 +56,7 @@ sphinx_gallery_conf = {
         'theano': 'http://deeplearning.net/software/theano/'
     },
     'default_thumb_file': 'noun_199.png',
+    'backreferences_dir': False,
 }
 
 import matplotlib as mpl
@@ -64,6 +65,9 @@ import matplotlib.pyplot as plt
 
 from glob import glob
 autosummary_generate = glob('*.rst')
+
+# Include the __init__ doc as well as the class
+autoclass_content = 'both'
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
