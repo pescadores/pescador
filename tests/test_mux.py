@@ -1,7 +1,6 @@
 import pytest
 
 import collections
-import itertools
 import numpy as np
 import random
 
@@ -219,11 +218,19 @@ def test_critical_mux():
     print(collections.Counter(samples))
 
 
+def _choice(vals):
+    while True:
+        yield random.choice(vals)
+
+
+def _cycle(values):
+    while True:
+        for v in values:
+            yield v
+
+
 def test_critical_mux_of_rate_limited_muxes():
     # Check on Issue #79
-    def _choice(vals):
-        while True:
-            yield random.choice(vals)
 
     ab = pescador.Streamer(_choice, 'ab')
     cd = pescador.Streamer(_choice, 'cd')
@@ -257,11 +264,6 @@ def test_restart_mux():
 
 
 def test_sampled_mux_of_muxes():
-
-    def _cycle(values):
-        while True:
-            for v in values:
-                yield v
 
     # Build some sample streams
     ab = pescador.Streamer(_cycle, 'ab')
@@ -310,3 +312,35 @@ def test_mux_inf_loop():
                        with_replacement=False, random_state=1234)
 
     assert len(list(mux(max_iter=100))) == 0
+
+
+def test_mux_stacked_uniform_convergence():
+    ab = pescador.Streamer(_choice, 'ab')
+    cd = pescador.Streamer(_choice, 'cd')
+    ef = pescador.Streamer(_choice, 'ef')
+    mux1 = pescador.Mux([ab, cd, ef], k=2, rate=2,
+                        with_replacement=False, revive=True)
+
+    gh = pescador.Streamer(_choice, 'gh')
+    ij = pescador.Streamer(_choice, 'ij')
+    kl = pescador.Streamer(_choice, 'kl')
+
+    mux2 = pescador.Mux([gh, ij, kl], k=2, rate=2,
+                        with_replacement=False, revive=True)
+
+    stacked_mux = pescador.Mux([mux1, mux2], k=2, rate=None,
+                               with_replacement=False, revive=True)
+
+    flat_mux = pescador.Mux([ab, cd, ef, gh, ij, kl], k=6, rate=None,
+                            with_replacement=False, revive=False)
+
+    max_iter = 50000
+    samples1 = list(stacked_mux.iterate(max_iter=max_iter))
+    samples2 = list(flat_mux.iterate(max_iter=max_iter))
+    count1 = collections.Counter(samples1)
+    count2 = collections.Counter(samples2)
+    print(count1, count2)
+    assert set('abcdefghijkl') == set(count1.keys()) == set(count2.keys())
+    c1, c2 = [list(c.values()) for c in (count1, count2)]
+    np.testing.assert_almost_equal(
+        np.std(c1) / max_iter, np.std(c2) / max_iter, decimal=2)
