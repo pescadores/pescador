@@ -330,17 +330,17 @@ def test_mux_stacked_uniform_convergence():
 
     stacked_mux = pescador.Mux([mux1, mux2], k=2, rate=None,
                                with_replacement=False, revive=True,
-                               random_state=159)
-
-    flat_mux = pescador.Streamer(_choice, 'abcdefghijkl')
+                               random_state=12345)
 
     max_iter = 50000
-    samples1 = list(stacked_mux.iterate(max_iter=max_iter))
-    samples2 = list(flat_mux.iterate(max_iter=max_iter))
-    count1 = collections.Counter(samples1)
-    count2 = collections.Counter(samples2)
+    chars = 'abcdefghijkl'
+    samples = list(stacked_mux.iterate(max_iter=max_iter))
+    counter = collections.Counter(samples)
+    assert set(chars) == set(counter.keys())
 
-    assert set('abcdefghijkl') == set(count1.keys()) == set(count2.keys())
-    c1, c2 = [list(c.values()) for c in (count1, count2)]
-    np.testing.assert_almost_equal(
-        np.std(c1) / max_iter, np.std(c2) / max_iter, decimal=2)
+    counts = np.array(counter.values())
+    exp_count = float(max_iter / len(chars))
+    max_error = np.max(np.abs(counts - exp_count) / exp_count)
+
+    # Confirm the max difference is under 5% -- for these seeds, it's 2.2
+    assert max_error < 0.05
