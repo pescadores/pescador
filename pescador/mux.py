@@ -311,6 +311,7 @@ class ShuffledMux(Mux):
     def activate(self):
         """Activates a number of streams"""
         self.distribution_ = 1. / self.n_streams * np.ones(self.n_streams)
+        self.valid_streams_ = np.ones(self.n_streams, dtype=bool)
 
         self.streams_ = [None] * self.k
 
@@ -426,11 +427,11 @@ class PoissonMux(BaseMux):
         pass
 
 
-class ShuffledMux(BaseMux):
-    """A Mux which guarantees that all substreams are activated."""
-    def __init__(self, mode=""):
-        """
-        Parameters
-        ----------
-        mode : ["permuted", "roundrobin"]
-        """
+# class ShuffledMux(BaseMux):
+#     """A Mux which guarantees that all substreams are activated."""
+#     def __init__(self, mode=""):
+#         """
+#         Parameters
+#         ----------
+#         mode : ["permuted", "roundrobin"]
+#         """
