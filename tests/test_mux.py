@@ -2,6 +2,7 @@ import pytest
 
 import collections
 import numpy as np
+import scipy.stats
 import random
 
 import pescador
@@ -338,7 +339,7 @@ def test_mux_stacked_uniform_convergence():
     counter = collections.Counter(samples)
     assert set(chars) == set(counter.keys())
 
-    counts = np.array(counter.values())
+    counts = np.asarray(list(counter.values()))
     exp_count = float(max_iter / len(chars))
     max_error = np.max(np.abs(counts - exp_count) / exp_count)
 
