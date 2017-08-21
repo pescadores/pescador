@@ -3,7 +3,6 @@ import pytest
 import collections
 import numpy as np
 import scipy.stats
-import random
 
 import pescador
 import pescador.mux
@@ -217,9 +216,11 @@ def test_critical_mux():
     assert len(samples) == len(chars) * n_reps
 
 
-def _choice(vals):
+def _choice(vals, seed=11111):
+    rng = np.random.RandomState(seed=seed)
+    n = len(vals)
     while True:
-        yield random.choice(vals)
+        yield vals[rng.randint(0, n)]
 
 
 def _cycle(values):
@@ -333,15 +334,14 @@ def test_mux_stacked_uniform_convergence():
                                with_replacement=False, revive=True,
                                random_state=12345)
 
-    max_iter = 50000
+    max_iter = 1000
     chars = 'abcdefghijkl'
     samples = list(stacked_mux.iterate(max_iter=max_iter))
     counter = collections.Counter(samples)
     assert set(chars) == set(counter.keys())
 
     counts = np.asarray(list(counter.values()))
-    exp_count = float(max_iter / len(chars))
-    max_error = np.max(np.abs(counts - exp_count) / exp_count)
 
-    # Confirm the max difference is under 5% -- for these seeds, it's 2.2
-    assert max_error < 0.05
+    # Check that the pvalue for the chi^2 test is at least 0.95
+    test = scipy.stats.chisquare(counts)
+    assert test.pvalue >= 0.95
