@@ -1,6 +1,26 @@
 Changes
 =======
 
+v1.1.0
+------
+This is primarily a maintenance release, and will be the last in the 1.x series.
+
+- `#97`_ Fixed an infinite loop in `Mux`
+- `#91`_ Changed the default timeout for `ZMQStreamer` to 5 seconds.
+- `#90`_ Fixed conda-forge package distribution
+- `#89`_ Refactored internals of the `Mux` class toward the 2.x series
+- `#88`_, `#100`_ improved unit tests
+- `#73`_, `#95`_ Updated documentation
+
+.. _#73: https://github.com/pescadores/pescador/pull/73
+.. _#88: https://github.com/pescadores/pescador/pull/88
+.. _#89: https://github.com/pescadores/pescador/pull/89
+.. _#90: https://github.com/pescadores/pescador/pull/90
+.. _#91: https://github.com/pescadores/pescador/pull/91
+.. _#95: https://github.com/pescadores/pescador/pull/95
+.. _#97: https://github.com/pescadores/pescador/pull/97
+.. _#100: https://github.com/pescadores/pescador/pull/100
+
 v1.0.0
 ------
 This release constitutes a major revision over the 0.x series, and the new interface
