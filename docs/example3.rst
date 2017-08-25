@@ -3,7 +3,11 @@
 Sampling from disk
 ==================
 
-A common use case for `pescador` is to sample data from a large collection of existing archives. As a concrete example, consider the problem of fitting a statistical model to a large corpus of musical recordings. When the corpus is sufficiently large, it is impossible to fit the entire set in memory while estimating the model parameters. Instead, one can pre-process each song to store pre-computed features (and, optionally, target labels) in a *numpy zip* `NPZ` archive. The problem then becomes sampling data from a collection of `NPZ` archives.
+A common use case for `pescador` is to sample data from a large collection of existing archives.
+As a concrete example, consider the problem of fitting a statistical model to a large corpus of musical recordings.
+When the corpus is sufficiently large, it is impossible to fit the entire set in memory while estimating the model parameters.
+Instead, one can pre-process each song to store pre-computed features (and, optionally, target labels) in a *numpy zip* `NPZ` archive.
+The problem then becomes sampling data from a collection of `NPZ` archives.
 
 Here, we will assume that the pre-processing has already been done so that each `NPZ` file contains a numpy array of features `X` and labels `Y`.
 We will define infinite samplers that pull `n` examples per iterate.
@@ -85,7 +89,6 @@ Alternatively, *memory-mapping* can be used to only load data as needed, but req
             idx = np.random.randint(n_total - n)
             yield dict(X=X[idx:idx + n],
                        Y=Y[idx:idx + n])
-
 
     # Using this streamer is similar to the first example, but now you need a separate
     # NPY file for each X and Y

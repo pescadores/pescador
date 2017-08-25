@@ -237,8 +237,6 @@ class Streamer(object):
     def __call__(self, max_iter=None, cycle=False, max_batches=Deprecated()):
         '''Convenience interface for interacting with the Streamer.
 
-        TODO: max_iter > len(self.stream_) is incompatible with cycle.
-
         Parameters
         ----------
         max_iter : None or int > 0

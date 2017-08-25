@@ -1,13 +1,14 @@
 .. _example2:
 
-This document will walk through some advanced usage of pescador.
+This example demonstrates how to re-use and multiplex streamers.
 
 We will assume a working understanding of the simple example in the previous section.
 
 Stream re-use and multiplexing
 ==============================
 
-The `Mux` streamer provides a powerful interface for randomly interleaving samples from multiple input streams. `Mux` can also dynamically activate and deactivate individual `Streamers`, which allows it to operate on a bounded subset of streams at any given time.
+The `Mux` streamer provides a powerful interface for randomly interleaving samples from multiple input streams.
+`Mux` can also dynamically activate and deactivate individual `Streamers`, which allows it to operate on a bounded subset of streams at any given time.
 
 As a concrete example, we can simulate a mixture of noisy streams with differing variances.
 
@@ -66,7 +67,8 @@ As a concrete example, we can simulate a mixture of noisy streams with differing
         print('Test accuracy: {:.3f}'.format(accuracy_score(Y[test], Ypred)))
 
 
-In the above example, each `Streamer` in `streams` can make infinitely many samples. The `rate=64` argument to `Mux` says that each stream should produce some `n` samples, where `n` is sampled from a Poisson distribution of rate `rate`. When a stream exceeds its bound, it is deactivated, and a new streamer is activated to fill its place.
+In the above example, each `Streamer` in `streams` can make infinitely many samples. The `rate=64` argument to `Mux` says that each stream should produce some `n` samples, where `n` is sampled from a Poisson distribution of rate `rate`.
+When a stream exceeds its bound, it is deactivated, and a new streamer is activated to fill its place.
 
 Setting `rate=None` disables the random stream bounding, and `mux()` simply runs each active stream until exhaustion.
 

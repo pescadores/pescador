@@ -7,9 +7,30 @@ pescador
 [![Documentation Status](https://readthedocs.org/projects/pescador/badge/?version=latest)](https://readthedocs.org/projects/pescador/?badge=latest)
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.400700.svg)](https://doi.org/10.5281/zenodo.400700)
 
-A sampling and buffering module for iterative learning.
+Pescador is a library for streaming (numerical) data, primarily for use in machine learning applications.
 
-Read the [documentation](http://pescador.readthedocs.org)
+Pescador addresses the following use cases:
+
+    - **Hierarchical sampling**
+    - **Out-of-core learning**
+    - **Parallel streaming**
+
+These use cases arise in the following common scenarios:
+
+    - Say you have three data sources `(A, B, C)` that you want to sample. 
+      Pescador can dynamically interleave these sources to provide a randomized stream `D <- (A, B, C)`.
+      The distribution over `(A, B, C)` need not be uniform: you can specify any distribution you like!
+
+    - Now, say you have 3000 data sources that you want to sample, and they're too large to all fit in RAM at
+      once.
+      Pescador makes it easy to interleave these sources while maintaining a small `working set`.
+      Not all sources are simultaneously active, but Pescador manages the working set so you don't have to.
+
+    - If loading data incurs substantial latency (e.g., due to storage access or pre-processing), this can slow down processing.
+      Pescador makes it easy to do this seamlessly in a background process, so that your main thread can continue working.
+
+
+Want to learn more? [Read the docs!](http://pescador.readthedocs.org)
 
 
 Installation
