@@ -1,8 +1,7 @@
 .. _intro:
 
-************
 Introduction
-************
+============
 
 Pescador's primary goal is to provide fine-grained control over data streaming and sampling.
 These problems can get complex quickly, so this section provides an overview of the concepts underlying

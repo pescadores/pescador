@@ -19,17 +19,23 @@ Pescador addresses the following use cases:
 
 These use cases arise in the following common scenarios:
 
-    - Say you have three data sources `(A, B, C)` that you want to sample. 
+    - Say you have three data sources `(A, B, C)` that you want to sample.
+      For example, each data source could contain all the examples of a particular category.
+
       Pescador can dynamically interleave these sources to provide a randomized stream `D <- (A, B, C)`.
       The distribution over `(A, B, C)` need not be uniform: you can specify any distribution you like!
 
-    - Now, say you have 3000 data sources that you want to sample, and they're too large to all fit in RAM at
-      once.
+    - Now, say you have 3000 data sources, each of which may contain a large number of samples.  Maybe that's too much data to fit in RAM at once.
+
       Pescador makes it easy to interleave these sources while maintaining a small `working set`.
       Not all sources are simultaneously active, but Pescador manages the working set so you don't have to.
+      This way, you can process the full data set *out of core*, but using a bounded
+      amount of memory.
 
-    - If loading data incurs substantial latency (e.g., due to storage access or pre-processing), this can slow down processing.
-      Pescador makes it easy to do this seamlessly in a background process, so that your main thread can continue working.
+    - If loading data incurs substantial latency (e.g., due to accessing storage access
+      or pre-processing), this can be a problem.
+
+      Pescador can seamlessly move data generation into a background process, so that your main thread can continue working.
 
 
 To make this all possible, Pescador provides the following utilities:
@@ -66,16 +72,21 @@ Introduction
 
     intro
 
+*************
+Why Pescador?
+*************
+.. toctree::
+    :maxdepth: 2
+
+    why
+
 **************
 Basic examples
 **************
 .. toctree::
     :maxdepth: 2
 
-    example1
-    example2
-    example3
-    bufferedstreaming
+    examples
 
 *****************
 Advanced examples

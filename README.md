@@ -11,23 +11,27 @@ Pescador is a library for streaming (numerical) data, primarily for use in machi
 
 Pescador addresses the following use cases:
 
-    - **Hierarchical sampling**
-    - **Out-of-core learning**
-    - **Parallel streaming**
+- **Hierarchical sampling**
+- **Out-of-core learning**
+- **Parallel streaming**
 
 These use cases arise in the following common scenarios:
 
-    - Say you have three data sources `(A, B, C)` that you want to sample. 
-      Pescador can dynamically interleave these sources to provide a randomized stream `D <- (A, B, C)`.
-      The distribution over `(A, B, C)` need not be uniform: you can specify any distribution you like!
+- Say you have three data sources `(A, B, C)` that you want to sample. 
+  For example, each data source could contain all the examples of a particular category.
 
-    - Now, say you have 3000 data sources that you want to sample, and they're too large to all fit in RAM at
-      once.
-      Pescador makes it easy to interleave these sources while maintaining a small `working set`.
-      Not all sources are simultaneously active, but Pescador manages the working set so you don't have to.
+  Pescador can dynamically interleave these sources to provide a randomized stream `D <- (A, B, C)`.
+  The distribution over `(A, B, C)` need not be uniform: you can specify any distribution you like!
 
-    - If loading data incurs substantial latency (e.g., due to storage access or pre-processing), this can slow down processing.
-      Pescador makes it easy to do this seamlessly in a background process, so that your main thread can continue working.
+- Now, say you have 3000 data sources, each of which may contain a large number of samples.  Maybe that's too much data to fit in RAM at once.
+
+  Pescador makes it easy to interleave these sources while maintaining a small `working set`.
+  Not all sources are simultaneously active, but Pescador manages the working set so you don't have to.
+
+- If loading data incurs substantial latency (e.g., due to accessing storage access
+  or pre-processing), this can be a problem.
+  
+  Pescador can seamlessly move data generation into a background process, so that your main thread can continue working.
 
 
 Want to learn more? [Read the docs!](http://pescador.readthedocs.org)
