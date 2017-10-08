@@ -507,8 +507,6 @@ class BaseMux(core.Streamer):
 
     def iterate(self, max_iter=None):
         """Yields items from the mux."""
-        self._validate_subclass()
-
         if max_iter is None:
             max_iter = np.inf
 
@@ -575,6 +573,12 @@ class BaseMux(core.Streamer):
         """
         pass
 
+    def _n_samples_to_stream(self):
+        """Return how many samples to stream for a new streamer. None
+        makes an infinite streamer.
+        """
+        return None
+
     def _activate_stream(self, idx):
         '''Randomly select and create a stream.
 
@@ -591,22 +595,8 @@ class BaseMux(core.Streamer):
             raise PescadorError('`streamers` must have the same '
                                 'length as `distribution`')
 
-        # instantiate
-        if self.rate is not None:
-            n_stream = 1 + self.rng.poisson(lam=self.rate)
-        else:
-            n_stream = None
-
-        ## TODO: migrate this to child class
-        # If we're sampling without replacement, zero this one out
-        # This effectively disables this stream as soon as it is chosen,
-        # preventing it from being chosen again (unless it is revived)
-        if not self.with_replacement:
-            self.distribution_[idx] = 0.0
-
-            # Correct the distribution
-            if (self.distribution_ > 0).any():
-                self.distribution_[:] /= np.sum(self.distribution_)
+        # instantiate a new streamer
+        n_stream = self._n_samples_to_stream()
 
         return (self.streamers[idx].iterate(max_iter=n_stream),
                 self.weights[idx])
@@ -653,8 +643,11 @@ class PoissonMux(BaseMux):
     Note: with a Poisson Mux, all streams are not necessarily guaranteed
     to be active.
     """
-    def __init__(self, streamers, mode="with_replacement",
-                 weights=None, random_state=None,):
+    def __init__(self, streamers, k,
+                 rate=256.0, weights=None,
+                 mode="with_replacement",
+                 prune_empty_streams=True,
+                 random_state=None):
         """
         Parameters
         ----------
@@ -668,7 +661,12 @@ class PoissonMux(BaseMux):
             exhaustive
                 Run every selected stream once to exhaustion.
         """
-        pass
+        self.mode = mode
+        self.rate = rate
+
+        super(PoissonMux, self).__init__(
+            streamers, k, weights=weights,
+            random_state=random_state, prune_empty_streams=prune_empty_streams)
 
     def _new_stream_index(self, idx=None):
         """Chooses a substream from the pool of streams with distribution > 0
@@ -683,7 +681,8 @@ class PoissonMux(BaseMux):
                                           self.weight_norm_))
 
     def _on_stream_exhausted(self, idx):
-        if self.revive and not self.with_replacement:
+        # if self.revive and not self.with_replacement:
+        if self.mode == "single_active":
             # If we need to revive a seed, give it the max
             # current probability
             if self.distribution_.any():
@@ -692,18 +691,49 @@ class PoissonMux(BaseMux):
             else:
                 self.distribution_[self.stream_idxs_[idx]] = 1.0
 
+    def _n_samples_to_stream(self):
+        if self.rate is not None:
+            return 1 + self.rng.poisson(lam=self.rate)
+        else:
+            return None
 
-class ShuffledMux(BaseMux):
+    def _activate_stream(self, idx):
+        '''Randomly select and create a stream.
+
+        Parameters
+        ----------
+        idx : int, [0:n_streams - 1]
+            The stream index to replace
+        '''
+        streamer, weight = super(PoissonMux, self)._activate_stream(idx)
+
+        # If we're sampling without replacement, zero this one out
+        # This effectively disables this stream as soon as it is chosen,
+        # preventing it from being chosen again (unless it is revived)
+        # if not self.with_replacement:
+        if self.mode != "with_replacement":
+            self.distribution_[idx] = 0.0
+
+            # Correct the distribution
+            if (self.distribution_ > 0).any():
+                self.distribution_[:] /= np.sum(self.distribution_)
+
+        return streamer, weight
+
+
+class ShuffledMux(PoissonMux):
     """A variation on a mux, which takes N streamers, and samples
     from them equally, guaranteeing all N streamers to be "active",
     unlike the base Mux, which randomly chooses streams when activating.
 
     TODO Better name / more general approach for this.
     """
-    def __init__(self, streamers, rate=None, random_state=None,
-                 prune_empty_streams=True):
+    def __init__(self, streamers, rate=None, weights=None,
+                 random_state=None, prune_empty_streams=True):
         super(ShuffledMux, self).__init__(
             streamers, k=len(streamers), rate=rate,
+            weights=weights,
+            mode="single_active",
             random_state=random_state,
             prune_empty_streams=prune_empty_streams)
 
@@ -734,10 +764,10 @@ class RoundRobinMux(BaseMux):
     """A Mux which iterates over all streamers in strict order.
 
     """
-    def __init__(self, streamers, rate=None, random_state=None,
+    def __init__(self, streamers, random_state=None,
                  prune_empty_streams=True):
         super(RoundRobinMux, self).__init__(
-            streamers, k=len(streamers), rate=rate,
+            streamers, k=len(streamers),
             random_state=random_state,
             prune_empty_streams=prune_empty_streams)
 
