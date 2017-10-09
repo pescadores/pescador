@@ -28,7 +28,7 @@ def _choice(vals, seed=11111):
     functools.partial(pescador.mux.Mux, k=1, with_replacement=False),
     functools.partial(pescador.mux.PoissonMux, k=1, rate=None,
                       mode="exhaustive"),
-    pytest.mark.xfail(pescador.mux.ChainMux, reason="TODO")],
+    pescador.mux.ChainMux],
     ids=["DeprecatedMux",
          "PoissonMux-exhaustive",
          "ChainMux"])
@@ -73,7 +73,7 @@ def test_mux_single_infinite(mux_class):
     functools.partial(pescador.mux.Mux, k=1, with_replacement=False),
     functools.partial(pescador.mux.PoissonMux, k=1, rate=None,
                       mode="exhaustive"),
-    pytest.mark.xfail(pescador.mux.ChainMux, reason="TODO")],
+    pescador.mux.ChainMux],
     ids=["DeprecatedMux",
          "PoissonMux-exhaustive",
          "ChainMux"])
@@ -102,7 +102,7 @@ def test_mux_single_tuple(items, mux_class):
     functools.partial(pescador.mux.PoissonMux, k=1),
     pescador.mux.ShuffledMux,
     pescador.mux.RoundRobinMux,
-    pytest.mark.xfail(pescador.mux.ChainMux, reason="TODO")],
+    pescador.mux.ChainMux],
     ids=["DeprecatedMux",
          "PoissonMux-exhaustive",
          "ShuffledMux",
@@ -407,20 +407,136 @@ def test_sampled_mux_of_muxes(mux_class):
     assert (max_count - min_count) / max_count < 0.2
 
 
-@pytest.mark.parametrize('mux_class', [
-    functools.partial(pescador.mux.Mux, with_replacement=False, revive=True),
-    functools.partial(pescador.mux.PoissonMux, mode="single_active")],
-    ids=["DeprecatedMux",
-         "PoissonMux"])
-# Note: `timeout` is necessary to break the infinite loop in the event a change
-# causes this test to fail.
-@pytest.mark.timeout(2.0)
-def test_mux_inf_loop(mux_class):
-    s1 = pescador.Streamer([])
-    s2 = pescador.Streamer([])
-    mux = mux_class([s1, s2], k=2, random_state=1234)
+class TestPoissonMux_SingleActive:
+    @pytest.mark.parametrize('mux_class', [
+        functools.partial(pescador.mux.Mux,
+                          with_replacement=False, revive=True),
+        functools.partial(pescador.mux.PoissonMux, mode="single_active")],
+        ids=["DeprecatedMux",
+             "PoissonMux"])
+    def test_mux_of_muxes_itered(self, mux_class):
+        # Check on Issue #79
+        abc = pescador.Streamer('abc')
+        xyz = pescador.Streamer('xyz')
+        mux1 = mux_class([abc, xyz], k=10, rate=None,
+                         prune_empty_streams=False, random_state=135)
+        samples1 = mux1.iterate(max_iter=1000)
+        count1 = collections.Counter(samples1)
+        assert set('abcxyz') == set(count1.keys())
 
-    assert len(list(mux(max_iter=100))) == 0
+        n123 = pescador.Streamer('123')
+        n456 = pescador.Streamer('456')
+        mux2 = mux_class([n123, n456], k=10, rate=None,
+                         prune_empty_streams=False,
+                         random_state=246)
+        samples2 = mux2.iterate(max_iter=1000)
+        count2 = collections.Counter(samples2)
+        assert set('123456') == set(count2.keys())
+
+        # Note that (random_state=987, k=2) fails.
+        mux3 = mux_class([mux1, mux2], k=10, rate=None,
+                         prune_empty_streams=False,
+                         random_state=987)
+        samples3 = mux3.iterate(max_iter=1000)
+        count3 = collections.Counter(samples3)
+        assert set('abcxyz123456') == set(count3.keys())
+
+    @pytest.mark.parametrize('mux_class', [
+        functools.partial(pescador.mux.Mux,
+                          with_replacement=False, revive=True),
+        functools.partial(pescador.mux.PoissonMux, mode="single_active")],
+        ids=["DeprecatedMux",
+             "PoissonMux"])
+    def test_mux_of_muxes_single(self, mux_class):
+        # Check on Issue #79
+        abc = pescador.Streamer('abc')
+        xyz = pescador.Streamer('xyz')
+        mux1 = mux_class([abc, xyz], k=2, rate=None,
+                         prune_empty_streams=False)
+
+        n123 = pescador.Streamer('123')
+        n456 = pescador.Streamer('456')
+        mux2 = mux_class([n123, n456], k=2, rate=None,
+                         prune_empty_streams=False)
+
+        mux3 = mux_class([mux1, mux2], k=2, rate=None,
+                         prune_empty_streams=False)
+        samples3 = list(mux3.iterate(max_iter=10000))
+        count3 = collections.Counter(samples3)
+        assert set('abcxyz123456') == set(count3.keys())
+
+    @pytest.mark.parametrize('mux_class', [
+        functools.partial(pescador.mux.Mux,
+                          with_replacement=False, revive=True),
+        functools.partial(pescador.mux.PoissonMux, mode="single_active")],
+        ids=["DeprecatedMux",
+             "PoissonMux"])
+    def test_critical_mux(self, mux_class):
+        # Check on Issue #80
+        chars = 'abcde'
+        streamers = [pescador.Streamer(x * 5) for x in chars]
+        mux = mux_class(streamers, k=len(chars), rate=None,
+                        prune_empty_streams=False, random_state=135)
+        samples = mux.iterate(max_iter=1000)
+        print(collections.Counter(samples))
+
+    @pytest.mark.parametrize('mux_class', [
+        functools.partial(pescador.mux.Mux,
+                          with_replacement=False, revive=True),
+        functools.partial(pescador.mux.PoissonMux, mode="single_active")],
+        ids=["DeprecatedMux",
+             "PoissonMux"])
+    def test_critical_mux_of_rate_limited_muxes(self, mux_class):
+        # Check on Issue #79
+        def _choice(vals):
+            while True:
+                yield random.choice(vals)
+
+        ab = pescador.Streamer(_choice, 'ab')
+        cd = pescador.Streamer(_choice, 'cd')
+        ef = pescador.Streamer(_choice, 'ef')
+        mux1 = mux_class([ab, cd, ef], k=2, rate=2)
+
+        gh = pescador.Streamer(_choice, 'gh')
+        ij = pescador.Streamer(_choice, 'ij')
+        kl = pescador.Streamer(_choice, 'kl')
+
+        mux2 = mux_class([gh, ij, kl], k=2, rate=2)
+
+        mux3 = mux_class([mux1, mux2], k=2, rate=None)
+        samples = list(mux3.iterate(max_iter=10000))
+        count = collections.Counter(samples)
+        max_count, min_count = max(count.values()), min(count.values())
+        assert (max_count - min_count) / max_count < 0.2
+        assert set('abcdefghijkl') == set(count.keys())
+
+    @pytest.mark.parametrize('mux_class', [
+        functools.partial(pescador.mux.Mux,
+                          with_replacement=False, revive=True),
+        functools.partial(pescador.mux.PoissonMux, mode="single_active")],
+        ids=["DeprecatedMux",
+             "PoissonMux"])
+    def test_restart_mux(self, mux_class):
+        s1 = pescador.Streamer('abc')
+        s2 = pescador.Streamer('def')
+        mux = mux_class([s1, s2], k=2, rate=None, random_state=1234)
+        assert len(list(mux(max_iter=100))) == len(list(mux(max_iter=100)))
+
+    @pytest.mark.parametrize('mux_class', [
+        functools.partial(pescador.mux.Mux,
+                          with_replacement=False, revive=True),
+        functools.partial(pescador.mux.PoissonMux, mode="single_active")],
+        ids=["DeprecatedMux",
+             "PoissonMux"])
+    # Note: `timeout` is necessary to break the infinite loop in the
+    # event a change causes this test to fail.
+    @pytest.mark.timeout(2.0)
+    def test_mux_inf_loop(self, mux_class):
+        s1 = pescador.Streamer([])
+        s2 = pescador.Streamer([])
+        mux = mux_class([s1, s2], k=2, random_state=1234)
+
+        assert len(list(mux(max_iter=100))) == 0
 
 
 def test_mux_stacked_uniform_convergence():
@@ -493,6 +609,22 @@ class TestChainMux:
         mux = pescador.mux.ChainMux([a, b],
                                     mode="exhaustive")
         assert "".join(list(mux.iterate())) == "abcdef"
+        # Make sure it's the same as itertools.chain
+        assert list(mux.iterate()) == list(
+            itertools.chain(a.iterate(), b.iterate()))
+
+    def test_chain_mux_exhaustive_many(self):
+        a = pescador.Streamer("a")
+        b = pescador.Streamer("b")
+        c = pescador.Streamer("c")
+        d = pescador.Streamer("d")
+        e = pescador.Streamer("e")
+        f = pescador.Streamer("f")
+        g = pescador.Streamer("g")
+
+        mux = pescador.mux.ChainMux([a, b, c, d, e, f, g],
+                                    mode="exhaustive")
+        assert "".join(list(mux.iterate())) == "abcdefg"
 
     def test_chain_mux_with_replacement(self):
         a = pescador.Streamer("abc")
