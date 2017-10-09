@@ -799,4 +799,72 @@ class ChainMux(BaseMux):
     """As in itertools.chain(). Runs the first streamer to exhaustion,
     then the second, then the third, etc. k=1.
     """
-    pass
+    def __init__(self, streamers, mode="exhaustive",
+                 random_state=None,
+                 prune_empty_streams=True):
+        """
+        Parameters
+        ----------
+        streamers :
+
+        mode : ["exhaustive", "with_replacement"]
+        """
+        super(ChainMux, self).__init__(
+            streamers, k=1, random_state=random_state,
+            prune_empty_streams=prune_empty_streams)
+
+        self.mode = mode
+
+    def activate(self):
+        # This streamer sets it to None so the first streamer knows
+        #  it hasn't been used yet.
+        self.active_index_ = None
+
+        super(ChainMux, self).activate()
+
+    def deactivate(self):
+        super(ChainMux, self).deactivate()
+        self.active_index_ = None
+
+    def _new_stream_index(self, idx=None):
+        """
+        """
+        # Streamer is starting
+        if self.active_index_ is None:
+            self.active_index_ = 0
+
+        else:
+            self.active_index_ += 1
+
+        # Move to the next streamer
+        if self.active_index_ >= len(self.streamers):
+            self.active_index_ = 0
+
+        return self.active_index_
+
+    def _next_sample_index(self):
+        """k==1, this is always 0."""
+        return 0
+
+    def _activate_stream(self, idx):
+        '''Randomly select and create a stream.
+
+        Parameters
+        ----------
+        idx : int, [0:n_streams - 1]
+            The stream index to replace
+        '''
+        streamer, weight = super(ChainMux, self)._activate_stream(idx)
+
+        # If we're sampling without replacement, zero this one out
+        # This effectively disables this stream as soon as it is chosen,
+        # preventing it from being chosen again (unless it is revived)
+        # if not self.with_replacement:
+        if self.mode != "with_replacement":
+            self.distribution_[idx] = 0.0
+
+            # Correct the distribution
+            if (self.distribution_ > 0).any():
+                self.distribution_[:] /= np.sum(self.distribution_)
+
+        return streamer, weight

@@ -479,8 +479,24 @@ class TestShuffledMux:
         a = pescador.Streamer(_cycle, 'a')
         b = pescador.Streamer(_cycle, 'b')
         c = pescador.Streamer(_cycle, 'c')
-        mux1 = pescador.ShuffledMux([a, b, c], random_state=10)
+        mux = pescador.ShuffledMux([a, b, c], random_state=10)
         # Test that there is [a, b, c] in the set
         # TODO: write test that checks the stats - that there's
         # Approx the same of each?
-        assert set(list(mux1.iterate(max_iter=9))) == set("abc")
+        assert set(list(mux.iterate(max_iter=9))) == set("abc")
+
+
+class TestChainMux:
+    def test_chain_mux_exhaustive(self):
+        a = pescador.Streamer("abc")
+        b = pescador.Streamer("def")
+        mux = pescador.mux.ChainMux([a, b],
+                                    mode="exhaustive")
+        assert "".join(list(mux.iterate())) == "abcdef"
+
+    def test_chain_mux_with_replacement(self):
+        a = pescador.Streamer("abc")
+        b = pescador.Streamer("def")
+        mux = pescador.mux.ChainMux([a, b],
+                                    mode="with_replacement")
+        assert "".join(list(mux.iterate(max_iter=12))) == "abcdefabcdef"
