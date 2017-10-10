@@ -1,88 +1,56 @@
-#!/usr/bin/env python
 '''Stream multiplexing
 
-(Refactoring thoughts; TODO - Remove)
+Defines the interface and several varieties of "Mux". A "Mux" is
+is a Streamer which wraps N other streamers, and at every step yields a
+sample from one of its sub-streamers.
 
-Goals:
+This module defines the following Mux types:
 
- 1. A `BaseMux` which defines the required interface for a Mux.
+`PoissonMux`
 
-    What is a Mux?
+    A Mux which chooses it's active streams stochastically, and chooses
+    samples from the active streams stochastically. `PoissonMux` is equivalent
+    to the `pescador.Mux` from versions <2.0.
 
-        A `Mux` is at its simplest a Streamer which wraps N other streamers,
-        and at every step yields a sample from one of its sub-streamers.
+     `PoissonMux` has a `mode` parameter which selects how it operates, with
+     the following modes:
 
-        In that sense, the BaseMux must have the following functions
+    `with_replacement`
 
-        `__init__(self, streamers)`
-        `iterate(self, max_iter)`
-        `activate()`
-        `deactivate()`
-        `_next_sample_index()` - chooses what stream to yield from
+        Sample streamers with replacement.  This allows a single stream to
+        be used multiple times (even simultaneously).
 
- 2. BaseMux Subclasses
+    `exhaustive`
 
-    a. `PoissonMux`
+        Each streamer is consumed at most once and never
+        revisited.
 
-        Essentially identical to the previous `Mux`. `PoissonMux` will have
-        a single `mode` parameter which selects how it operates
+    `single_active`
 
-        `with_replacement` (with_replacement=True, revive=*,
-                            prune_empty_streams=False):
-            All streams are active, and revive if exhausted. Kind of the
-            opposite of `exhausted`
+        Once a stream from the candidate pool is activated,
+        it can be used at most once. Streams are revived when
+        they are exhausted. This setting makes it so that streams in the
+        active pool are uniquely selected from the candidate pool.
 
-        `single_active` (with_replacement=False, revive=True) :
+`ShuffledMux`
 
-            This setting makes it so that once a stream from the pool
-            of streamers is activated, it can be used at most once.
-            Streams are revived when they are exhausted.
+    A `ShuffledMux` uses all the given streamers, and samples from
+    each of them with equal probability.
 
-            Propose to name this something like `unique_active`.
+`RoundRobinMux`
 
-        `exhaustive` (with_replacement=False, revive=False) :
-            Sample the streams until they all die, and then stop.
+    As in `ShuffledMux`, uses all the given streamers, but iterates over
+    the streamers in strict order.
 
-            -> Does this need to raise StopIteration? We are not doing that now
+`ChainMux`
 
-        * Questions:
-            - how does prune_empty_streams work in here? Currently, none
-             of the intermediate checks also check anything against
-             valid_streams_, making it potentially dangerous / ineffective in
-             (revive & ~with_replacement) mode.
+    As in itertools.chain(), runs the first streamer to exhaustion, then
+    the second, then the third, etc. Uses only a single stream at a time.
 
-             I think this is not a problem in `with_replacement` mode,
-             just in `unique_active` mode.
+`Mux`
 
-             Basically, there is a separate parameter here that seems
-             to control *actually* pruning empty seeds, which
-             seems like it should actually be:
-                * revive == True revive seeds
-                * revive == False prune empty seeds.
-
-            So, do we:
-             * turn with_replacement/revive+prune_empty_seeds into
-              one single mode parameter?
-
-    b. `ShuffledMux`
-
-        k == N; draws one sample from each stream, guaranteeing to
-        choose them with equal probability.
-
-        Could have some options for what to do if they die (revive / prune)
-
-    c. `RoundRobinMux`
-
-        AKA RoundRobin - Similar to `ShuffledMux` but guaranteed to
-        iterate over the streamers in strict order.
-
-    d. `ChainMux`
-
-        As in itertools.chain(). Runs the first streamer to exhaustion, then
-        the second, then the third, etc. k=1
-
- 3. Old Mux still works but is deprecated
-
+    The pescador<2.0 `Mux` is still available and works the same,
+    but is deprecated.
 '''
 import six
 import numpy as np
@@ -409,6 +377,9 @@ class BaseMux(core.Streamer):
         streamers : iterable of streamers
             The collection of streamer-type objects
 
+        k : int > 0
+            The number of streams to keep active at any time.
+
         weights : np.ndarray or None
             Optional weighting for ``streamers``.
             If ``None``, then weights are assumed to be uniform.
@@ -426,6 +397,15 @@ class BaseMux(core.Streamer):
 
             If None, the random number generator is the RandomState instance
             used by np.random.
+
+        prune_empty_streams : bool
+            Disable streamers that produce no data. If ``True``,
+            streamers that previously produced no data are never
+            revisited.
+            Note:
+            1. This may be undesireable for streams where past emptiness
+            may not imply future emptiness.
+            2. [TODO: UPDATE] Failure to prune truly empty streams with `revive=True` can result in infinite looping behavior. Disable with caution.
         """
         self.streamers = streamers
         self.n_streams = len(streamers)
@@ -435,11 +415,6 @@ class BaseMux(core.Streamer):
 
         # Clear state and reset actiave/deactivate params.
         self.deactivate()
-
-        # TODO: Remove from base
-        # These are defaults; set them in the subclass.
-        self.with_replacement = True
-        self.revive = False
 
         if random_state is None:
             self.rng = np.random
@@ -575,7 +550,9 @@ class BaseMux(core.Streamer):
 
     def _n_samples_to_stream(self):
         """Return how many samples to stream for a new streamer. None
-        makes an infinite streamer.
+        makes an infinite streamer. If the `BaseMux` subclass has a
+        `rate` field, it would be returned here. The default - None -
+        makes the resulting streamers infinite. (`max_iter`=None)
         """
         return None
 
@@ -595,15 +572,18 @@ class BaseMux(core.Streamer):
             raise PescadorError('`streamers` must have the same '
                                 'length as `distribution`')
 
-        # instantiate a new streamer
+        # Get the number of samples for this streamer.
         n_stream = self._n_samples_to_stream()
 
+        # instantiate a new streamer
         return (self.streamers[idx].iterate(max_iter=n_stream),
                 self.weights[idx])
 
     def _new_stream_index(self, idx=None):
         """Returns an index of a streamer from `self.streamers` which
         will get added to the active set.
+
+        Implementation Required in any child class.
 
         Parameters
         ----------
@@ -616,72 +596,129 @@ class BaseMux(core.Streamer):
                                   " a child class.")
 
     def _next_sample_index(self):
-        """Returns the index in self.streams_ for which to try to draw
-        the next sample."""
+        """Returns the index in self.streams_ for the streamer from which
+        to try to draw the next sample.
+
+        Implementation required in any child class.
+        """
         raise NotImplementedError("_next_sample_index() must be implemented in"
                                   " a child class.")
 
     def _new_stream(self, idx):
-        '''Randomly select and create a stream.
+        '''Randomly select and create a new stream.
 
         Parameters
         ----------
         idx : int, [0:n_streams - 1]
             The stream index to replace
         '''
+        # Choose the stream index from the candidate pool
         self.stream_idxs_[idx] = self._new_stream_index(idx)
 
-        # => self._activate_stream(idx)
+        # Activate the Streamer and get the weights
         self.streams_[idx], self.stream_weights_[idx] = (
             self._activate_stream(self.stream_idxs_[idx]))
 
+        # Reset the sample count to zero
         self.stream_counts_[idx] = 0
 
 
 class PoissonMux(BaseMux):
-    """A Mux mux which chooses it's active streams randomly.
-    Note: with a Poisson Mux, all streams are not necessarily guaranteed
-    to be active.
-    """
+    '''Stochastic Mux
+
+    Examples
+    --------
+    >>> # Create a collection of streamers
+    >>> seeds = [pescador.Streamer(my_generator) for i in range(10)]
+    >>> # Multiplex them together into a single streamer
+    >>> # Use at most 3 streams at once
+    >>> mux = pescador.PoissonMux(seeds, k=3)
+    >>> for batch in mux():
+    ...     MY_FUNCTION(batch)
+
+    PoissonMux([stream, range(8), stream2])
+    '''
     def __init__(self, streamers, k,
                  rate=256.0, weights=None,
                  mode="with_replacement",
                  prune_empty_streams=True,
                  random_state=None):
-        """
+        """Given an array (pool) of streamer types, do the following:
+
+        1. Select ``k`` streams at random to iterate from
+        2. Assign each activated stream a sample count ~ Poisson(rate)
+        3. Yield samples from the streams by randomly multiplexing
+           from the active set.
+        4. When a stream is exhausted, select a new one from `streamers`.
+
         Parameters
         ----------
+        streamers : iterable of streamers
+            The collection of streamer-type objects
+
+        k : int > 0
+            The number of streams to keep active at any time.
+
+        rate : float > 0 or None
+            Rate parameter for the Poisson distribution governing sample counts
+            for individual streams.
+            If ``None``, sample infinitely from each stream.
+
+        weights : np.ndarray or None
+            Optional weighting for ``streamers``.
+            If ``None``, then weights are assumed to be uniform.
+            Otherwise, ``weights[i]`` defines the sampling proportion
+            of ``streamers[i]``.
+
+            Must have the same length as ``streamers``.
+
         mode : ["with_replacement", "single_active", "exhaustive"]
             with_replacement
-                Streams are sampled independently and indefinitely; a single
-                stream may be active multiple times.
+                Sample streamers with replacement.  This allows a single
+                stream to be used multiple times (even simultaneously).
+                Streams are sampled independently and indefinitely.
 
             single_active
+                This configuration allows a stream to be active at most once
+                at any time.
 
             exhaustive
+                Each streamer is consumed at most once and never revisited.
                 Run every selected stream once to exhaustion.
+
+        prune_empty_streams : bool
+            Disable streamers that produce no data. See `BaseMux`
+
+        random_state : None, int, or np.random.RandomState
+            See `BaseMux`
         """
         self.mode = mode
         self.rate = rate
+
+        if self.mode not in [
+                "with_replacement", "single_active", "exhaustive"]:
+            raise PescadorError("{} is not a valid mode for PoissonMux".format(
+                self.mode))
 
         super(PoissonMux, self).__init__(
             streamers, k, weights=weights,
             random_state=random_state, prune_empty_streams=prune_empty_streams)
 
     def _new_stream_index(self, idx=None):
-        """Chooses a substream from the pool of streams with distribution > 0
-        to activate.
+        """Returns a random streamer index from `self.streamers`,
+        given the current distribution.
         """
         return self.rng.choice(
             self.n_streams, p=self.distribution_)
 
     def _next_sample_index(self):
-        """PoissonMux chooses it's next stream randomly"""
+        """PoissonMux chooses it's next sample stream randomly"""
         return self.rng.choice(self.k, p=(self.stream_weights_ /
                                           self.weight_norm_))
 
     def _on_stream_exhausted(self, idx):
-        # if self.revive and not self.with_replacement:
+        # This is the same as
+        #  if self.revive and not self.with_replacement in the original Mux
         if self.mode == "single_active":
             # If we need to revive a seed, give it the max
             # current probability
@@ -692,6 +729,7 @@ class PoissonMux(BaseMux):
                 self.distribution_[self.stream_idxs_[idx]] = 1.0
 
     def _n_samples_to_stream(self):
+        "Returns rate or none."
         if self.rate is not None:
             return 1 + self.rng.poisson(lam=self.rate)
         else:
@@ -726,7 +764,8 @@ class ShuffledMux(PoissonMux):
     from them equally, guaranteeing all N streamers to be "active",
     unlike the base Mux, which randomly chooses streams when activating.
 
-    TODO Better name / more general approach for this.
+    TODO Does this need to implement things directly, or is subclassing
+    PoissonMux okay?
     """
     def __init__(self, streamers, rate=None, weights=None,
                  random_state=None, prune_empty_streams=True):
@@ -737,32 +776,20 @@ class ShuffledMux(PoissonMux):
             random_state=random_state,
             prune_empty_streams=prune_empty_streams)
 
-    # def activate(self):
-    #     """Activates a number of streams"""
-    #     self.distribution_ = 1. / self.n_streams * np.ones(self.n_streams)
-    #     self.valid_streams_ = np.ones(self.n_streams, dtype=bool)
-
-    #     self.streams_ = [None] * self.k
-
-    #     self.stream_weights_ = np.zeros(self.k)
-    #     self.stream_counts_ = np.zeros(self.k, dtype=int)
-    #     # Array of pointers into `self.streamers`
-    #     self.stream_idxs_ = np.arange(self.k, dtype=int)
-
-    #     for idx in range(self.k):
-
-    #         if not (self.distribution_ > 0).any():
-    #             break
-
-    #         self.streams_[idx], self.stream_weights_[idx] = (
-    #             self._new_stream(self.stream_idxs_[idx]))
-
-    #     self.weight_norm_ = np.sum(self.stream_weights_)
-
 
 class RoundRobinMux(BaseMux):
     """A Mux which iterates over all streamers in strict order.
 
+    TODO: (maybe) handle stream exhaustion?
+
+    Examples
+    --------
+    >>> a = pescador.Streamer("a")
+    >>> b = pescador.Streamer("b")
+    >>> c = pescador.Streamer("c")
+    >>> mux = pescador.RoundRobinMux([a, b, c])
+    >>> print("".join(mux.iterate(9)))
+    "abcabcabc"
     """
     def __init__(self, streamers, random_state=None,
                  prune_empty_streams=True):
@@ -786,7 +813,7 @@ class RoundRobinMux(BaseMux):
         return idx
 
     def _next_sample_index(self):
-        """PoissonMux chooses it's next stream randomly"""
+        """Rotates through each active sampler by incrementing the index"""
         idx = self.active_index_
         self.active_index_ += 1
         if self.active_index_ >= len(self.streamers):
@@ -798,6 +825,20 @@ class RoundRobinMux(BaseMux):
 class ChainMux(BaseMux):
     """As in itertools.chain(). Runs the first streamer to exhaustion,
     then the second, then the third, etc. k=1.
+
+    Examples
+    --------
+    >>> a = pescador.Streamer("abc")
+    >>> b = pescador.Streamer("def")
+    >>> mux = pescador.mux.ChainMux([a, b], mode="exhaustive")
+    >>> "".join(list(mux.iterate()))
+    "abcdef"
+
+    >>> a = pescador.Streamer("abc")
+    >>> b = pescador.Streamer("def")
+    >>> mux = pescador.mux.ChainMux([a, b], mode="with_replacement")
+    >>> "".join(list(mux.iterate(max_iter=12)))
+    "abcdefabcdef"
     """
     def __init__(self, streamers, mode="exhaustive",
                  random_state=None,
@@ -808,6 +849,12 @@ class ChainMux(BaseMux):
         streamers :
 
         mode : ["exhaustive", "with_replacement"]
+            `exhaustive`
+                `ChainMux will exit after each stream has been exhausted.
+
+            `with_replacement`
+                `ChainMux will restart from the beginning after each
+                streamer has been run to exhaustion.
         """
         super(ChainMux, self).__init__(
             streamers, k=1, random_state=random_state,
@@ -827,8 +874,7 @@ class ChainMux(BaseMux):
         self.active_index_ = None
 
     def _new_stream_index(self, idx=None):
-        """
-        """
+        """Just increment the active stream every time one is requested."""
         # Streamer is starting
         if self.active_index_ is None:
             self.active_index_ = 0
@@ -847,7 +893,7 @@ class ChainMux(BaseMux):
         return 0
 
     def _activate_stream(self, idx):
-        '''Randomly select and create a stream.
+        '''Activate the next stream.
 
         Parameters
         ----------
