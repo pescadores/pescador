@@ -1,14 +1,14 @@
 '''Stream multiplexing
 
 Defines the interface and several varieties of "Mux". A "Mux" is
-is a Streamer which wraps N other streamers, and at every step yields a
+a Streamer which wraps N other streamers, and at every step yields a
 sample from one of its sub-streamers.
 
 This module defines the following Mux types:
 
 `PoissonMux`
 
-    A Mux which chooses it's active streams stochastically, and chooses
+    A Mux which chooses its active streams stochastically, and chooses
     samples from the active streams stochastically. `PoissonMux` is equivalent
     to the `pescador.Mux` from versions <2.0.
 
@@ -27,10 +27,11 @@ This module defines the following Mux types:
 
     `single_active`
 
-        Once a stream from the candidate pool is activated,
-        it can be used at most once. Streams are revived when
-        they are exhausted. This setting makes it so that streams in the
-        active pool are uniquely selected from the candidate pool.
+        Each stream in the candidate pool is either active or not.
+        Streams are revived when they are exhausted.
+        This setting makes it so that streams in the
+        active pool are *uniquely* selected from the candidate pool, where as
+        `with_replacement` allows the same stream to be used more than once.
 
 `ShuffledMux`
 
@@ -55,11 +56,13 @@ This module defines the following Mux types:
 import six
 import numpy as np
 
+from futurepast import remove, rename_parameter
+
 from . import core
 from .exceptions import PescadorError
-from .util import Deprecated, rename_kw
 
 
+@remove(past='1.1', future='2.0')
 class Mux(core.Streamer):
     '''Stochastic multiplexor for Streamers
 
@@ -76,14 +79,17 @@ class Mux(core.Streamer):
     Mux([stream, range(8), stream2])
     '''
 
+    @rename_parameter(old="seed_pool", new="streamers",
+                      past='1.0', future='2.0')
+    @rename_parameter(old="lam", new="rate", past='1.0', future='2.0')
+    @rename_parameter(old="pool_weights", new="weights",
+                      past='1.0', future='2.0')
+    @rename_parameter(old='prune_empty_seeds', new='prune_empty_streams',
+                      past='1.0', future='2.0')
     def __init__(self, streamers, k,
                  rate=256.0, weights=None, with_replacement=True,
                  prune_empty_streams=True, revive=False,
-                 random_state=None,
-                 seed_pool=Deprecated(),
-                 lam=Deprecated(),
-                 pool_weights=Deprecated(),
-                 prune_empty_seeds=Deprecated()):
+                 random_state=None):
         """Given an array (pool) of streamer types, do the following:
 
         1. Select ``k`` streams at random to iterate from
@@ -167,19 +173,6 @@ class Mux(core.Streamer):
                 The `prune_empty_seeds` parameter will be removed in
                 pescador 2.0.
         """
-        streamers = rename_kw('seed_pool', seed_pool,
-                              'streamers', streamers,
-                              '1.1', '2.0')
-        rate = rename_kw('lam', lam,
-                         'rate', rate,
-                         '1.1', '2.0')
-        weights = rename_kw('pool_weights', pool_weights,
-                            'weights', weights,
-                            '1.1', '2.0')
-        prune_empty_streams = rename_kw(
-            'prune_empty_seeds', prune_empty_seeds,
-            'prune_empty_streams', prune_empty_streams,
-            '1.1', '2.0')
         self.streamers = streamers
         self.n_streams = len(streamers)
         self.k = k
@@ -304,7 +297,7 @@ class Mux(core.Streamer):
                             self.n_streams, p=self.distribution_)
 
                         self.streams_[idx], self.stream_weights_[idx] = (
-                            self._new_stream(self.stream_idxs_[idx]))
+                            self.__new_stream(self.stream_idxs_[idx]))
 
                         self.stream_counts_[idx] = 0
 
@@ -319,7 +312,7 @@ class Mux(core.Streamer):
                 if not self.valid_streams_.any():
                     break
 
-    def _new_stream(self, idx):
+    def __new_stream(self, idx):
         '''Randomly select and create a stream.
 
         Parameters
@@ -369,7 +362,7 @@ class BaseMux(core.Streamer):
      * Handles exhaustion of streams (restarting, replacing, ...)
 
     """
-    def __init__(self, streamers, k, weights=None, random_state=None,
+    def __init__(self, streamers, k, random_state=None,
                  prune_empty_streams=True):
         """
         Parameters
@@ -379,14 +372,6 @@ class BaseMux(core.Streamer):
 
         k : int > 0
             The number of streams to keep active at any time.
-
-        weights : np.ndarray or None
-            Optional weighting for ``streamers``.
-            If ``None``, then weights are assumed to be uniform.
-            Otherwise, ``weights[i]`` defines the sampling proportion
-            of ``streamers[i]``.
-
-            Must have the same length as ``streamers``.
 
         random_state : None, int, or np.random.RandomState
             If int, random_state is the seed used by the random number
@@ -411,7 +396,6 @@ class BaseMux(core.Streamer):
         self.n_streams = len(streamers)
         self.k = k
         self.prune_empty_streams = prune_empty_streams
-        self.weights = weights
 
         # Clear state and reset actiave/deactivate params.
         self.deactivate()
@@ -427,20 +411,6 @@ class BaseMux(core.Streamer):
 
         if not self.n_streams:
             raise PescadorError('Cannot mux an empty collection')
-
-        if self.weights is None:
-            self.weights = 1. / self.n_streams * np.ones(self.n_streams)
-        self.weights = np.atleast_1d(self.weights)
-
-        if len(self.weights) != len(self.streamers):
-            raise PescadorError('`weights` must be the same '
-                                'length as `streamers`')
-
-        if not (self.weights > 0.0).any():
-            raise PescadorError('`weights` must contain at least '
-                                'one positive value')
-
-        self.weights /= np.sum(self.weights)
 
     def activate(self):
         """Activates the mux as a streamer, choosing which substreams to
@@ -468,7 +438,7 @@ class BaseMux(core.Streamer):
                 break
 
             # Setup a new streamer at this index.
-            self._new_stream(idx)
+            self.__new_stream(idx)
 
         self.weight_norm_ = np.sum(self.stream_weights_)
 
@@ -604,7 +574,7 @@ class BaseMux(core.Streamer):
         raise NotImplementedError("_next_sample_index() must be implemented in"
                                   " a child class.")
 
-    def _new_stream(self, idx):
+    def __new_stream(self, idx):
         '''Randomly select and create a new stream.
 
         Parameters
@@ -701,8 +671,23 @@ class PoissonMux(BaseMux):
                 self.mode))
 
         super(PoissonMux, self).__init__(
-            streamers, k, weights=weights,
+            streamers, k,
             random_state=random_state, prune_empty_streams=prune_empty_streams)
+
+        self.weights = weights
+        if self.weights is None:
+            self.weights = 1. / self.n_streams * np.ones(self.n_streams)
+        self.weights = np.atleast_1d(self.weights)
+
+        if len(self.weights) != len(self.streamers):
+            raise PescadorError('`weights` must be the same '
+                                'length as `streamers`')
+
+        if not (self.weights > 0.0).any():
+            raise PescadorError('`weights` must contain at least '
+                                'one positive value')
+
+        self.weights /= np.sum(self.weights)
 
     def _new_stream_index(self, idx=None):
         """Returns a random streamer index from `self.streamers`,
@@ -712,7 +697,7 @@ class PoissonMux(BaseMux):
             self.n_streams, p=self.distribution_)
 
     def _next_sample_index(self):
-        """PoissonMux chooses it's next sample stream randomly"""
+        """PoissonMux chooses its next sample stream randomly"""
         return self.rng.choice(self.k, p=(self.stream_weights_ /
                                           self.weight_norm_))
 
