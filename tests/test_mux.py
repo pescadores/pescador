@@ -26,12 +26,14 @@ def _choice(vals, seed=11111):
 
 @pytest.mark.parametrize('mux_class', [
     functools.partial(pescador.mux.Mux, k=1, with_replacement=False),
-    functools.partial(pescador.mux.PoissonMux, k=1, rate=None,
+    functools.partial(pescador.mux.PoissonMux, k_active=1, rate=None,
                       mode="exhaustive"),
-    pescador.mux.ChainMux],
+    pescador.mux.ChainMux,
+],
     ids=["DeprecatedMux",
          "PoissonMux-exhaustive",
-         "ChainMux"])
+         "ChainMux",
+         ])
 def test_mux_single_finite(mux_class):
     "Test a single finite streamer for each mux with an exhaustive setting."
 
@@ -45,17 +47,20 @@ def test_mux_single_finite(mux_class):
 
 @pytest.mark.parametrize('mux_class', [
     functools.partial(pescador.mux.Mux, k=1, with_replacement=True),
-    functools.partial(pescador.mux.PoissonMux, k=1, rate=None,
+    functools.partial(pescador.mux.PoissonMux, k_active=1, rate=None,
                       mode="with_replacement"),
-    functools.partial(pescador.mux.PoissonMux, k=1, rate=None,
+    functools.partial(pescador.mux.PoissonMux, k_active=1, rate=None,
                       mode="single_active"),
     pescador.mux.ShuffledMux,
-    pescador.mux.RoundRobinMux],
+    pescador.mux.RoundRobinMux,
+    functools.partial(pescador.mux.ChainMux, mode="with_replacement"),
+],
     ids=["DeprecatedMux",
          "PoissonMux-with_replacement",
          "PoissonMux-single_active",
          "ShuffledMux",
-         "RoundRobinMux"
+         "RoundRobinMux",
+         "ChainMux-with_replacement"
          ])
 def test_mux_single_infinite(mux_class):
     """Test a single finite streamer for each mux class which can revive it's
@@ -71,7 +76,7 @@ def test_mux_single_infinite(mux_class):
 
 @pytest.mark.parametrize('mux_class', [
     functools.partial(pescador.mux.Mux, k=1, with_replacement=False),
-    functools.partial(pescador.mux.PoissonMux, k=1, rate=None,
+    functools.partial(pescador.mux.PoissonMux, k_active=1, rate=None,
                       mode="exhaustive"),
     pescador.mux.ChainMux],
     ids=["DeprecatedMux",
@@ -99,7 +104,7 @@ def test_mux_single_tuple(items, mux_class):
 
 @pytest.mark.parametrize('mux_class', [
     functools.partial(pescador.mux.Mux, k=1),
-    functools.partial(pescador.mux.PoissonMux, k=1),
+    functools.partial(pescador.mux.PoissonMux, k_active=1),
     pescador.mux.ShuffledMux,
     pescador.mux.RoundRobinMux,
     pescador.mux.ChainMux],
@@ -125,7 +130,7 @@ def test_mux_weighted(weight, mux_class):
     noise = list(T.finite_generator(50, size=1))
     stream = pescador.Streamer(reference)
     stream2 = pescador.Streamer(noise)
-    mux = mux_class([stream, stream2], k=2,
+    mux = mux_class([stream, stream2], 2,
                     weights=[1.0, weight])
     estimate = list(mux)
     if weight == 0.0:
@@ -155,7 +160,7 @@ def test_mux_rare(weight, mux_class):
 @pytest.mark.parametrize('mux_class', [
     functools.partial(pescador.mux.Mux, k=2, with_replacement=False,
                       rate=None),
-    functools.partial(pescador.mux.PoissonMux, k=2, mode="exhaustive",
+    functools.partial(pescador.mux.PoissonMux, k_active=2, mode="exhaustive",
                       rate=None)],
     ids=["DeprecatedMux",
          "PoissonMux-exhaustive"])
@@ -184,7 +189,7 @@ def test_weighted_empty_streams(mux_class):
          "PoissonMux"])
 @pytest.mark.parametrize('n_streams', [1, 2, 4])
 @pytest.mark.parametrize('n_samples', [10, 20, 80])
-@pytest.mark.parametrize('k', [1, 2, 4])
+@pytest.mark.parametrize('k_active', [1, 2, 4])
 @pytest.mark.parametrize('rate', [1.0, 2.0, 8.0])
 @pytest.mark.parametrize('random_state',
                          [None,
@@ -192,12 +197,13 @@ def test_weighted_empty_streams(mux_class):
                           np.random.RandomState(seed=1000),
                           pytest.mark.xfail('foo',
                                             raises=pescador.PescadorError)])
-def test_mux_replacement(mux_class, n_streams, n_samples, k, rate,
+def test_mux_replacement(mux_class, n_streams, n_samples, k_active, rate,
                          random_state):
     streamers = [pescador.Streamer(T.infinite_generator)
                  for _ in range(n_streams)]
 
-    mux = mux_class(streamers, k=k, rate=rate, random_state=random_state)
+    mux = mux_class(streamers, k_active, rate=rate,
+                    random_state=random_state)
     estimate = list(mux.iterate(n_samples))
 
     # Make sure we get the right number of samples
@@ -266,7 +272,7 @@ def test_mux_of_muxes_itered(mux_class):
     # Check on Issue #79
     abc = pescador.Streamer('abc')
     xyz = pescador.Streamer('xyz')
-    mux1 = mux_class([abc, xyz], k=10, rate=None,
+    mux1 = mux_class([abc, xyz], 10, rate=None,
                      prune_empty_streams=False, random_state=135)
     samples1 = mux1.iterate(max_iter=1000)
     count1 = collections.Counter(samples1)
@@ -274,15 +280,15 @@ def test_mux_of_muxes_itered(mux_class):
 
     n123 = pescador.Streamer('123')
     n456 = pescador.Streamer('456')
-    mux2 = mux_class([n123, n456], k=10, rate=None,
+    mux2 = mux_class([n123, n456], 10, rate=None,
                      prune_empty_streams=False,
                      random_state=246)
     samples2 = mux2.iterate(max_iter=1000)
     count2 = collections.Counter(samples2)
     assert set('123456') == set(count2.keys())
 
-    # Note that (random_state=987, k=2) fails.
-    mux3 = mux_class([mux1, mux2], k=10, rate=None,
+    # Note that (random_state=987, k_active=2) fails.
+    mux3 = mux_class([mux1, mux2], 10, rate=None,
                      prune_empty_streams=False,
                      random_state=987)
     samples3 = mux3.iterate(max_iter=1000)
@@ -299,15 +305,15 @@ def test_mux_of_muxes_single(mux_class):
     # Check on Issue #79
     abc = pescador.Streamer('abc')
     xyz = pescador.Streamer('xyz')
-    mux1 = mux_class([abc, xyz], k=2, rate=None,
+    mux1 = mux_class([abc, xyz], 2, rate=None,
                      prune_empty_streams=False)
 
     n123 = pescador.Streamer('123')
     n456 = pescador.Streamer('456')
-    mux2 = mux_class([n123, n456], k=2, rate=None,
+    mux2 = mux_class([n123, n456], 2, rate=None,
                      prune_empty_streams=False)
 
-    mux3 = mux_class([mux1, mux2], k=2, rate=None,
+    mux3 = mux_class([mux1, mux2], 2, rate=None,
                      prune_empty_streams=False)
     samples3 = list(mux3.iterate(max_iter=10000))
     count3 = collections.Counter(samples3)
@@ -324,7 +330,7 @@ def test_critical_mux(mux_class):
     chars = 'abcde'
     n_reps = 5
     streamers = [pescador.Streamer(x * n_reps) for x in chars]
-    mux = mux_class(streamers, k=len(chars), rate=None,
+    mux = mux_class(streamers, len(chars), rate=None,
                     prune_empty_streams=False, random_state=135)
     samples = list(mux.iterate(max_iter=1000))
     assert len(collections.Counter(samples)) == len(chars)
@@ -342,15 +348,15 @@ def test_critical_mux_of_rate_limited_muxes(mux_class):
     ab = pescador.Streamer(_choice, 'ab')
     cd = pescador.Streamer(_choice, 'cd')
     ef = pescador.Streamer(_choice, 'ef')
-    mux1 = mux_class([ab, cd, ef], k=2, rate=2)
+    mux1 = mux_class([ab, cd, ef], 2, rate=2)
 
     gh = pescador.Streamer(_choice, 'gh')
     ij = pescador.Streamer(_choice, 'ij')
     kl = pescador.Streamer(_choice, 'kl')
 
-    mux2 = mux_class([gh, ij, kl], k=2, rate=2)
+    mux2 = mux_class([gh, ij, kl], 2, rate=2)
 
-    mux3 = mux_class([mux1, mux2], k=2, rate=None)
+    mux3 = mux_class([mux1, mux2], 2, rate=None)
     samples = list(mux3.iterate(max_iter=10000))
     count = collections.Counter(samples)
     max_count, min_count = max(count.values()), min(count.values())
@@ -366,7 +372,7 @@ def test_critical_mux_of_rate_limited_muxes(mux_class):
 def test_restart_mux(mux_class):
     s1 = pescador.Streamer('abc')
     s2 = pescador.Streamer('def')
-    mux = mux_class([s1, s2], k=2, rate=None, random_state=1234)
+    mux = mux_class([s1, s2], 2, rate=None, random_state=1234)
     assert len(list(mux(max_iter=100))) == len(list(mux(max_iter=100)))
 
 
@@ -380,7 +386,7 @@ def test_sampled_mux_of_muxes(mux_class):
     ab = pescador.Streamer(_cycle, 'ab')
     cd = pescador.Streamer(_cycle, 'cd')
     ef = pescador.Streamer(_cycle, 'ef')
-    mux1 = mux_class([ab, cd, ef], k=3, rate=None)
+    mux1 = mux_class([ab, cd, ef], 3, rate=None)
 
     # And inspect the first mux
     samples1 = list(mux1(max_iter=6 * 10))
@@ -391,7 +397,7 @@ def test_sampled_mux_of_muxes(mux_class):
     gh = pescador.Streamer(_cycle, 'gh')
     ij = pescador.Streamer(_cycle, 'ij')
     kl = pescador.Streamer(_cycle, 'kl')
-    mux2 = mux_class([gh, ij, kl], k=3, rate=None)
+    mux2 = mux_class([gh, ij, kl], 3, rate=None)
 
     # And inspect the second mux
     samples2 = list(mux2(max_iter=6 * 10))
@@ -399,7 +405,7 @@ def test_sampled_mux_of_muxes(mux_class):
     assert set(count2.keys()) == set('ghijkl')
 
     # Merge the muxes together.
-    mux3 = mux_class([mux1, mux2], k=2, rate=None)
+    mux3 = mux_class([mux1, mux2], 2, rate=None)
     samples3 = list(mux3.iterate(max_iter=10000))
     count3 = collections.Counter(samples3)
     assert set('abcdefghijkl') == set(count3.keys())
@@ -418,7 +424,7 @@ class TestPoissonMux_SingleActive:
         # Check on Issue #79
         abc = pescador.Streamer('abc')
         xyz = pescador.Streamer('xyz')
-        mux1 = mux_class([abc, xyz], k=10, rate=None,
+        mux1 = mux_class([abc, xyz], 10, rate=None,
                          prune_empty_streams=False, random_state=135)
         samples1 = mux1.iterate(max_iter=1000)
         count1 = collections.Counter(samples1)
@@ -426,15 +432,15 @@ class TestPoissonMux_SingleActive:
 
         n123 = pescador.Streamer('123')
         n456 = pescador.Streamer('456')
-        mux2 = mux_class([n123, n456], k=10, rate=None,
+        mux2 = mux_class([n123, n456], 10, rate=None,
                          prune_empty_streams=False,
                          random_state=246)
         samples2 = mux2.iterate(max_iter=1000)
         count2 = collections.Counter(samples2)
         assert set('123456') == set(count2.keys())
 
-        # Note that (random_state=987, k=2) fails.
-        mux3 = mux_class([mux1, mux2], k=10, rate=None,
+        # Note that (random_state=987, k_active=2) fails.
+        mux3 = mux_class([mux1, mux2], 10, rate=None,
                          prune_empty_streams=False,
                          random_state=987)
         samples3 = mux3.iterate(max_iter=1000)
@@ -451,15 +457,15 @@ class TestPoissonMux_SingleActive:
         # Check on Issue #79
         abc = pescador.Streamer('abc')
         xyz = pescador.Streamer('xyz')
-        mux1 = mux_class([abc, xyz], k=2, rate=None,
+        mux1 = mux_class([abc, xyz], 2, rate=None,
                          prune_empty_streams=False)
 
         n123 = pescador.Streamer('123')
         n456 = pescador.Streamer('456')
-        mux2 = mux_class([n123, n456], k=2, rate=None,
+        mux2 = mux_class([n123, n456], 2, rate=None,
                          prune_empty_streams=False)
 
-        mux3 = mux_class([mux1, mux2], k=2, rate=None,
+        mux3 = mux_class([mux1, mux2], 2, rate=None,
                          prune_empty_streams=False)
         samples3 = list(mux3.iterate(max_iter=10000))
         count3 = collections.Counter(samples3)
@@ -475,7 +481,7 @@ class TestPoissonMux_SingleActive:
         # Check on Issue #80
         chars = 'abcde'
         streamers = [pescador.Streamer(x * 5) for x in chars]
-        mux = mux_class(streamers, k=len(chars), rate=None,
+        mux = mux_class(streamers, len(chars), rate=None,
                         prune_empty_streams=False, random_state=135)
         samples = mux.iterate(max_iter=1000)
         print(collections.Counter(samples))
@@ -491,15 +497,15 @@ class TestPoissonMux_SingleActive:
         ab = pescador.Streamer(_choice, 'ab')
         cd = pescador.Streamer(_choice, 'cd')
         ef = pescador.Streamer(_choice, 'ef')
-        mux1 = mux_class([ab, cd, ef], k=2, rate=2)
+        mux1 = mux_class([ab, cd, ef], 2, rate=2)
 
         gh = pescador.Streamer(_choice, 'gh')
         ij = pescador.Streamer(_choice, 'ij')
         kl = pescador.Streamer(_choice, 'kl')
 
-        mux2 = mux_class([gh, ij, kl], k=2, rate=2)
+        mux2 = mux_class([gh, ij, kl], 2, rate=2)
 
-        mux3 = mux_class([mux1, mux2], k=2, rate=None)
+        mux3 = mux_class([mux1, mux2], 2, rate=None)
         samples = list(mux3.iterate(max_iter=10000))
         count = collections.Counter(samples)
         max_count, min_count = max(count.values()), min(count.values())
@@ -515,7 +521,7 @@ class TestPoissonMux_SingleActive:
     def test_restart_mux(self, mux_class):
         s1 = pescador.Streamer('abc')
         s2 = pescador.Streamer('def')
-        mux = mux_class([s1, s2], k=2, rate=None, random_state=1234)
+        mux = mux_class([s1, s2], 2, rate=None, random_state=1234)
         assert len(list(mux(max_iter=100))) == len(list(mux(max_iter=100)))
 
     @pytest.mark.parametrize('mux_class', [
@@ -530,7 +536,7 @@ class TestPoissonMux_SingleActive:
     def test_mux_inf_loop(self, mux_class):
         s1 = pescador.Streamer([])
         s2 = pescador.Streamer([])
-        mux = mux_class([s1, s2], k=2, random_state=1234)
+        mux = mux_class([s1, s2], 2, random_state=1234)
 
         assert len(list(mux(max_iter=100))) == 0
 
@@ -549,15 +555,15 @@ class TestPoissonMux_SingleActive:
         ab = pescador.Streamer(_choice, 'ab')
         cd = pescador.Streamer(_choice, 'cd')
         ef = pescador.Streamer(_choice, 'ef')
-        mux1 = mux_class([ab, cd, ef], k=2, rate=2, random_state=1357)
+        mux1 = mux_class([ab, cd, ef], 2, rate=2, random_state=1357)
 
         gh = pescador.Streamer(_choice, 'gh')
         ij = pescador.Streamer(_choice, 'ij')
         kl = pescador.Streamer(_choice, 'kl')
 
-        mux2 = mux_class([gh, ij, kl], k=2, rate=2, random_state=2468)
+        mux2 = mux_class([gh, ij, kl], 2, rate=2, random_state=2468)
 
-        stacked_mux = mux_class([mux1, mux2], k=2, rate=None,
+        stacked_mux = mux_class([mux1, mux2], 2, rate=None,
                                 random_state=12345)
 
         max_iter = 1000
