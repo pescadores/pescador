@@ -232,8 +232,8 @@ def test_mux_single_active(mux_class, n_streams, n_samples, k, rate):
 
 
 @pytest.mark.parametrize('mux_class', [
-    pescador.mux.Mux,
-    pescador.mux.PoissonMux,
+    functools.partial(pescador.mux.Mux, k=None),
+    functools.partial(pescador.mux.PoissonMux, k_active=None),
     pescador.mux.ShuffledMux],
     ids=["DeprecatedMux",
          "PoissonMux",
@@ -244,12 +244,12 @@ def test_mux_bad_streamers(mux_class):
                     for _ in range(5)]
 
         # 5 steamers, 10 weights, should trigger an error
-        mux_class(steamers, None, weights=np.random.randn(10))
+        mux_class(steamers, weights=np.random.randn(10))
 
 
 @pytest.mark.parametrize('mux_class', [
-    pescador.mux.Mux,
-    pescador.mux.PoissonMux,
+    functools.partial(pescador.mux.Mux, k=None),
+    functools.partial(pescador.mux.PoissonMux, k_active=None),
     pescador.mux.ShuffledMux],
     ids=["DeprecatedMux",
          "PoissonMux",
@@ -260,7 +260,7 @@ def test_mux_bad_weights(mux_class):
                      for _ in range(5)]
 
         # 5 streamers, all-zeros weight vector should trigger an error
-        mux_class(streamers, None, weights=np.zeros(5))
+        mux_class(streamers, weights=np.zeros(5))
 
 
 @pytest.mark.parametrize('mux_class', [

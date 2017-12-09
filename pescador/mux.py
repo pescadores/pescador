@@ -573,7 +573,6 @@ class WeightedStochasticMux(BaseMux):
     """A Mux which chooses streams randomly (possibly weighted).
 
     Expands BaseMux with the following features:
-     * Adds `rate` parameter
      * Adds `weights` parameter for optionally setting the weights
        of the `streams`, for modifying how often they are sampled from.
 
@@ -581,7 +580,7 @@ class WeightedStochasticMux(BaseMux):
     not create the streams_ upon activation); you must instead use a child
     class which does this (i.e. PoissonMux, StochasticMux).
     """
-    def __init__(self, streamers, rate=256.0, weights=None,
+    def __init__(self, streamers, weights=None,
                  prune_empty_streams=True, random_state=None):
         """
         """
@@ -589,7 +588,6 @@ class WeightedStochasticMux(BaseMux):
             streamers, prune_empty_streams=prune_empty_streams,
             random_state=random_state)
 
-        self.rate = rate
         self.weights = weights
         if self.weights is None:
             self.weights = 1. / self.n_streams * np.ones(self.n_streams)
@@ -628,13 +626,6 @@ class WeightedStochasticMux(BaseMux):
             self.stream_weights_[idx] = 0.0
 
         self.weight_norm_ = np.sum(self.stream_weights_)
-
-    def _n_samples_to_stream(self):
-        "Returns rate or none."
-        if self.rate is not None:
-            return 1 + self.rng.poisson(lam=self.rate)
-        else:
-            return None
 
     def _activate_stream(self, idx):
         '''Randomly select and create a stream.
@@ -749,6 +740,7 @@ class PoissonMux(WeightedStochasticMux):
         """
         self.mode = mode
         self.k_active = k_active
+        self.rate = rate
 
         if self.mode not in [
                 "with_replacement", "single_active", "exhaustive"]:
@@ -756,7 +748,7 @@ class PoissonMux(WeightedStochasticMux):
                 self.mode))
 
         super(PoissonMux, self).__init__(
-            streamers, rate=rate, weights=weights,
+            streamers, weights=weights,
             prune_empty_streams=prune_empty_streams,
             random_state=random_state)
 
@@ -797,6 +789,13 @@ class PoissonMux(WeightedStochasticMux):
 
     def _streamers_available(self):
         return self.weight_norm_ > 0.0
+
+    def _n_samples_to_stream(self):
+        "Returns rate or none."
+        if self.rate is not None:
+            return 1 + self.rng.poisson(lam=self.rate)
+        else:
+            return None
 
     def _next_sample_index(self):
         """PoissonMux chooses its next sample stream randomly"""
@@ -853,10 +852,10 @@ class ShuffledMux(WeightedStochasticMux):
     TODO Does this need to implement things directly, or is subclassing
     PoissonMux okay?
     """
-    def __init__(self, streamers, rate=None, weights=None,
+    def __init__(self, streamers, weights=None,
                  random_state=None, prune_empty_streams=True):
         super(ShuffledMux, self).__init__(
-            streamers, rate=rate, weights=weights,
+            streamers, weights=weights,
             prune_empty_streams=prune_empty_streams,
             random_state=random_state)
 
@@ -873,7 +872,7 @@ class ShuffledMux(WeightedStochasticMux):
         # Weights of the active streams.
         # Once a stream is exhausted, it is set to 0
         self.stream_weights_ = np.zeros(self.n_streams)
-        # How many samples have been draw from each (active) stream.
+        # How many samples have been drawn from each (active) stream.
         self.stream_counts_ = np.zeros(self.n_streams, dtype=int)
         # Array of pointers into `self.streamers`
         self.stream_idxs_ = np.zeros(self.n_streams, dtype=int)
