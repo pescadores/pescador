@@ -321,12 +321,19 @@ def test_mux_of_muxes_single(mux_class):
 
 
 @pytest.mark.parametrize('mux_class', [
-    functools.partial(pescador.mux.Mux, with_replacement=False, revive=True),
-    functools.partial(pescador.mux.PoissonMux, mode="single_active")],
+    functools.partial(pescador.mux.Mux, with_replacement=False, revive=False),
+    functools.partial(pescador.mux.PoissonMux, mode="exhaustive")],
     ids=["DeprecatedMux",
          "PoissonMux"])
 def test_critical_mux(mux_class):
+    """This test checks the following:
+
+    When `max_iter` is specified, the `Mux` should return / complete
+    when the input generators are complete, and should not cycle infinitely.
+
     # Check on Issue #80
+    https://github.com/pescadores/pescador/issues/80
+    """
     chars = 'abcde'
     n_reps = 5
     streamers = [pescador.Streamer(x * n_reps) for x in chars]
