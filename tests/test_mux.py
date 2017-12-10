@@ -47,19 +47,19 @@ def test_mux_single_finite(mux_class):
 
 @pytest.mark.parametrize('mux_class', [
     functools.partial(pescador.mux.Mux, k=1, with_replacement=True),
-    functools.partial(pescador.mux.PoissonMux, k_active=1, rate=None,
-                      mode="with_replacement"),
-    functools.partial(pescador.mux.PoissonMux, k_active=1, rate=None,
-                      mode="single_active"),
-    pescador.mux.ShuffledMux,
-    pescador.mux.RoundRobinMux,
+    # functools.partial(pescador.mux.PoissonMux, k_active=1, rate=None,
+    #                   mode="with_replacement"),
+    # functools.partial(pescador.mux.PoissonMux, k_active=1, rate=None,
+    #                   mode="single_active"),
+    # pescador.mux.ShuffledMux,
+    # pescador.mux.RoundRobinMux,
     functools.partial(pescador.mux.ChainMux, mode="with_replacement"),
 ],
     ids=["DeprecatedMux",
-         "PoissonMux-with_replacement",
-         "PoissonMux-single_active",
-         "ShuffledMux",
-         "RoundRobinMux",
+         # "PoissonMux-with_replacement",
+         # "PoissonMux-single_active",
+         # "ShuffledMux",
+         # "RoundRobinMux",
          "ChainMux-with_replacement"
          ])
 def test_mux_single_infinite(mux_class):
@@ -643,3 +643,38 @@ class TestChainMux:
         mux = pescador.mux.ChainMux([a, b],
                                     mode="with_replacement")
         assert "".join(list(mux.iterate(max_iter=12))) == "abcdefabcdef"
+
+    def test_chain_generator_of_streams(self):
+        def stream_gen(n, source_letters):
+            """
+            Parameters
+            ----------
+            n : how many to stream.
+
+            source_letters : list of things to stream.
+            """
+            for char in source_letters:
+                yield pescador.Streamer(char * n)
+
+        streamers = stream_gen(10, "abcde")
+
+        mux = pescador.mux.ChainMux(streamers, mode="exhaustive")
+        result = "".join(list(mux.iterate()))
+        assert len(result) == 50
+        assert result == "{}{}{}{}{}".format(
+            'a' * 10, 'b' * 10, 'c' * 10, 'd' * 10, 'e' * 10)
+
+    def test_chain_generator_with_empty_streams(self):
+        def stream_gen():
+            things_to_generate = [
+                "aa", [], "bb", [], [], [], "cccc"
+            ]
+            for item in things_to_generate:
+                yield pescador.Streamer(item)
+
+        streamers = stream_gen()
+
+        mux = pescador.mux.ChainMux(streamers, mode="exhaustive")
+        result = "".join(list(mux.iterate()))
+        assert len(result) == 8
+        assert result == "aabbcccc"
