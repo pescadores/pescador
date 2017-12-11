@@ -970,6 +970,9 @@ class ShuffledMux(WeightedStochasticMux):
 class RoundRobinMux(BaseMux):
     """A Mux which iterates over all streamers in strict order.
 
+    Based on the roundrobin() example in python itertools:
+     https://docs.python.org/3/library/itertools.html#itertools-recipes
+
     TODO: (maybe) handle stream exhaustion?
 
     Examples
@@ -981,16 +984,51 @@ class RoundRobinMux(BaseMux):
     >>> print("".join(mux.iterate(9)))
     "abcabcabc"
     """
-    def __init__(self, streamers, random_state=None,
-                 prune_empty_streams=True):
+    def __init__(self, streamers, mode="exhaustive", random_state=None):
+        """
+        Parameters
+        ----------
+        streamers : list of pescador.Streamers
+
+        mode : ["exhaustive", "cycle", "permuted_cycle"]
+            `exhaustive`
+                `RoundRobinMux` will exit after each stream has been exhausted.
+
+            `cycle`
+                Restart streamer once all streams are exhausted.
+
+            `permuted_cycle`
+                Restart streamer once streams are exhausted, and permute
+                the order of the streams.
+
+        random_state : None, int, or np.random.RandomState
+            If int, random_state is the seed used by the random number
+            generator;
+
+            If RandomState instance, random_state is the random number
+            generator;
+
+            If None, the random number generator is the RandomState instance
+            used by np.random.
+        """
+        self.mode = mode
         super(RoundRobinMux, self).__init__(
             streamers,
-            random_state=random_state,
-            prune_empty_streams=prune_empty_streams)
+            random_state=random_state)
+
+        if not self.n_streams:
+            raise PescadorError('Cannot mux an empty collection')
 
     def activate(self):
-        super(RoundRobinMux, self).activate()
+        self._setup_streams(False)
 
+    def deactivate(self):
+        self.active_index_ = None
+        self.streams_ = None
+        self.stream_idxs_ = None
+        self.stream_counts_ = None
+
+    def _setup_streams(self, permute=False):
         self.active_index_ = 0
 
         # The active streamers
@@ -1000,34 +1038,44 @@ class RoundRobinMux(BaseMux):
         # for each complete iteration.
         self.stream_idxs_ = np.arange(self.n_streams, dtype=int)
 
+        if permute:
+            self.rng.shuffle(self.stream_idxs_)
+
         # How many samples have been drawn from each?
         self.stream_counts_ = np.zeros(self.n_streams, dtype=int)
 
         # Initialize each active stream.
         for idx in range(self.n_streams):
-
-            if not (self.distribution_ > 0).any():
-                break
-
             # Setup a new streamer at this index.
             self._new_stream(idx)
 
-    def deactivate(self):
-        super(RoundRobinMux, self).deactivate()
-        self.active_index_ = None
-        self.streams_ = None
-        self.stream_idxs_ = None
-        self.stream_counts_ = None
-
-    def _new_stream_index(self, idx=None):
-        return self.stream_idxs_[idx]
+    def _streamers_available(self):
+        """As we are treating `streamers` as a generator, we can only know
+        if it is available if the streamer exited or not.
+        """
+        return any([x is not None for x in self.streams_])
 
     def _next_sample_index(self):
         """Rotates through each active sampler by incrementing the index"""
+        # Return the next streamer index where the streamer is not None,
+        # wrapping around.
         idx = self.active_index_
         self.active_index_ += 1
-        if self.active_index_ >= len(self.streamers):
+
+        if self.active_index_ >= len(self.streams_):
             self.active_index_ = 0
+
+        # Continue to increment if this streamer is exhausted (None)
+        # This should never be infinite looping;
+        # the `_streamers_available` check happens immediately
+        # before this, so there should always be at least one not-None
+        # streamer.
+        while self.streams_[idx] is None:
+            idx = self.active_index_
+            self.active_index_ += 1
+
+            if self.active_index_ >= len(self.streams_):
+                self.active_index_ = 0
 
         return idx
 
@@ -1043,14 +1091,40 @@ class RoundRobinMux(BaseMux):
         idx : int, [0:n_streams - 1]
             The stream index to replace
         """
-        # Choose the stream index from the candidate pool
-        self.stream_idxs_[idx] = self._new_stream_index(idx)
+        # Get the stream index from the candidate pool
+        stream_index = self.stream_idxs_[idx]
 
         # Activate the Streamer, and get the weights
-        self.streams_[idx] = self._activate_stream(self.stream_idxs_[idx])
+        self.streams_[idx] = self.streamers[stream_index].iterate()
 
         # Reset the sample count to zero
         self.stream_counts_[idx] = 0
+
+    def _replace_stream(self, idx=None):
+        """Called by `BaseMux`'s iterate() when a stream is exhausted.
+        Set the stream to None so it is ignored once exhausted.
+
+        Parameters
+        ----------
+        idx : int or None
+
+        Raises
+        ------
+        StopIteration
+            If all streams are consumed, and `mode`=="exahustive"
+        """
+        self.streams_[idx] = None
+
+        # Check if we've now exhausted all the streams.
+        if not self._streamers_available():
+            if self.mode == 'exhaustive':
+                raise StopIteration
+
+            elif self.mode == "cycle":
+                self._setup_streams(permute=False)
+
+            elif self.mode == "permuted_cycle":
+                self._setup_streams(permute=True)
 
 
 class ChainMux(BaseMux):
@@ -1080,6 +1154,8 @@ class ChainMux(BaseMux):
             yield pescador.Streamer(string.ascii_letters[i] * n_copies)
 
     >>> mux = pescador.mux.ChainMux(gen_streamers(3, 5))
+    >>> "".join(list(mux.iterate()))
+    "aaaaabbbbbccccc"
     """
     def __init__(self, streamers, mode="exhaustive",
                  random_state=None):
