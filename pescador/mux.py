@@ -1059,25 +1059,35 @@ class ChainMux(BaseMux):
 
     Examples
     --------
+    # Run Chain once through until the end.
     >>> a = pescador.Streamer("abc")
     >>> b = pescador.Streamer("def")
     >>> mux = pescador.mux.ChainMux([a, b], mode="exhaustive")
     >>> "".join(list(mux.iterate()))
     "abcdef"
 
+    # Chain restarts from the beginning once exhausted.
     >>> a = pescador.Streamer("abc")
     >>> b = pescador.Streamer("def")
     >>> mux = pescador.mux.ChainMux([a, b], mode="with_replacement")
     >>> "".join(list(mux.iterate(max_iter=12)))
     "abcdefabcdef"
+
+    # Chain a generator of streamers
+    >>> import string
+    def gen_streamers(n_streamers, n_copies):
+        for i in range(n_streamers):
+            yield pescador.Streamer(string.ascii_letters[i] * n_copies)
+
+    >>> mux = pescador.mux.ChainMux(gen_streamers(3, 5))
     """
     def __init__(self, streamers, mode="exhaustive",
-                 random_state=None,
-                 prune_empty_streams=True):
+                 random_state=None):
         """
         Parameters
         ----------
-        streamers :
+        streamers : list of pescador.Streamers OR generator of
+            pescador.Streamrers
 
         mode : ["exhaustive", "with_replacement"]
             `exhaustive`
@@ -1086,10 +1096,19 @@ class ChainMux(BaseMux):
             `with_replacement`
                 `ChainMux will restart from the beginning after each
                 streamer has been run to exhaustion.
+
+        random_state : None, int, or np.random.RandomState
+            If int, random_state is the seed used by the random number
+            generator;
+
+            If RandomState instance, random_state is the random number
+            generator;
+
+            If None, the random number generator is the RandomState instance
+            used by np.random.
         """
         super(ChainMux, self).__init__(
-            streamers, random_state=random_state,
-            prune_empty_streams=prune_empty_streams)
+            streamers, random_state=random_state)
 
         self.mode = mode
 
@@ -1110,7 +1129,7 @@ class ChainMux(BaseMux):
         # Initialize the active stream.
         # Setup a new streamer at this index.
         try:
-            self._new_stream(0)
+            self._new_stream()
         except StopIteration:
             pass
 
@@ -1131,16 +1150,26 @@ class ChainMux(BaseMux):
         return 0
 
     def _replace_stream(self, idx=None):
-        """Called by `BaseMux`'s iterate() when a stream is exhausted."""
-        self._new_stream(idx)
-
-    def _new_stream(self, idx=None):
-        '''Grab a new stream from the streamers, and start it.
+        """Called by `BaseMux`'s iterate() when a stream is exhausted.
 
         Parameters
         ----------
-        idx : int, [0:n_streams - 1]
-            The stream index to replace
+        idx : int or None
+            Passed from the `BaseMux` to indicate which streamer index
+            was exhausted. For `ChainMux`, there is only one active streamer,
+            so it is just ignored.
+        """
+        self._new_stream()
+
+    def _new_stream(self):
+        '''Grab the next stream from the input streamers, and start it.
+
+        Raises
+        ------
+        StopIteration
+            When the input list or generator of streamers is complete,
+            will raise a StopIteration. If `mode == with_replacement`, it
+            will instead restart iterating from the beginning of the sequence.
         '''
         try:
             # Advance the stream_generator_ to get the next available stream.
