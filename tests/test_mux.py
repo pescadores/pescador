@@ -28,10 +28,12 @@ def _choice(vals, seed=11111):
     functools.partial(pescador.mux.Mux, k=1, with_replacement=False),
     functools.partial(pescador.mux.PoissonMux, k_active=1, rate=None,
                       mode="exhaustive"),
+    pescador.mux.RoundRobinMux,
     pescador.mux.ChainMux,
 ],
     ids=["DeprecatedMux",
          "PoissonMux-exhaustive",
+         "RoundRobin",
          "ChainMux",
          ])
 def test_mux_single_finite(mux_class):
@@ -52,7 +54,7 @@ def test_mux_single_finite(mux_class):
     functools.partial(pescador.mux.PoissonMux, k_active=1, rate=None,
                       mode="single_active"),
     pescador.mux.ShuffledMux,
-    pescador.mux.RoundRobinMux,
+    functools.partial(pescador.mux.RoundRobinMux, mode="cycle"),
     functools.partial(pescador.mux.ChainMux, mode="with_replacement"),
 ],
     ids=["DeprecatedMux",
@@ -78,10 +80,13 @@ def test_mux_single_infinite(mux_class):
     functools.partial(pescador.mux.Mux, k=1, with_replacement=False),
     functools.partial(pescador.mux.PoissonMux, k_active=1, rate=None,
                       mode="exhaustive"),
+    pescador.mux.RoundRobinMux,
     pescador.mux.ChainMux],
     ids=["DeprecatedMux",
          "PoissonMux-exhaustive",
-         "ChainMux"])
+         "RoundRobinMux",
+         "ChainMux",
+         ])
 @pytest.mark.parametrize('items',
                          [['X'], ['Y'], ['X', 'Y'], ['Y', 'X'],
                           pytest.mark.xfail([],
@@ -107,12 +112,12 @@ def test_mux_single_tuple(items, mux_class):
     functools.partial(pescador.mux.PoissonMux, k_active=1),
     pescador.mux.ShuffledMux,
     pescador.mux.RoundRobinMux,
-    pescador.mux.ChainMux],
+],
     ids=["DeprecatedMux",
          "PoissonMux-exhaustive",
          "ShuffledMux",
          "RoundRobinMux",
-         "ChainMux"])
+         ])
 def test_mux_empty(mux_class):
     "Make sure an empty list of streamers raises an error."
     with pytest.raises(pescador.PescadorError):
@@ -234,10 +239,12 @@ def test_mux_single_active(mux_class, n_streams, n_samples, k, rate):
 @pytest.mark.parametrize('mux_class', [
     functools.partial(pescador.mux.Mux, k=None),
     functools.partial(pescador.mux.PoissonMux, k_active=None),
-    pescador.mux.ShuffledMux],
+    pescador.mux.ShuffledMux,
+],
     ids=["DeprecatedMux",
          "PoissonMux",
-         "ShuffledMux"])
+         "ShuffledMux",
+         ])
 def test_mux_bad_streamers(mux_class):
     with pytest.raises(pescador.PescadorError):
         steamers = [pescador.Streamer(T.finite_generator, 10)
@@ -250,10 +257,12 @@ def test_mux_bad_streamers(mux_class):
 @pytest.mark.parametrize('mux_class', [
     functools.partial(pescador.mux.Mux, k=None),
     functools.partial(pescador.mux.PoissonMux, k_active=None),
-    pescador.mux.ShuffledMux],
+    pescador.mux.ShuffledMux,
+],
     ids=["DeprecatedMux",
          "PoissonMux",
-         "ShuffledMux"])
+         "ShuffledMux",
+         ])
 def test_mux_bad_weights(mux_class):
     with pytest.raises(pescador.PescadorError):
         streamers = [pescador.Streamer(T.finite_generator, 10)
@@ -335,12 +344,15 @@ def test_critical_mux(mux_class):
     https://github.com/pescadores/pescador/issues/80
     """
     chars = 'abcde'
-    n_reps = 5
+    n_reps = 7
     streamers = [pescador.Streamer(x * n_reps) for x in chars]
     mux = mux_class(streamers, len(chars), rate=None,
                     prune_empty_streams=False, random_state=135)
     samples = list(mux.iterate(max_iter=1000))
-    assert len(collections.Counter(samples)) == len(chars)
+    sample_counts = collections.Counter(samples)
+    assert len(sample_counts) == len(chars)
+    for k, v in sample_counts.items():
+        assert v == n_reps
     assert len(samples) == len(chars) * n_reps
 
 
@@ -586,19 +598,6 @@ class TestPoissonMux_SingleActive:
         assert test.pvalue >= 0.95
 
 
-class TestRoundRobinMux:
-    """The RoundRobinMux is guaranteed to reproduce samples in the
-    same order as original streams.
-    """
-
-    def test_roundrobin_mux_simple(self):
-        ab = pescador.Streamer(_cycle, 'ab')
-        cd = pescador.Streamer(_cycle, 'cd')
-        ef = pescador.Streamer(_cycle, 'ef')
-        mux1 = pescador.mux.RoundRobinMux([ab, cd, ef])
-        assert "".join(list(mux1.iterate(max_iter=6))) == "acebdf"
-
-
 class TestShuffledMux:
     """Shuffled Mux samples from all provided
     """
@@ -611,6 +610,48 @@ class TestShuffledMux:
         # TODO: write test that checks the stats - that there's
         # Approx the same of each?
         assert set(list(mux.iterate(max_iter=9))) == set("abc")
+
+
+class TestRoundRobinMux:
+    """The RoundRobinMux is guaranteed to reproduce samples in the
+    same order as original streams.
+    """
+
+    def test_roundrobin_mux_simple(self):
+        ab = pescador.Streamer('ab')
+        cde = pescador.Streamer('cde')
+        fghi = pescador.Streamer('fghi')
+        mux = pescador.mux.RoundRobinMux([ab, cde, fghi], 'exhaustive')
+        assert "".join(list(mux.iterate())) == "acfbdgehi"
+
+    def test_rr_with_empty_streams(self):
+        things_to_generate = [
+            "aa", [], "bb", [], [], [], "cccc"
+        ]
+        streamers = [pescador.Streamer(x) for x in things_to_generate]
+        mux = pescador.mux.RoundRobinMux(streamers, 'exhaustive')
+        result = "".join(list(mux.iterate()))
+        assert result == "abcabccc"
+
+    def test_rr_basic_cycle(self):
+        a = pescador.Streamer('a')
+        b = pescador.Streamer('bb')
+        mux = pescador.mux.RoundRobinMux([a, b], 'cycle')
+        assert "".join(list(mux.iterate(7))) == "abbabba"
+
+    def test_rr_permuted_cycle(self):
+        a = pescador.Streamer('a')
+        b = pescador.Streamer('bb')
+        empty = pescador.Streamer([])
+        c = pescador.Streamer('c')
+        mux = pescador.mux.RoundRobinMux([a, b, empty, c], 'permuted_cycle')
+
+        result = list(mux.iterate(12))
+        counts = collections.Counter(result)
+        assert len(counts) == 3
+        assert counts['a'] == 3
+        assert counts['b'] == 6
+        assert counts['c'] == 3
 
 
 class TestChainMux:
@@ -643,3 +684,38 @@ class TestChainMux:
         mux = pescador.mux.ChainMux([a, b],
                                     mode="with_replacement")
         assert "".join(list(mux.iterate(max_iter=12))) == "abcdefabcdef"
+
+    def test_chain_generator_of_streams(self):
+        def stream_gen(n, source_letters):
+            """
+            Parameters
+            ----------
+            n : how many to stream.
+
+            source_letters : list of things to stream.
+            """
+            for char in source_letters:
+                yield pescador.Streamer(char * n)
+
+        streamers = stream_gen(10, "abcde")
+
+        mux = pescador.mux.ChainMux(streamers, mode="exhaustive")
+        result = "".join(list(mux.iterate()))
+        assert len(result) == 50
+        assert result == "{}{}{}{}{}".format(
+            'a' * 10, 'b' * 10, 'c' * 10, 'd' * 10, 'e' * 10)
+
+    def test_chain_generator_with_empty_streams(self):
+        def stream_gen():
+            things_to_generate = [
+                "aa", [], "bb", [], [], [], "cccc"
+            ]
+            for item in things_to_generate:
+                yield pescador.Streamer(item)
+
+        streamers = stream_gen()
+
+        mux = pescador.mux.ChainMux(streamers, mode="exhaustive")
+        result = "".join(list(mux.iterate()))
+        assert len(result) == 8
+        assert result == "aabbcccc"
