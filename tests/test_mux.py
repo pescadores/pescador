@@ -53,7 +53,7 @@ def test_mux_single_finite(mux_class):
                       mode="with_replacement"),
     functools.partial(pescador.mux.PoissonMux, k_active=1, rate=None,
                       mode="single_active"),
-    pytest.mark.xfail(pescador.mux.ShuffledMux, reason="TOFIX"),
+    pescador.mux.ShuffledMux,
     functools.partial(pescador.mux.RoundRobinMux, mode="cycle"),
     functools.partial(pescador.mux.ChainMux, mode="with_replacement"),
 ],
@@ -110,7 +110,7 @@ def test_mux_single_tuple(items, mux_class):
 @pytest.mark.parametrize('mux_class', [
     functools.partial(pescador.mux.Mux, k=1),
     functools.partial(pescador.mux.PoissonMux, k_active=1),
-    pytest.mark.xfail(pescador.mux.ShuffledMux, reason="TOFIX"),
+    pescador.mux.ShuffledMux,
     pescador.mux.RoundRobinMux,
 ],
     ids=["DeprecatedMux",
@@ -239,7 +239,7 @@ def test_mux_single_active(mux_class, n_streams, n_samples, k, rate):
 @pytest.mark.parametrize('mux_class', [
     functools.partial(pescador.mux.Mux, k=None),
     functools.partial(pescador.mux.PoissonMux, k_active=None),
-    pytest.mark.xfail(pescador.mux.ShuffledMux, reason="TOFIX"),
+    pescador.mux.ShuffledMux,
 ],
     ids=["DeprecatedMux",
          "PoissonMux",
@@ -257,7 +257,7 @@ def test_mux_bad_streamers(mux_class):
 @pytest.mark.parametrize('mux_class', [
     functools.partial(pescador.mux.Mux, k=None),
     functools.partial(pescador.mux.PoissonMux, k_active=None),
-    pytest.mark.xfail(pescador.mux.ShuffledMux, reason="TOFIX"),
+    pescador.mux.ShuffledMux,
 ],
     ids=["DeprecatedMux",
          "PoissonMux",
@@ -598,7 +598,6 @@ class TestPoissonMux_SingleActive:
         assert test.pvalue >= 0.95
 
 
-@pytest.mark.xfail(reason="TOFIX")
 class TestShuffledMux:
     """Shuffled Mux samples from all provided
     """
