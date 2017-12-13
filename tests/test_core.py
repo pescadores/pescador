@@ -42,13 +42,13 @@ def test_streamer_generator_func():
     actual1 = list(streamer)
     assert len(expected) == len(actual1) == n_items
     for b1, b2 in zip(expected, actual1):
-        T.__eq_batch(b1, b2)
+        T._eq_batch(b1, b2)
 
     # Test __iter__ interface
     actual2 = list(streamer)
     assert len(expected) == len(actual2) == n_items
     for b1, b2 in zip(expected, actual2):
-        T.__eq_batch(b1, b2)
+        T._eq_batch(b1, b2)
 
 
 @pytest.mark.parametrize('items',
@@ -66,7 +66,7 @@ def test_streamer_tuple(items):
     assert len(reference) == len(query)
     for b1, b2 in zip(reference, query):
         assert isinstance(b2, tuple)
-        T.__eq_lists(b1, b2)
+        T._eq_lists(b1, b2)
 
 
 @pytest.mark.parametrize('n_max', [None, 10, 50, 100])
@@ -89,7 +89,7 @@ def test_streamer_finite(n_max, stream_size, generate):
 
         query = list(gen)
         for b1, b2 in zip(reference, query):
-            T.__eq_batch(b1, b2)
+            T._eq_batch(b1, b2)
 
 
 @pytest.mark.parametrize('n_max', [10, 50])
@@ -107,7 +107,7 @@ def test_streamer_infinite(n_max, stream_size):
         query = list(streamer.iterate(max_iter=n_max))
 
         for b1, b2 in zip(reference, query):
-            T.__eq_batch(b1, b2)
+            T._eq_batch(b1, b2)
 
 
 @pytest.mark.parametrize('n_max', [10, 50])
@@ -128,7 +128,7 @@ def test_streamer_in_streamer(n_max, stream_size):
         query = list(streamer2.iterate(max_iter=n_max))
 
         for b1, b2 in zip(reference, query):
-            T.__eq_batch(b1, b2)
+            T._eq_batch(b1, b2)
 
 
 @pytest.mark.parametrize('generate', [False, True])

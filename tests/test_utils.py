@@ -8,13 +8,13 @@ import warnings
 import pescador.util
 
 
-def __eq_batch(b1, b2):
+def _eq_batch(b1, b2):
 
     for k in six.iterkeys(b1):
         assert np.allclose(b1[k], b2[k])
 
 
-def __eq_lists(b1, b2):
+def _eq_lists(b1, b2):
 
     assert len(b1) == len(b2)
 

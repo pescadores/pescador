@@ -31,7 +31,7 @@ def test_BufferedStreamer(dimension, batch_size, buf_size):
 
     estimate = list(__unpack_stream(estimate))
 
-    T.__eq_lists(reference, estimate)
+    T._eq_lists(reference, estimate)
 
     estimate = pescador.BufferedStreamer(gen_stream, buf_size)
 
@@ -40,8 +40,9 @@ def test_BufferedStreamer(dimension, batch_size, buf_size):
 
 @pytest.mark.parametrize('items',
                          [['X'], ['Y'], ['X', 'Y'], ['Y', 'X'],
-                          pytest.mark.xfail([],
-                                            raises=pescador.PescadorError)])
+                          pytest.param([],
+                                       marks=pytest.mark.xfail(
+                                           raises=pescador.PescadorError))])
 @pytest.mark.parametrize('dimension', [1, 2, 3])
 @pytest.mark.parametrize('batch_size', [1, 2, 5, 17])
 @pytest.mark.parametrize('buf_size', [1, 2, 5, 17, 100])

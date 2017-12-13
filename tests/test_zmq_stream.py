@@ -20,7 +20,7 @@ def test_zmq(copy, timeout):
         query = list(zmq_stream)
         assert len(reference) == len(query)
         for b1, b2 in zip(reference, query):
-            T.__eq_batch(b1, b2)
+            T._eq_batch(b1, b2)
 
 
 @pytest.mark.parametrize('items',
@@ -61,7 +61,7 @@ def test_zmq_align():
             assert 'align' in str(out[0].message).lower()
 
         for b1, b2 in zip(reference, query):
-            T.__eq_batch(b1, b2)
+            T._eq_batch(b1, b2)
             if six.PY2:
                 continue
             for key in b2:

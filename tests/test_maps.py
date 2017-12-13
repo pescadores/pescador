@@ -11,7 +11,7 @@ def test___stack_data():
     data = [{"X": np.array([n])} for n in range(n_items)]
     expected = {"X": np.arange(n_items).reshape(-1, 1)}
     output = pescador.maps.__stack_data(data)
-    T.__eq_batch(expected, output)
+    T._eq_batch(expected, output)
 
 
 def test_buffer_stream():
@@ -24,13 +24,13 @@ def test_buffer_stream():
     outputs = list(stream)
     assert len(outputs) == (len(expected) - 1)
     for exp, obs in zip(expected, outputs):
-        T.__eq_batch(exp, obs)
+        T._eq_batch(exp, obs)
 
     stream = pescador.maps.buffer_stream(inputs, buffer_size=4, partial=True)
     outputs = list(stream)
     assert len(outputs) == len(expected)
     for exp, obs in zip(expected, outputs):
-        T.__eq_batch(exp, obs)
+        T._eq_batch(exp, obs)
 
     with pytest.raises(pescador.maps.DataError):
         for not_data in pescador.maps.buffer_stream([1, 2, 3, 4], 2):
