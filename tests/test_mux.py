@@ -94,8 +94,7 @@ def test_mux_single_infinite(mux_class):
 @pytest.mark.parametrize(
     'items', [
         ['X'], ['Y'], ['X', 'Y'], ['Y', 'X'],
-        pytest.param([], marks=pytest.mark.xfail(
-            raises=pescador.PescadorError, strict=True), id='empty')])
+        pytest.mark.xfail([], raises=pescador.PescadorError, strict=True)])
 def test_mux_single_tuple(items, mux_class):
     "Test Exhaustive streamers returning tuples."
 
@@ -117,11 +116,10 @@ def test_mux_single_tuple(items, mux_class):
     functools.partial(pescador.mux.PoissonMux, k_active=1),
     pescador.mux.ShuffledMux,
     pescador.mux.RoundRobinMux,
-    pytest.param(pescador.mux.ChainMux,
-                 marks=pytest.mark.xfail(
-                     reason="ChainMux can accept an empty iterable or "
-                            "generator, and will simply return empty.",
-                     strict=True)),
+    pytest.mark.xfail(pescador.mux.ChainMux,
+                      reason="ChainMux can accept an empty iterable or "
+                             "generator, and will simply return empty.",
+                      strict=True),
 ],
     ids=["DeprecatedMux",
          "PoissonMux-exhaustive",
@@ -184,11 +182,9 @@ class TestPoissonMux_WithReplacement:
                              [None,
                               1000,
                               np.random.RandomState(seed=1000),
-                              pytest.param(
-                                  'foo',
-                                  marks=pytest.mark.xfail(
-                                      raises=pescador.PescadorError,
-                                      strict=True)),
+                              pytest.mark.xfail(
+                                  'foo', raises=pescador.PescadorError,
+                                  strict=True),
                               ])
     def test_mux_replacement(self, mux_class, n_streams, n_samples, k_active,
                              rate, random_state):
