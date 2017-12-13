@@ -35,13 +35,11 @@ This module defines the following Mux types:
 
 `ShuffledMux`
 
-    A `ShuffledMux` uses all the given streamers, and samples from
-    each of them with equal probability.
+    A `ShuffledMux` samples from each provided streamer with equal probability.
 
 `RoundRobinMux`
 
-    As in `ShuffledMux`, uses all the given streamers, but iterates over
-    the streamers in strict order.
+    Iterates over all the streamers in strict order.
 
 `ChainMux`
 
@@ -366,10 +364,9 @@ class BaseMux(core.Streamer):
 
      * When "activated", choose a subset of available streamers to stream from
        (the "active substreams")
-     * When a sample is drawn from the mux (via generate),
+     * When a sample is drawn from the mux (via iterate),
        chooses which active substream to stream from.
      * Handles exhaustion of streams (restarting, replacing, ...)
-
     """
     def __init__(self, streamers, random_state=None):
         """
@@ -404,12 +401,31 @@ class BaseMux(core.Streamer):
 
     @property
     def n_streams(self):
-        """Return the number of streamers."""
+        """Return the number of streamers.
+
+        Note: Some `Mux` sub-classes (i.e. `ChainMux`) may allow generators
+        of streamers, in which case this will fail.
+        """
         return len(self.streamers)
 
     def activate(self):
         """Activates the mux as a streamer, choosing which substreams to
-        select as active."""
+        select as active.
+
+        Any implementation of `activate()` should implement the following:
+
+        1. Create a pool of active streams, `self.streams_`.
+            This is required by the `BaseMux.iterate()`, which is the core
+             of all Mux.
+
+        2. Must call `self._new_stream(idx)` to setup each active stream
+            for the `Mux`.
+
+        3. Must setup `self.stream_counts_`; an array of zeros of the same
+            length as `self.streams_` which counts how many samples have been
+            drawn from each active streamer. This is used to determine if
+            the streamer has produced any samples.
+        """
         raise NotImplementedError()
 
     def deactivate(self):
@@ -417,7 +433,9 @@ class BaseMux(core.Streamer):
         pass
 
     def iterate(self, max_iter=None):
-        """Yields items from the mux."""
+        """Yields items from the mux, and handles stream exhaustion and
+        replacement.
+        """
         if max_iter is None:
             max_iter = np.inf
 
@@ -447,12 +465,6 @@ class BaseMux(core.Streamer):
                     # Setup a new stream for this index
                     self._replace_stream(idx)
 
-                # TODO: moved; kill.
-                # If everything has been pruned, kill the while loop
-                # TODO: deal with this / make tests for it.
-                # if not self.valid_streams_.any():
-                #     break
-
     def _streamers_available(self):
         "Override this to modify the behavior of the main iter loop condition."
         return True
@@ -460,7 +472,8 @@ class BaseMux(core.Streamer):
     def _on_stream_exhausted(self, idx):
         """Override this to provide a Mux with additional behavior
         when a stream is exhausted. This gets called *after* streams
-        are pruned.
+        are pruned, but before replacing it with a new stream. Handle
+        behaviors for closing down your previous stream here.
 
         Parameters
         ----------
@@ -473,24 +486,18 @@ class BaseMux(core.Streamer):
         """Called after a stream has been exhausted, replace the stream
         with another from the pool.
 
-        For custom behavior (weights, etc.), override in a child class.
+        Any implementation of `_replace_stream()` should call
+
+        > # Setup the new stream.
+        > self._new_stream(idx)
+
+        to replace the exhausted stream.
         """
         raise NotImplementedError("_replace_stream() must be implemented in"
                                   " a child class.")
-        # if (self.distribution_ > 0).any():
-        #     # Replace it and move on if there are still seeds
-        #     # in the pool.
-        #     self.distribution_[:] /= np.sum(self.distribution_)
-
-        #     # Setup the new stream.
-        #     self._new_stream(idx)
 
     def _new_stream(self, idx):
         """Activate a new stream, given the index into the stream pool.
-
-        BaseMux's _new_stream simply chooses a new stream and activates it.
-        For special behavior (ie Weighted streams), you must override this
-        in a child class.
 
         Parameters
         ----------
@@ -756,6 +763,9 @@ class ShuffledMux(BaseMux):
     """A variation on a mux, which takes N streamers, and samples
     from them equally, guaranteeing all N streamers to be "active",
     unlike the base Mux, which randomly chooses streams when activating.
+
+    `ShuffledMux` automatically restarts streams when they die. For a more
+    nuanced behavior, consider using `PoissonMux` with `single_active=True`.
     """
     def __init__(self, streamers, weights=None,
                  random_state=None):
@@ -817,8 +827,6 @@ class ShuffledMux(BaseMux):
         self.stream_weights_ = np.array(self.weights, dtype=float)
         # How many samples have been drawn from each (active) stream.
         self.stream_counts_ = np.zeros(self.n_streams, dtype=int)
-        # Array of pointers into `self.streamers`
-        self.stream_idxs_ = np.zeros(self.n_streams, dtype=int)
 
         # Initialize each active stream.
         for idx in range(self.n_streams):
@@ -831,7 +839,6 @@ class ShuffledMux(BaseMux):
         self.streams_ = None
         self.stream_weights_ = None
         self.stream_counts_ = None
-        self.stream_idxs_ = None
         self.weight_norm_ = None
 
     def _streamers_available(self):
@@ -848,8 +855,9 @@ class ShuffledMux(BaseMux):
     def _on_stream_exhausted(self, idx):
         # See if this stream produced any data; if it didn't, turn it off
         # using the stream weights.
+        # stream_weights_ only get modified if the stream produced no data.
         if self.stream_counts_[idx] == 0:
-            self.stream_weights[idx] = 0
+            self.stream_weights_[idx] = 0
 
     def _new_stream(self, idx):
         '''Randomly select and create a new stream.
@@ -859,13 +867,11 @@ class ShuffledMux(BaseMux):
         idx : int, [0:n_streams - 1]
             The stream index to replace
         '''
-        # Choose the stream index from the candidate pool
-        self.stream_idxs_[idx] = self.rng.choice(
-            self.n_streams, p=self.stream_weights_)
-
-        # Activate the Streamer and get the weights
-        self.streams_[idx] = self.streamers[self.stream_idxs_[idx]].iterate()
-        self.stream_weights_[idx] = self.weights[self.stream_idxs_[idx]]
+        # Don't activate the stream if the weight is 0 or None
+        if self.stream_weights_[idx]:
+            self.streams_[idx] = self.streamers[idx].iterate()
+        else:
+            self.streams_[idx] = None
 
         # Reset the sample count to zero
         self.stream_counts_[idx] = 0
@@ -1125,6 +1131,8 @@ class ChainMux(BaseMux):
         try:
             self._new_stream()
         except StopIteration:
+            # This should only be reached with an empty
+            # iterator (ie streams = [])
             pass
 
     def deactivate(self):

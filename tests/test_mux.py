@@ -90,7 +90,10 @@ def test_mux_single_infinite(mux_class):
 @pytest.mark.parametrize('items',
                          [['X'], ['Y'], ['X', 'Y'], ['Y', 'X'],
                           pytest.mark.xfail([],
-                                            raises=pescador.PescadorError)])
+                                            reason="No keys specified *should*"
+                                                   " fail the test.",
+                                            raises=pescador.PescadorError,
+                                            strict=True)])
 def test_mux_single_tuple(items, mux_class):
     "Test Exhaustive streamers returning tuples."
 
@@ -112,11 +115,16 @@ def test_mux_single_tuple(items, mux_class):
     functools.partial(pescador.mux.PoissonMux, k_active=1),
     pescador.mux.ShuffledMux,
     pescador.mux.RoundRobinMux,
+    pytest.mark.xfail(pescador.mux.ChainMux,
+                      reason="ChainMux can accept an empty iterable or "
+                             "generator, and will simply return empty.",
+                      strict=True),
 ],
     ids=["DeprecatedMux",
          "PoissonMux-exhaustive",
          "ShuffledMux",
          "RoundRobinMux",
+         "ChainMux"
          ])
 def test_mux_empty(mux_class):
     "Make sure an empty list of streamers raises an error."
@@ -201,7 +209,8 @@ def test_weighted_empty_streams(mux_class):
                           1000,
                           np.random.RandomState(seed=1000),
                           pytest.mark.xfail('foo',
-                                            raises=pescador.PescadorError)])
+                                            raises=pescador.PescadorError,
+                                            strict=True)])
 def test_mux_replacement(mux_class, n_streams, n_samples, k_active, rate,
                          random_state):
     streamers = [pescador.Streamer(T.infinite_generator)
@@ -599,17 +608,78 @@ class TestPoissonMux_SingleActive:
 
 
 class TestShuffledMux:
-    """Shuffled Mux samples from all provided
-    """
     def test_shuffled_mux_simple(self):
+        "Test that `ShuffledMux` samples from all provided streams"
+        to_generate = ['a', 'b', 'c', 'd', 'e']
+        streams = [pescador.Streamer(_cycle, x) for x in to_generate]
+        mux = pescador.ShuffledMux(streams, random_state=10)
+
+        samples = list(mux.iterate(max_iter=1000))
+        counter = collections.Counter(samples)
+
+        # Test that there is [a, b, c] in the set
+        assert set(counter.keys()) == set(to_generate)
+
+        # Test that the statistics line up with expected.
+        for i, key in enumerate(to_generate):
+            np.testing.assert_approx_equal(counter[key] / len(samples),
+                                           mux.weights[i],
+                                           significant=1)
+
+    def test_shuffled_mux_with_empty_streams(self):
+        """Tests that empty streams are dropped, and that `ShuffledMux`
+        actually restarts given finite streams.
+        """
+        things_to_generate = [
+            "a", [], "b", [], [], "c"
+        ]
+        streamers = [pescador.Streamer(x) for x in things_to_generate]
+        mux = pescador.mux.ShuffledMux(streamers, random_state=1234)
+
+        samples = []
+        # Iterate over the list manually so we can introspect the state
+        # in the middle.
+        for i, sample in enumerate(mux.iterate(30)):
+            samples.append(sample)
+
+            assert mux.streams_ is not None
+            assert mux.weight_norm_ > 0
+
+            # Check to make sure that the empty streams got their probabilities
+            # set to 0 when they didn't produce any data.
+            if i == 29:
+                assert mux.stream_weights_[1] == 0
+                assert mux.stream_weights_[3] == 0
+                assert mux.stream_weights_[4] == 0
+
+        assert len(samples) == 30
+
+        counter = collections.Counter(samples)
+        assert set(counter.keys()) == set(['a', 'b', 'c'])
+        for key in ['a', 'b', 'c']:
+            assert counter[key] > 0
+
+    def test_shuffled_mux_weights(self):
+        "When sampling with weights, do the statistics line up?"
         a = pescador.Streamer(_cycle, 'a')
         b = pescador.Streamer(_cycle, 'b')
         c = pescador.Streamer(_cycle, 'c')
-        mux = pescador.ShuffledMux([a, b, c], random_state=10)
+
+        weights = [.6, .3, .1]
+        mux = pescador.ShuffledMux([a, b, c], weights=weights, random_state=10)
+
+        samples = list(mux.iterate(max_iter=1000))
+        counter = collections.Counter(samples)
+
         # Test that there is [a, b, c] in the set
-        # TODO: write test that checks the stats - that there's
-        # Approx the same of each?
-        assert set(list(mux.iterate(max_iter=9))) == set("abc")
+        assert set(counter.keys()) == set(['a', 'b', 'c'])
+
+        # Test the statistics on the counts.
+        # Does the sampling approximately match the weights?
+        for i, key in enumerate(['a', 'b', 'c']):
+            np.testing.assert_approx_equal(counter[key] / len(samples),
+                                           weights[i],
+                                           significant=1)
 
 
 class TestRoundRobinMux:
@@ -704,6 +774,15 @@ class TestChainMux:
         assert len(result) == 50
         assert result == "{}{}{}{}{}".format(
             'a' * 10, 'b' * 10, 'c' * 10, 'd' * 10, 'e' * 10)
+
+    def test_chain_empty_generator_of_streams(self):
+        def stream_gen():
+            return iter(())
+        streamers = stream_gen()
+        mux = pescador.mux.ChainMux(streamers, mode="exhaustive")
+        result = "".join(list(mux.iterate()))
+        assert len(result) == 0
+        assert result == ''
 
     def test_chain_generator_with_empty_streams(self):
         def stream_gen():
