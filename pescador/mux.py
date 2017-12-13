@@ -395,13 +395,8 @@ class BaseMux(core.Streamer):
 
     @property
     def n_streams(self):
-        """Return the number of streamers. Will fail if it's an iterable,
-        in which case just return None.
-        """
-        try:
-            return len(self.streamers)
-        except TypeError:
-            return None
+        """Return the number of streamers."""
+        return len(self.streamers)
 
     def activate(self):
         """Activates the mux as a streamer, choosing which substreams to
