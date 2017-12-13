@@ -906,7 +906,15 @@ class RoundRobinMux(BaseMux):
     >>> c = pescador.Streamer("c")
     >>> mux = pescador.RoundRobinMux([a, b, c])
     >>> print("".join(mux.iterate(9)))
+    "abc"
+
+    >>> mux = pescador.RoundRobinMux([a, b, c], mode="cycle")
+    >>> print("".join(mux.iterate(9)))
     "abcabcabc"
+
+    >>> mux = pescador.RoundRobinMux([a, b, c], mode="permuted_cycle")
+    >>> print("".join(mux.iterate(20)))
+    "abcacbacbacbbcabacac"
     """
     def __init__(self, streamers, mode="exhaustive", random_state=None):
         """
@@ -1042,7 +1050,7 @@ class RoundRobinMux(BaseMux):
         # Check if we've now exhausted all the streams.
         if not self._streamers_available():
             if self.mode == 'exhaustive':
-                raise StopIteration
+                pass
 
             elif self.mode == "cycle":
                 self._setup_streams(permute=False)
@@ -1128,12 +1136,7 @@ class ChainMux(BaseMux):
 
         # Initialize the active stream.
         # Setup a new streamer at this index.
-        try:
-            self._new_stream()
-        except StopIteration:
-            # This should only be reached with an empty
-            # iterator (ie streams = [])
-            pass
+        self._new_stream()
 
     def deactivate(self):
         self.chain_streamer_ = None
@@ -1181,7 +1184,6 @@ class ChainMux(BaseMux):
         except StopIteration:
             # If running with with_replacement, restart the chain_streamer_
             if self.mode == "with_replacement":
-                # import ipdb; ipdb.set_trace()
                 self.stream_generator_ = self.chain_streamer_.iterate()
 
                 # Try again to get the next stream;
@@ -1189,15 +1191,18 @@ class ChainMux(BaseMux):
                 # this means the streams are probably dead or empty.
                 next_stream = six.advance_iterator(self.stream_generator_)
 
-            # If running in exhaustive mode, just let the StopIteration raise
+            # If running in exhaustive mode
             else:
-                raise
+                # self.chain_streamer_ should no longer be active, so
+                # the outer loop should fall out without running.
+                next_stream = None
 
-        # Start that stream, and return it.
-        streamer = next_stream.iterate()
+        if next_stream is not None:
+            # Start that stream, and return it.
+            streamer = next_stream.iterate()
 
-        # Activate the Streamer
-        self.streams_[0] = streamer
+            # Activate the Streamer
+            self.streams_[0] = streamer
 
-        # Reset the sample count to zero
-        self.stream_counts_[0] = 0
+            # Reset the sample count to zero
+            self.stream_counts_[0] = 0
