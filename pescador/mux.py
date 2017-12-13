@@ -56,13 +56,11 @@ This module defines the following Mux types:
 import six
 import numpy as np
 
-from futurepast import remove, rename_parameter
-
 from . import core
 from .exceptions import PescadorError
+from .util import Deprecated, rename_kw
 
 
-@remove(past='1.1', future='2.0')
 class Mux(core.Streamer):
     '''Stochastic multiplexor for Streamers
 
@@ -78,18 +76,15 @@ class Mux(core.Streamer):
 
     Mux([stream, range(8), stream2])
     '''
-
-    @rename_parameter(old="seed_pool", new="streamers",
-                      past='1.0', future='2.0')
-    @rename_parameter(old="lam", new="rate", past='1.0', future='2.0')
-    @rename_parameter(old="pool_weights", new="weights",
-                      past='1.0', future='2.0')
-    @rename_parameter(old='prune_empty_seeds', new='prune_empty_streams',
-                      past='1.0', future='2.0')
     def __init__(self, streamers, k,
                  rate=256.0, weights=None, with_replacement=True,
                  prune_empty_streams=True, revive=False,
-                 random_state=None):
+                 random_state=None,
+                 seed_pool=Deprecated(),
+                 lam=Deprecated(),
+                 pool_weights=Deprecated(),
+                 prune_empty_seeds=Deprecated(),
+                 ):
         """Given an array (pool) of streamer types, do the following:
 
         1. Select ``k`` streams at random to iterate from
@@ -173,6 +168,20 @@ class Mux(core.Streamer):
                 The `prune_empty_seeds` parameter will be removed in
                 pescador 2.0.
         """
+        streamers = rename_kw('seed_pool', seed_pool,
+                              'streamers', streamers,
+                              '1.1', '2.0')
+        rate = rename_kw('lam', lam,
+                         'rate', rate,
+                         '1.1', '2.0')
+        weights = rename_kw('pool_weights', pool_weights,
+                            'weights', weights,
+                            '1.1', '2.0')
+        prune_empty_streams = rename_kw(
+            'prune_empty_seeds', prune_empty_seeds,
+            'prune_empty_streams', prune_empty_streams,
+            '1.1', '2.0')
+
         self.streamers = streamers
         self.n_streams = len(streamers)
         self.k = k
