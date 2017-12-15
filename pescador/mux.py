@@ -51,6 +51,7 @@ This module defines the following Mux types:
     The pescador<2.0 `Mux` is still available and works the same,
     but is deprecated.
 '''
+from warnings import warn
 import six
 import numpy as np
 
@@ -139,6 +140,10 @@ class Mux(core.Streamer):
             If None, the random number generator is the RandomState instance
             used by np.random.
         """
+        warn('`Mux` is deprecated in pescador 2.0. '
+             'Please use `PoissonMux` instead to maintain forward-compatibility.'
+             'This class will be removed in pescador 2.1.', DeprecationWarning)
+
         self.streamers = streamers
         self.n_streams = len(streamers)
         self.k = k
