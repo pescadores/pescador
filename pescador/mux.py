@@ -56,7 +56,6 @@ import numpy as np
 
 from . import core
 from .exceptions import PescadorError
-from .util import Deprecated, rename_kw
 
 
 class Mux(core.Streamer):
@@ -77,12 +76,7 @@ class Mux(core.Streamer):
     def __init__(self, streamers, k,
                  rate=256.0, weights=None, with_replacement=True,
                  prune_empty_streams=True, revive=False,
-                 random_state=None,
-                 seed_pool=Deprecated(),
-                 lam=Deprecated(),
-                 pool_weights=Deprecated(),
-                 prune_empty_seeds=Deprecated(),
-                 ):
+                 random_state=None):
         """Given an array (pool) of streamer types, do the following:
 
         1. Select ``k`` streams at random to iterate from
@@ -144,42 +138,7 @@ class Mux(core.Streamer):
 
             If None, the random number generator is the RandomState instance
             used by np.random.
-
-        seed_pool : iterable of streamers
-            .. warning:: This parameter name was deprecated in pescador 1.1
-                Use the `streamers` parameter instead.
-                The `seed_pool` parameter will be removed in pescador 2.0.
-
-        lam : float > 0.0
-            .. warning:: This parameter name was deprecated in pescador 1.1
-                Use the `rate` parameter instead.
-                The `lam` parameter will be removed in pescador 2.0.
-
-        pool_weights : np.ndarray or None
-            .. warning:: This parameter name was deprecated in pescador 1.1
-                Use the `weights` parameter instead.
-                The `pool_weights` parameter will be removed in pescador 2.0.
-
-        prune_empty_seeds : bool
-            .. warning:: This parameter name was deprecated in pescador 1.1
-                Use the `prune_empty_streams` parameter instead.
-                The `prune_empty_seeds` parameter will be removed in
-                pescador 2.0.
         """
-        streamers = rename_kw('seed_pool', seed_pool,
-                              'streamers', streamers,
-                              '1.1', '2.0')
-        rate = rename_kw('lam', lam,
-                         'rate', rate,
-                         '1.1', '2.0')
-        weights = rename_kw('pool_weights', pool_weights,
-                            'weights', weights,
-                            '1.1', '2.0')
-        prune_empty_streams = rename_kw(
-            'prune_empty_seeds', prune_empty_seeds,
-            'prune_empty_streams', prune_empty_streams,
-            '1.1', '2.0')
-
         self.streamers = streamers
         self.n_streams = len(streamers)
         self.k = k

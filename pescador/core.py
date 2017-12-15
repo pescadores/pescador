@@ -3,10 +3,8 @@
 import collections
 import inspect
 import six
-from warnings import warn
 
 from .exceptions import PescadorError
-from .util import Deprecated, rename_kw
 
 
 class StreamActivator(object):
@@ -129,15 +127,6 @@ class Streamer(object):
     def deactivate(self):
         self.stream_ = None
 
-    def generate(self, max_batches=None):
-        warn('`Streamer.generate(max_batches)` is deprecated in 1.1 '
-             'This method will become `Streamer.iterate(max_iter)` in 2.0. '
-             'Consider using this method instead, or iterating the Streamer '
-             'directly (preferred), e.g. `for x in streamer:`, to maintain '
-             'forwards compatibility.',
-             DeprecationWarning)
-        return self.iterate(max_iter=max_batches)
-
     def iterate(self, max_iter=None):
         '''Instantiate an iterator.
 
@@ -177,64 +166,7 @@ class Streamer(object):
             for obj in self:
                 yield obj
 
-    def tuples(self, *items, **kwargs):
-        '''Generate data in tuple-form instead of dicts.
-
-        This is useful for interfacing with Keras's generator system,
-        which requires iterates to be provided as tuples.
-
-        Parameters
-        ----------
-        *items
-            One or more dictionary keys.
-            The generated tuples will correspond to
-            `(batch[item1], batch[item2], ..., batch[itemk])`
-            where `batch` is a single iterate produced by the
-            streamer.
-
-        cycle : bool
-            If `True`, then data is generated infinitely
-            using the `cycle` method.
-            Otherwise, data is generated according to the
-            `generate` method.
-
-        max_batches : None or int > 0
-            Maximum number of batches to yield.
-            If ``None``, exhaust the generator.
-            If the stream is finite, the generator will be
-            exhausted when it completes.
-            Call generate again, or use cycle to force an infinite stream.
-
-        Yields
-        ------
-        batch : tuple
-            Items from the contained generator
-            If `max_batches` is an integer, then at most
-            `max_batches` are generated.
-
-        See Also
-        --------
-        cycle
-        tuples
-        keras_tuples
-
-        '''
-        warn('`Streamer.tuples()` is deprecated in 1.1 '
-             'This functionality is moved to `pescador.tuples` in 2.0. '
-             'Consider using this method to maintain forwards compatibility.',
-             DeprecationWarning)
-        if not items:
-            raise PescadorError('Unable to generate tuples from '
-                                'an empty item set')
-
-        if kwargs.pop('cycle', False):
-            for data in self.cycle():
-                yield tuple(data[item] for item in items)
-        else:
-            for data in self.iterate(**kwargs):
-                yield tuple(data[item] for item in items)
-
-    def __call__(self, max_iter=None, cycle=False, max_batches=Deprecated()):
+    def __call__(self, max_iter=None, cycle=False):
         '''Convenience interface for interacting with the Streamer.
 
         Parameters
@@ -248,11 +180,6 @@ class Streamer(object):
         cycle: bool
             If `True`, cycle indefinitely.
 
-        max_batches : None or int > 0
-            .. warning:: This parameter name was deprecated in pescador 1.1
-                Use the `max_iter` parameter instead.
-                The `max_batches` parameter will be removed in pescador 2.0.
-
         Yields
         ------
         obj : Objects yielded by the generator provided on init.
@@ -262,9 +189,6 @@ class Streamer(object):
         iterate
         cycle
         '''
-        max_iter = rename_kw('max_batches', max_batches,
-                             'max_iter', max_iter,
-                             '1.1', '2.0')
         if cycle:
             gen = self.cycle()
         else:
