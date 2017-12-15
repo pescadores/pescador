@@ -532,8 +532,8 @@ class PoissonMux(BaseMux):
 
     PoissonMux([stream, range(8), stream2])
     '''
-    def __init__(self, streamers, k_active,
-                 rate=256.0, weights=None,
+    def __init__(self, streamers, k_active, rate,
+                 weights=None,
                  mode="with_replacement",
                  prune_empty_streams=True,
                  random_state=None):

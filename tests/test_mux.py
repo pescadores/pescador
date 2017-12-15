@@ -113,7 +113,7 @@ def test_mux_single_tuple(items, mux_class):
 
 @pytest.mark.parametrize('mux_class', [
     functools.partial(pescador.mux.Mux, k=1),
-    functools.partial(pescador.mux.PoissonMux, k_active=1),
+    functools.partial(pescador.mux.PoissonMux, k_active=1, rate=256),
     pescador.mux.ShuffledMux,
     pescador.mux.RoundRobinMux,
     pytest.mark.xfail(pescador.mux.ChainMux,
@@ -135,7 +135,7 @@ def test_mux_empty(mux_class):
 
 @pytest.mark.parametrize('mux_class', [
     functools.partial(pescador.mux.Mux, k=None),
-    functools.partial(pescador.mux.PoissonMux, k_active=None),
+    functools.partial(pescador.mux.PoissonMux, k_active=None, rate=256),
     pescador.mux.ShuffledMux,
 ],
     ids=["DeprecatedMux",
@@ -153,7 +153,7 @@ def test_mux_bad_streamers(mux_class):
 
 @pytest.mark.parametrize('mux_class', [
     functools.partial(pescador.mux.Mux, k=None),
-    functools.partial(pescador.mux.PoissonMux, k_active=None),
+    functools.partial(pescador.mux.PoissonMux, k_active=None, rate=256),
     pescador.mux.ShuffledMux,
 ],
     ids=["DeprecatedMux",
@@ -211,7 +211,7 @@ class TestPoissonMux_Exhaustive:
         noise = list(T.finite_generator(50, size=1))
         stream = pescador.Streamer(reference)
         stream2 = pescador.Streamer(noise)
-        mux = mux_class([stream, stream2], 2,
+        mux = mux_class([stream, stream2], 2, rate=256,
                         weights=[1.0, weight])
         estimate = list(mux)
         if weight == 0.0:
@@ -231,7 +231,7 @@ class TestPoissonMux_Exhaustive:
         noise = list(T.finite_generator(50, size=1))
         stream = pescador.Streamer(reference)
         stream2 = pescador.Streamer(noise)
-        mux = mux_class([stream, stream2], 2,
+        mux = mux_class([stream, stream2], 2, rate=256,
                         weights=weight)
         estimate = list(mux)
         assert (reference + noise) == estimate
@@ -436,7 +436,7 @@ class TestPoissonMux_SingleActive:
     def test_mux_inf_loop(self, mux_class):
         s1 = pescador.Streamer([])
         s2 = pescador.Streamer([])
-        mux = mux_class([s1, s2], 2, random_state=1234)
+        mux = mux_class([s1, s2], 2, rate=None, random_state=1234)
 
         assert len(list(mux(max_iter=100))) == 0
 
