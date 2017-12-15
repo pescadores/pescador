@@ -28,8 +28,7 @@ def __stack_data(data):
     return output
 
 
-def buffer_stream(stream, buffer_size, partial=False,
-                  generator=util.Deprecated()):
+def buffer_stream(stream, buffer_size, partial=False):
     '''Buffer "data" from an stream into one data object.
 
     Parameters
@@ -43,10 +42,6 @@ def buffer_stream(stream, buffer_size, partial=False,
     partial : bool, default=False
         If True, yield a final partial batch on under-run.
 
-    generator : stream
-        .. warning:: This parameter name was deprecated in pescador 1.1
-            Use the `stream` parameter instead.
-            The `generator` parameter will be removed in pescador 2.0.
     Yields
     ------
     batch
@@ -57,10 +52,6 @@ def buffer_stream(stream, buffer_size, partial=False,
     DataError
         If the stream contains items that are not data-like.
     '''
-
-    stream = util.rename_kw('generator', generator,
-                            'stream', stream,
-                            '1.1', '2.0')
 
     data = []
     n = 0

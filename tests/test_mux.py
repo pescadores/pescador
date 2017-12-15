@@ -81,37 +81,6 @@ def test_mux_single_infinite(mux_class):
 
 
 @pytest.mark.parametrize('mux_class', [
-    functools.partial(pescador.mux.Mux, k=1, with_replacement=False),
-    functools.partial(pescador.mux.PoissonMux, k_active=1, rate=None,
-                      mode="exhaustive"),
-    pescador.mux.RoundRobinMux,
-    pescador.mux.ChainMux],
-    ids=["DeprecatedMux",
-         "PoissonMux-exhaustive",
-         "RoundRobinMux",
-         "ChainMux",
-         ])
-@pytest.mark.parametrize(
-    'items', [
-        ['X'], ['Y'], ['X', 'Y'], ['Y', 'X'],
-        pytest.mark.xfail([], raises=pescador.PescadorError, strict=True)])
-def test_mux_single_tuple(items, mux_class):
-    "Test Exhaustive streamers returning tuples."
-
-    stream = pescador.Streamer(T.md_generator, 2, 50, items=items)
-    reference = list(stream)
-
-    mux = mux_class([stream])
-    estimate = list(mux.tuples(*items))
-
-    assert len(reference) == len(estimate)
-    for r, e in zip(reference, estimate):
-        assert isinstance(e, tuple)
-        for item, value in zip(items, e):
-            assert np.allclose(r[item], value)
-
-
-@pytest.mark.parametrize('mux_class', [
     functools.partial(pescador.mux.Mux, k=1),
     functools.partial(pescador.mux.PoissonMux, k_active=1, rate=256),
     pescador.mux.ShuffledMux,
