@@ -982,8 +982,8 @@ class RoundRobinMux(BaseMux):
             self._new_stream(idx)
 
     def _streamers_available(self):
-        """As we are treating `streamers` as a generator, we can only know
-        if it is available if the streamer exited or not.
+        """Check if any of streams_ is not a None; if they're all None,
+        the streamers have all been exhausted.
         """
         return any([x is not None for x in self.streams_])
 
@@ -1061,7 +1061,7 @@ class RoundRobinMux(BaseMux):
 
 class ChainMux(BaseMux):
     """As in itertools.chain(). Runs the first streamer to exhaustion,
-    then the second, then the third, etc. k=1.
+    then the second, then the third, etc.
 
     Examples
     --------
@@ -1075,7 +1075,7 @@ class ChainMux(BaseMux):
     # Chain restarts from the beginning once exhausted.
     >>> a = pescador.Streamer("abc")
     >>> b = pescador.Streamer("def")
-    >>> mux = pescador.mux.ChainMux([a, b], mode="with_replacement")
+    >>> mux = pescador.mux.ChainMux([a, b], mode="cycle")
     >>> "".join(list(mux.iterate(max_iter=12)))
     "abcdefabcdef"
 
@@ -1097,11 +1097,11 @@ class ChainMux(BaseMux):
         streamers : list of pescador.Streamers OR generator of
             pescador.Streamrers
 
-        mode : ["exhaustive", "with_replacement"]
+        mode : ["exhaustive", "cycle"]
             `exhaustive`
                 `ChainMux will exit after each stream has been exhausted.
 
-            `with_replacement`
+            `cycle`
                 `ChainMux will restart from the beginning after each
                 streamer has been run to exhaustion.
 
@@ -1173,7 +1173,7 @@ class ChainMux(BaseMux):
         ------
         StopIteration
             When the input list or generator of streamers is complete,
-            will raise a StopIteration. If `mode == with_replacement`, it
+            will raise a StopIteration. If `mode == cycle`, it
             will instead restart iterating from the beginning of the sequence.
         '''
         try:
@@ -1182,8 +1182,9 @@ class ChainMux(BaseMux):
             next_stream = six.advance_iterator(self.stream_generator_)
 
         except StopIteration:
-            # If running with with_replacement, restart the chain_streamer_
-            if self.mode == "with_replacement":
+            # If running with cycle, restart the chain_streamer_ after
+            # exhaustion.
+            if self.mode == "cycle":
                 self.stream_generator_ = self.chain_streamer_.iterate()
 
                 # Try again to get the next stream;

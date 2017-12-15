@@ -59,14 +59,14 @@ def test_mux_single_finite(mux_class):
                       mode="single_active"),
     pescador.mux.ShuffledMux,
     functools.partial(pescador.mux.RoundRobinMux, mode="cycle"),
-    functools.partial(pescador.mux.ChainMux, mode="with_replacement"),
+    functools.partial(pescador.mux.ChainMux, mode="cycle"),
 ],
     ids=["DeprecatedMux",
          "PoissonMux-with_replacement",
          "PoissonMux-single_active",
          "ShuffledMux",
          "RoundRobinMux",
-         "ChainMux-with_replacement"
+         "ChainMux-cycle"
          ])
 def test_mux_single_infinite(mux_class):
     """Test a single finite streamer for each mux class which can revive it's
@@ -614,11 +614,11 @@ class TestChainMux:
                                     mode="exhaustive")
         assert "".join(list(mux.iterate())) == "abcdefg"
 
-    def test_chain_mux_with_replacement(self):
+    def test_chain_mux_cycle(self):
         a = pescador.Streamer("abc")
         b = pescador.Streamer("def")
         mux = pescador.mux.ChainMux([a, b],
-                                    mode="with_replacement")
+                                    mode="cycle")
         assert "".join(list(mux.iterate(max_iter=12))) == "abcdefabcdef"
 
     def test_chain_generator_of_streams(self):
