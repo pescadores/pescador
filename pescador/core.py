@@ -7,21 +7,6 @@ import six
 from .exceptions import PescadorError
 
 
-class StreamActivator(object):
-    def __init__(self, streamer):
-        if not isinstance(streamer, Streamer):
-            raise PescadorError("`streamer` must be / inherit from Streamer")
-        self.streamer = streamer
-
-    def __enter__(self, *args, **kwargs):
-        self.streamer.activate()
-        return self
-
-    def __exit__(self, *exc):
-        self.streamer.deactivate()
-        return False
-
-
 class Streamer(object):
     '''A wrapper class for recycling iterables and generator functions, i.e.
     streamers.
@@ -107,6 +92,14 @@ class Streamer(object):
         self.kwargs = kwargs
         self.stream_ = None
 
+    def __enter__(self, *args, **kwargs):
+        self.activate()
+        return self
+
+    def __exit__(self, *exc):
+        self.deactivate()
+        return False
+
     @property
     def active(self):
         """Returns true if the stream is active
@@ -145,7 +138,8 @@ class Streamer(object):
         cycle : force an infinite stream.
 
         '''
-        with StreamActivator(self):
+        # Use self as context manager / calls __enter__() => activate()
+        with self:
             for n, obj in enumerate(self.stream_):
                 if max_iter is not None and n >= max_iter:
                     break

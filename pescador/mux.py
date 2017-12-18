@@ -214,7 +214,8 @@ class Mux(core.Streamer):
         self.weight_norm_ = None
 
     def iterate(self, max_iter=None):
-        with core.StreamActivator(self):
+        # Calls Streamer's __enter__, which calls activate()
+        with self:
 
             # Main sampling loop
             n = 0
@@ -403,7 +404,8 @@ class BaseMux(core.Streamer):
         if max_iter is None:
             max_iter = np.inf
 
-        with core.StreamActivator(self):
+        # Calls Streamer's __enter__, which calls activate()
+        with self:
             # Main sampling loop
             n = 0
 
