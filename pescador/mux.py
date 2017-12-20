@@ -793,7 +793,7 @@ class ShuffledMux(BaseMux):
 
         self.weight_norm_ = np.sum(self.stream_weights_)
 
-    def deactivate(self):
+    def _deactivate(self):
         self.streams_ = None
         self.stream_weights_ = None
         self.stream_counts_ = None
