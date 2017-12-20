@@ -153,7 +153,7 @@ class Mux(core.Streamer):
         self.prune_empty_streams = prune_empty_streams
         self.revive = revive
 
-        self.deactivate()
+        self._deactivate()
 
         if random_state is None:
             self.rng = np.random
@@ -182,7 +182,7 @@ class Mux(core.Streamer):
 
         self.weights /= np.sum(self.weights)
 
-    def activate(self):
+    def _activate(self):
         """Activates a number of streams"""
         self.distribution_ = 1. / self.n_streams * np.ones(self.n_streams)
         self.valid_streams_ = np.ones(self.n_streams, dtype=bool)
@@ -206,7 +206,7 @@ class Mux(core.Streamer):
 
         self.weight_norm_ = np.sum(self.stream_weights_)
 
-    def deactivate(self):
+    def _deactivate(self):
         self.streams_ = None
         self.stream_weights_ = None
         self.stream_counts_ = None
@@ -214,7 +214,8 @@ class Mux(core.Streamer):
         self.weight_norm_ = None
 
     def iterate(self, max_iter=None):
-        with core.StreamActivator(self):
+        # Calls Streamer's __enter__, which calls _activate()
+        with self:
 
             # Main sampling loop
             n = 0
@@ -291,14 +292,6 @@ class Mux(core.Streamer):
         idx : int, [0:n_streams - 1]
             The stream index to replace
         '''
-        if len(self.streamers) != len(self.weights):
-            raise PescadorError('`streamers` must have the same '
-                                'length as `weights`')
-
-        if len(self.streamers) != len(self.distribution_):
-            raise PescadorError('`streamers` must have the same '
-                                'length as `distribution`')
-
         # instantiate
         if self.rate is not None:
             n_stream = 1 + self.rng.poisson(lam=self.rate)
@@ -361,7 +354,7 @@ class BaseMux(core.Streamer):
             raise PescadorError('Invalid random_state={}'.format(random_state))
 
         # Clear state and reset actiave/deactivate params.
-        self.deactivate()
+        self._deactivate()
 
     @property
     def n_streams(self):
@@ -372,7 +365,7 @@ class BaseMux(core.Streamer):
         """
         return len(self.streamers)
 
-    def activate(self):
+    def _activate(self):
         """Activates the mux as a streamer, choosing which substreams to
         select as active.
 
@@ -392,7 +385,7 @@ class BaseMux(core.Streamer):
         """
         raise NotImplementedError()
 
-    def deactivate(self):
+    def _deactivate(self):
         """Reset the Mux state."""
         pass
 
@@ -403,7 +396,8 @@ class BaseMux(core.Streamer):
         if max_iter is None:
             max_iter = np.inf
 
-        with core.StreamActivator(self):
+        # Calls Streamer's __enter__, which calls activate()
+        with self:
             # Main sampling loop
             n = 0
 
@@ -581,7 +575,7 @@ class PoissonMux(BaseMux):
 
         self.weights /= np.sum(self.weights)
 
-    def activate(self):
+    def _activate(self):
         # These do not depend on the number of streams, k
         self.distribution_ = 1. / self.n_streams * np.ones(self.n_streams)
         self.valid_streams_ = np.ones(self.n_streams, dtype=bool)
@@ -613,7 +607,7 @@ class PoissonMux(BaseMux):
 
         self.weight_norm_ = np.sum(self.stream_weights_)
 
-    def deactivate(self):
+    def _deactivate(self):
         self.distribution_ = np.zeros(self.n_streams)
         self.valid_streams_ = np.zeros(self.n_streams)
 
@@ -779,7 +773,7 @@ class ShuffledMux(BaseMux):
 
         self.weights /= np.sum(self.weights)
 
-    def activate(self):
+    def _activate(self):
         """ShuffledMux's activate is similar to PoissonMux,
         but there is no 'k_active', since all the streams are always available.
         """
@@ -799,7 +793,7 @@ class ShuffledMux(BaseMux):
 
         self.weight_norm_ = np.sum(self.stream_weights_)
 
-    def deactivate(self):
+    def _deactivate(self):
         self.streams_ = None
         self.stream_weights_ = None
         self.stream_counts_ = None
@@ -915,10 +909,10 @@ class RoundRobinMux(BaseMux):
         if not self.n_streams:
             raise PescadorError('Cannot mux an empty collection')
 
-    def activate(self):
+    def _activate(self):
         self._setup_streams(False)
 
-    def deactivate(self):
+    def _deactivate(self):
         self.active_index_ = None
         self.streams_ = None
         self.stream_idxs_ = None
@@ -1084,7 +1078,7 @@ class ChainMux(BaseMux):
 
         self.mode = mode
 
-    def activate(self):
+    def _activate(self):
         # Use a streamer to iterate over the input streamers.
         # This allows the streamers to be an iterable, and also easily
         #  be restarted.
@@ -1102,7 +1096,7 @@ class ChainMux(BaseMux):
         # Setup a new streamer at this index.
         self._new_stream()
 
-    def deactivate(self):
+    def _deactivate(self):
         self.chain_streamer_ = None
         self.chain_generator_ = None
         self.streams_ = None

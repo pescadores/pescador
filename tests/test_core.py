@@ -10,11 +10,6 @@ import pescador.core
 import test_utils as T
 
 
-def test_StreamActivator():
-    with pytest.raises(pescador.core.PescadorError):
-        pescador.core.StreamActivator(range)
-
-
 def test_streamer_iterable():
     n_items = 10
     expected = list(range(n_items))

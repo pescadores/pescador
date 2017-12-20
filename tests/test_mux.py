@@ -138,6 +138,22 @@ def test_mux_bad_weights(mux_class):
         mux_class(streamers, weights=np.zeros(5))
 
 
+class TestPoissonMux:
+    @pytest.mark.parametrize(
+        'mode', ['with_replacement', 'single_active', 'exhaustive',
+                 pytest.mark.xfail('foo', raises=pescador.PescadorError),
+                 pytest.mark.xfail(None, raises=pescador.PescadorError)])
+    @pytest.mark.parametrize('n_samples', [10])
+    def test_valid_modes(self, mode, n_samples):
+        """Simply tests the modes to make sure they work."""
+        streamers = [pescador.Streamer(T.infinite_generator)
+                     for _ in range(4)]
+
+        mux = pescador.mux.PoissonMux(streamers, 1, rate=10, mode=mode)
+        output = list(mux.iterate(n_samples))
+        assert len(output) == n_samples
+
+
 @pytest.mark.parametrize('mux_class', [
     pescador.mux.Mux, pescador.mux.PoissonMux],
     ids=["DeprecatedMux",
