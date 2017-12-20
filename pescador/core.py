@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 """Core classes"""
 import collections
+import copy
 import inspect
 import six
 
@@ -92,9 +93,13 @@ class Streamer(object):
         self.kwargs = kwargs
         self.stream_ = None
 
+    def copy(self):
+        return copy.deepcopy(self)
+
     def __enter__(self, *args, **kwargs):
-        self._activate()
-        return self
+        streamer_copy = self.copy()
+        streamer_copy._activate()
+        return streamer_copy
 
     def __exit__(self, *exc):
         self._deactivate()
@@ -139,8 +144,8 @@ class Streamer(object):
 
         '''
         # Use self as context manager / calls __enter__() => _activate()
-        with self:
-            for n, obj in enumerate(self.stream_):
+        with self as active_streamer:
+            for n, obj in enumerate(active_streamer.stream_):
                 if max_iter is not None and n >= max_iter:
                     break
                 yield obj

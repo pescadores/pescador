@@ -143,3 +143,29 @@ def test_streamer_bad_function():
 
     with pytest.raises(pescador.core.PescadorError):
         pescador.Streamer(__fail)
+
+
+def test_streamer_context_copy():
+    """Check that the streamer produced by __enter__/activate
+    is a *different* streamer than the original.
+
+    Note: Do not use the streamer in this way in your code! You
+    can't actually extract samples from the streamer using the context
+    manager externally.
+    """
+    stream_len = 10
+    streamer = pescador.core.Streamer(T.finite_generator, stream_len)
+    assert streamer.stream_ is None
+
+    with streamer as active_stream:
+        assert isinstance(active_stream, pescador.core.Streamer)
+        # Check that the objects are not the same
+        assert active_stream is not streamer
+
+        assert streamer.stream_ is None
+        # The active stream should have been activated.
+        assert active_stream.stream_ is not None
+        assert active_stream.streamer == streamer.streamer
+        assert active_stream.streamer is streamer.streamer
+        assert active_stream.args == streamer.args
+        assert active_stream.kwargs == streamer.kwargs
