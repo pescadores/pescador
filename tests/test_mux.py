@@ -48,7 +48,9 @@ def test_mux_single_finite(mux_class):
 
     mux = mux_class([stream])
     estimate = list(mux)
-    assert reference == estimate
+    assert len(reference) == len(estimate)
+    for i, d in enumerate(estimate):
+        assert d.items() == estimate[i].items()
 
 
 @pytest.mark.parametrize('mux_class', [
