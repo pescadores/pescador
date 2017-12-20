@@ -155,9 +155,7 @@ class Mux(core.Streamer):
 
         self._deactivate()
 
-        if random_state is None:
-            self.rng = np.random
-        elif isinstance(random_state, int):
+        if isinstance(random_state, int) or random_state is None:
             self.rng = np.random.RandomState(seed=random_state)
         elif isinstance(random_state, np.random.RandomState):
             self.rng = random_state
@@ -215,7 +213,7 @@ class Mux(core.Streamer):
 
     def iterate(self, max_iter=None):
         # Calls Streamer's __enter__, which calls _activate()
-        with self:
+        with self as active_mux:
 
             # Main sampling loop
             n = 0
@@ -223,65 +221,74 @@ class Mux(core.Streamer):
             if max_iter is None:
                 max_iter = np.inf
 
-            while n < max_iter and self.weight_norm_ > 0.0:
+            while n < max_iter and active_mux.weight_norm_ > 0.0:
                 # Pick a stream from the active set
-                idx = self.rng.choice(self.k, p=(self.stream_weights_ /
-                                                 self.weight_norm_))
+                idx = active_mux.rng.choice(
+                    active_mux.k,
+                    p=(active_mux.stream_weights_ /
+                       active_mux.weight_norm_))
 
                 # Can we sample from it?
                 try:
                     # Then yield the sample
-                    yield six.advance_iterator(self.streams_[idx])
+                    yield six.advance_iterator(active_mux.streams_[idx])
 
                     # Increment the sample counter
                     n += 1
-                    self.stream_counts_[idx] += 1
+                    active_mux.stream_counts_[idx] += 1
 
                 except StopIteration:
                     # Oops, this one's exhausted.
 
-                    if (self.prune_empty_streams and
-                            self.stream_counts_[idx] == 0):
+                    if (active_mux.prune_empty_streams and
+                            active_mux.stream_counts_[idx] == 0):
                         # If we're disabling empty seeds, see if this stream
                         # produced data; if it didn't, turn it off.
-                        self.distribution_[self.stream_idxs_[idx]] = 0.0
-                        self.valid_streams_[self.stream_idxs_[idx]] = False
+                        active_mux.distribution_[
+                            active_mux.stream_idxs_[idx]] = 0.0
+                        active_mux.valid_streams_[
+                            active_mux.stream_idxs_[idx]] = False
 
-                    if self.revive and not self.with_replacement:
+                    if active_mux.revive and not active_mux.with_replacement:
                         # When this case is hit, the `distribution_` for
                         # this "seed"/"stream" is 0.0, because it got set
                         # to when we activated it. (in `_new_stream`)
 
                         # Since revive mode is on, we set it to the max
                         # current probability to enable it to be used again.
-                        if self.distribution_.any():
-                            self.distribution_[self.stream_idxs_[idx]] = (
-                                np.max(self.distribution_))
+                        if active_mux.distribution_.any():
+                            active_mux.distribution_[
+                                active_mux.stream_idxs_[idx]] = (
+                                np.max(active_mux.distribution_))
                         else:
-                            self.distribution_[self.stream_idxs_[idx]] = 1.0
+                            active_mux.distribution_[
+                                active_mux.stream_idxs_[idx]] = 1.0
 
-                    if (self.distribution_ > 0).any():
+                    if (active_mux.distribution_ > 0).any():
                         # Replace it and move on if there are still seeds
                         # in the pool.
-                        self.distribution_[:] /= np.sum(self.distribution_)
+                        active_mux.distribution_[:] /= np.sum(
+                            active_mux.distribution_)
 
-                        self.stream_idxs_[idx] = self.rng.choice(
-                            self.n_streams, p=self.distribution_)
+                        active_mux.stream_idxs_[idx] = active_mux.rng.choice(
+                            active_mux.n_streams, p=active_mux.distribution_)
 
-                        self.streams_[idx], self.stream_weights_[idx] = (
-                            self._new_stream(self.stream_idxs_[idx]))
+                        active_mux.streams_[idx], active_mux.stream_weights_[
+                            idx] = (active_mux._new_stream(
+                                active_mux.stream_idxs_[idx]))
 
-                        self.stream_counts_[idx] = 0
+                        active_mux.stream_counts_[idx] = 0
 
                     else:
                         # Otherwise, this one's exhausted.
                         # Set its probability to 0
-                        self.stream_weights_[idx] = 0.0
+                        active_mux.stream_weights_[idx] = 0.0
 
-                    self.weight_norm_ = np.sum(self.stream_weights_)
+                    active_mux.weight_norm_ = np.sum(
+                        active_mux.stream_weights_)
 
                 # If everything has been pruned, kill the while loop
-                if not self.valid_streams_.any():
+                if not active_mux.valid_streams_.any():
                     break
 
     def _new_stream(self, idx):
@@ -344,9 +351,7 @@ class BaseMux(core.Streamer):
         """
         self.streamers = streamers
 
-        if random_state is None:
-            self.rng = np.random
-        elif isinstance(random_state, int):
+        if isinstance(random_state, int) or random_state is None:
             self.rng = np.random.RandomState(seed=random_state)
         elif isinstance(random_state, np.random.RandomState):
             self.rng = random_state
@@ -397,31 +402,31 @@ class BaseMux(core.Streamer):
             max_iter = np.inf
 
         # Calls Streamer's __enter__, which calls activate()
-        with self:
+        with self as active_mux:
             # Main sampling loop
             n = 0
 
-            while n < max_iter and self._streamers_available():
+            while n < max_iter and active_mux._streamers_available():
                 # Pick a stream from the active set
-                idx = self._next_sample_index()
+                idx = active_mux._next_sample_index()
 
                 # Can we sample from it?
                 try:
                     # Then yield the sample
-                    yield six.advance_iterator(self.streams_[idx])
+                    yield six.advance_iterator(active_mux.streams_[idx])
 
                     # Increment the sample counter
                     n += 1
-                    self.stream_counts_[idx] += 1
+                    active_mux.stream_counts_[idx] += 1
 
                 except StopIteration:
                     # Oops, this stream is exhausted.
 
                     # Call child-class exhausted-stream behavior
-                    self._on_stream_exhausted(idx)
+                    active_mux._on_stream_exhausted(idx)
 
                     # Setup a new stream for this index
-                    self._replace_stream(idx)
+                    active_mux._replace_stream(idx)
 
     def _streamers_available(self):
         "Override this to modify the behavior of the main iter loop condition."

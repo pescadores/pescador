@@ -155,7 +155,8 @@ class TestPoissonMux:
 
 
 @pytest.mark.parametrize('mux_class', [
-    pescador.mux.Mux, pescador.mux.PoissonMux],
+    functools.partial(pescador.mux.Mux, with_replacement=True),
+    functools.partial(pescador.mux.PoissonMux, mode='with_replacement')],
     ids=["DeprecatedMux",
          "PoissonMux"])
 class TestPoissonMux_WithReplacement:
@@ -182,6 +183,25 @@ class TestPoissonMux_WithReplacement:
 
         # Make sure we get the right number of samples
         assert len(estimate) == n_samples
+
+    @pytest.mark.parametrize('n_samples', [10, 20, 80])
+    @pytest.mark.parametrize('rate', [1.0, 2.0, 8.0])
+    @pytest.mark.parametrize('random_state', [100])
+    def test_mux_k_greater_n(self, mux_class, n_samples, rate, random_state):
+        """Test that replacement works correctly. See #112:
+        https://github.com/pescadores/pescador/issues/112
+
+        When streamers are activated, they should make copies of their
+        underlying streamers, and this should work. Before the bug
+        was fixed, this would fail. Note; this doesn't test underlying
+        state at all, however.
+        """
+        a = pescador.Streamer('a')
+        b = pescador.Streamer('b')
+
+        mux = mux_class([a, b], 6, rate, random_state=random_state)
+        result = list(mux.iterate(n_samples))
+        assert len(result) == n_samples
 
 
 class TestPoissonMux_Exhaustive:
