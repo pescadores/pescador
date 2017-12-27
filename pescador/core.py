@@ -88,9 +88,18 @@ class Streamer(object):
             raise PescadorError('`streamer` must be an iterable or callable '
                                 'function that returns an iterable object.')
 
+        # The iterable or callable to stream from
         self.streamer = streamer
+        # Args and kwargs are passed to an instantiated function
         self.args = args
         self.kwargs = kwargs
+
+        # When a stream is activated, a copy of this streamer is made.
+        # The number of copies is tracked with active_count_.
+        self.active_count_ = 0
+
+        # Stream points to the activated generator. This is only used
+        # in the copy created.
         self.stream_ = None
 
     def copy(self):
@@ -99,18 +108,30 @@ class Streamer(object):
     def __enter__(self, *args, **kwargs):
         streamer_copy = self.copy()
         streamer_copy._activate()
+
+        # Increment the count of active streams.
+        self.active_count_ += 1
+
         return streamer_copy
 
     def __exit__(self, *exc):
         self._deactivate()
+
+        # Decrement the count of active streams.
+        self.active_count_ -= 1
+
+        if self.active_count_ < 0:
+            raise PescadorError("Active stream count passed below 0 for {}"
+                                .format(self))
+
         return False
 
     @property
     def active(self):
         """Returns true if the stream is active
-        (ie a StopIteration) has not been thrown.
+        (ie there are still open / existing streams)
         """
-        return self.stream_ is not None
+        return self.active_count_
 
     def _activate(self):
         """Activates the stream."""

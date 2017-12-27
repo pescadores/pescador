@@ -156,8 +156,14 @@ def test_streamer_context_copy():
     stream_len = 10
     streamer = pescador.core.Streamer(T.finite_generator, stream_len)
     assert streamer.stream_ is None
+    assert streamer.active == 0
 
     with streamer as active_stream:
+        # the original streamer should be makred active now
+        assert streamer.active == 1
+        # The reference shouldn't be active
+        assert active_stream.active == 0
+
         assert isinstance(active_stream, pescador.core.Streamer)
         # Check that the objects are not the same
         assert active_stream is not streamer
@@ -166,6 +172,39 @@ def test_streamer_context_copy():
         # The active stream should have been activated.
         assert active_stream.stream_ is not None
         assert active_stream.streamer == streamer.streamer
-        assert active_stream.streamer is streamer.streamer
         assert active_stream.args == streamer.args
         assert active_stream.kwargs == streamer.kwargs
+
+    assert streamer.active == 0
+
+
+def test_streamer_context_multiple_copies():
+    """Check that a streamer produced by __enter__/activate
+    multiple times yields streamers *different* than the original.
+    """
+    stream_len = 10
+    streamer = pescador.core.Streamer(T.finite_generator, stream_len)
+    assert streamer.stream_ is None
+    assert streamer.active == 0
+
+    # Active the streamer multiple times with iterate
+    gen1 = streamer.iterate(5)
+    gen2 = streamer.iterate(7)
+
+    # No streamers should be active until we actually start the generators
+    assert streamer.active == 0
+
+    # grab one sample each to make sure we've actually started the generator
+    _ = next(gen1)
+    _ = next(gen2)
+    assert streamer.active == 2
+
+    # the first one should die after four more samples
+    result1 = list(gen1)
+    assert len(result1) == 4
+    assert streamer.active == 1
+
+    # The second should die after 6
+    result2 = list(gen2)
+    assert len(result2) == 6
+    assert streamer.active == 0
