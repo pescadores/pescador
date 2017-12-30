@@ -180,6 +180,11 @@ class Mux(core.Streamer):
 
         self.weights /= np.sum(self.weights)
 
+        # When a stream is activated, a copy of this mux is made via
+        # the core.Streamer context manager.
+        # The number of copies is tracked with active_count_.
+        self.active_count_ = 0
+
     def _activate(self):
         """Activates a number of streams"""
         self.distribution_ = 1. / self.n_streams * np.ones(self.n_streams)
@@ -360,6 +365,11 @@ class BaseMux(core.Streamer):
 
         # Clear state and reset actiave/deactivate params.
         self._deactivate()
+
+        # When a stream is activated, a copy of this mux is made via
+        # the core.Streamer context manager.
+        # The number of copies is tracked with active_count_.
+        self.active_count_ = 0
 
     @property
     def n_streams(self):
@@ -1078,8 +1088,14 @@ class ChainMux(BaseMux):
             If None, the random number generator is the RandomState instance
             used by np.random.
         """
+        # if inspect.isgeneratorfunction(streamers):
+        #     streamers = core.Streamer(streamers)
+
         super(ChainMux, self).__init__(
             streamers, random_state=random_state)
+
+        if mode not in ["exhaustive", "cycle"]:
+            raise PescadorError("Invalid ChainMux mode '{}'".format(mode))
 
         self.mode = mode
 

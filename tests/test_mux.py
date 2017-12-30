@@ -596,8 +596,50 @@ class TestRoundRobinMux:
         assert counts['b'] == 6
         assert counts['c'] == 3
 
+    def test_rr_multiple_copies(self):
+        ab = pescador.Streamer('ab')
+        cde = pescador.Streamer('cde')
+        fghi = pescador.Streamer('fghi')
+        mux = pescador.mux.RoundRobinMux([ab, cde, fghi], 'exhaustive')
+
+        gen1 = mux.iterate(3)
+        gen2 = mux.iterate()  # n == 9
+
+        # No streamers should be active until we actually start the generators
+        assert mux.active == 0
+
+        # grab one sample each to make sure we've actually started the
+        # generator
+        _ = next(gen1)
+        _ = next(gen2)
+        assert mux.active == 2
+
+        # the first one should die after two more samples
+        result1 = list(gen1)
+        assert "".join(result1) == "cf"
+        assert len(result1) == 2
+        assert mux.active == 1
+
+        # The second should die after 6
+        result2 = list(gen2)
+        assert "".join(result2) == "cfbdgehi"
+        assert len(result2) == 8
+        assert mux.active == 0
+
 
 class TestChainMux:
+    @pytest.mark.parametrize('mode', [
+        "exhaustive", "cycle",
+        pytest.mark.xfail("foo")
+    ])
+    def test_modes(self, mode):
+        a = pescador.Streamer("abc")
+        b = pescador.Streamer("def")
+        mux = pescador.mux.ChainMux([a, b],
+                                    mode="exhaustive")
+        result = list(mux.iterate())
+        assert len(result) > 0
+
     def test_chain_mux_exhaustive(self):
         a = pescador.Streamer("abc")
         b = pescador.Streamer("def")
@@ -628,7 +670,10 @@ class TestChainMux:
                                     mode="cycle")
         assert "".join(list(mux.iterate(max_iter=12))) == "abcdefabcdef"
 
-    def test_chain_generator_of_streams(self):
+    def test_chain_streamer_of_streams(self):
+        """If you want to pass parameters to your generator function,
+        you have to do it with a streamer.
+        """
         def stream_gen(n, source_letters):
             """
             Parameters
@@ -640,24 +685,25 @@ class TestChainMux:
             for char in source_letters:
                 yield pescador.Streamer(char * n)
 
-        streamers = stream_gen(10, "abcde")
-
+        streamers = pescador.Streamer(stream_gen, 10, "abcde")
         mux = pescador.mux.ChainMux(streamers, mode="exhaustive")
         result = "".join(list(mux.iterate()))
         assert len(result) == 50
         assert result == "{}{}{}{}{}".format(
             'a' * 10, 'b' * 10, 'c' * 10, 'd' * 10, 'e' * 10)
 
-    def test_chain_empty_generator_of_streams(self):
+    def test_chain_empty_streamer_of_streams(self):
         def stream_gen():
             return iter(())
+        # stream_gen doesn't contain a yield statement, so we have to
+        # create the generator here
         streamers = stream_gen()
         mux = pescador.mux.ChainMux(streamers, mode="exhaustive")
         result = "".join(list(mux.iterate()))
         assert len(result) == 0
         assert result == ''
 
-    def test_chain_generator_with_empty_streams(self):
+    def test_chain_generatorfn_with_empty_streams(self):
         def stream_gen():
             things_to_generate = [
                 "aa", [], "bb", [], [], [], "cccc"
@@ -665,9 +711,41 @@ class TestChainMux:
             for item in things_to_generate:
                 yield pescador.Streamer(item)
 
-        streamers = stream_gen()
-
-        mux = pescador.mux.ChainMux(streamers, mode="exhaustive")
+        mux = pescador.mux.ChainMux(stream_gen, mode="exhaustive")
         result = "".join(list(mux.iterate()))
         assert len(result) == 8
         assert result == "aabbcccc"
+
+    def test_chain_generator_with_multiple_copies(self):
+        def stream_gen():
+            things_to_generate = [
+                "a", "bb", [], "ccc"
+            ]
+            for item in things_to_generate:
+                yield pescador.Streamer(item)
+
+        mux = pescador.mux.ChainMux(stream_gen, mode="exhaustive")
+
+        gen1 = mux.iterate(3)
+        gen2 = mux.iterate()  # n == 6
+
+        # No streamers should be active until we actually start the generators
+        assert mux.active == 0
+
+        # grab one sample each to make sure we've actually started the
+        # generator
+        _ = next(gen1)
+        _ = next(gen2)
+        assert mux.active == 2
+
+        # the first one should die after two more samples
+        result1 = list(gen1)
+        assert "".join(result1) == "bb"
+        assert len(result1) == 2
+        assert mux.active == 1
+
+        # The second should die after 6
+        result2 = list(gen2)
+        assert "".join(result2) == "bbccc"
+        assert len(result2) == 5
+        assert mux.active == 0
