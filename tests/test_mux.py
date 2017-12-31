@@ -79,7 +79,13 @@ def test_mux_single_infinite(mux_class):
 
     mux = mux_class([stream])
     estimate = list(mux.iterate(max_iter=100))
-    assert (reference + reference) == estimate
+
+    assert len(estimate) == 2 * len(reference)
+    reference = (reference + reference)
+    for i in range(len(reference)):
+        assert set(reference[i].keys()) == set(estimate[i].keys())
+        for key in reference[i].keys():
+            assert np.all(reference[i][key] == estimate[i][key])
 
 
 @pytest.mark.parametrize('mux_class', [
@@ -222,9 +228,9 @@ class TestPoissonMux_Exhaustive:
                         weights=[1.0, weight])
         estimate = list(mux)
         if weight == 0.0:
-            assert reference == estimate
+            assert T._eq_list_of_dicts(reference, estimate)
         else:
-            assert reference != estimate
+            assert not T._eq_list_of_dicts(reference, estimate)
 
     @pytest.mark.parametrize('mux_class', [
         functools.partial(pescador.mux.Mux, with_replacement=False),
@@ -241,7 +247,7 @@ class TestPoissonMux_Exhaustive:
         mux = mux_class([stream, stream2], 2, rate=256,
                         weights=weight)
         estimate = list(mux)
-        assert (reference + noise) == estimate
+        assert T._eq_list_of_dicts(reference + noise, estimate)
 
     @pytest.mark.parametrize('mux_class', [
         functools.partial(pescador.mux.Mux, k=2, with_replacement=False,
@@ -515,15 +521,17 @@ class TestShuffledMux:
         for i, sample in enumerate(mux.iterate(30)):
             samples.append(sample)
 
-            assert mux.streams_ is not None
-            assert mux.weight_norm_ > 0
+            assert mux.active > 0
+            # TODO: redesign this test so
+            # that we can introspect the inards of the mux.
+            # assert mux.weight_norm_ > 0
 
-            # Check to make sure that the empty streams got their probabilities
-            # set to 0 when they didn't produce any data.
-            if i == 29:
-                assert mux.stream_weights_[1] == 0
-                assert mux.stream_weights_[3] == 0
-                assert mux.stream_weights_[4] == 0
+            # # Check to make sure that the empty streams got their probabilities
+            # # set to 0 when they didn't produce any data.
+            # if i == 29:
+            #     assert mux.stream_weights_[1] == 0
+            #     assert mux.stream_weights_[3] == 0
+            #     assert mux.stream_weights_[4] == 0
 
         assert len(samples) == 30
 
