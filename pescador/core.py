@@ -106,23 +106,33 @@ class Streamer(object):
         return copy.deepcopy(self)
 
     def __enter__(self, *args, **kwargs):
-        streamer_copy = self.copy()
-        streamer_copy._activate()
+        # If this is the base / original streamer, create a copy and return
+        # it
+        if not self.is_activated_copy:
+            streamer_copy = self.copy()
+            streamer_copy._activate()
 
-        # Increment the count of active streams.
-        self.active_count_ += 1
+            # Increment the count of active streams.
+            self.active_count_ += 1
+
+        # However, if this is an activated streamer, then it is a copy,
+        #  so just return self.
+        else:
+            streamer_copy = self
 
         return streamer_copy
 
     def __exit__(self, *exc):
-        self._deactivate()
+        if not self.is_activated_copy:
 
-        # Decrement the count of active streams.
-        self.active_count_ -= 1
+            self._deactivate()
 
-        if self.active_count_ < 0:
-            raise PescadorError("Active stream count passed below 0 for {}"
-                                .format(self))
+            # Decrement the count of active streams.
+            self.active_count_ -= 1
+
+            if self.active_count_ < 0:
+                raise PescadorError("Active stream count passed below 0 for {}"
+                                    .format(self))
 
         return False
 
@@ -132,6 +142,13 @@ class Streamer(object):
         (ie there are still open / existing streams)
         """
         return self.active_count_
+
+    @property
+    def is_activated_copy(self):
+        """is_active is true if this object is a copy of the original Streamer
+        *and* has been activated.
+        """
+        return self.stream_ is not None
 
     def _activate(self):
         """Activates the stream."""

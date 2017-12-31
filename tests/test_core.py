@@ -175,6 +175,18 @@ def test_streamer_context_copy():
         assert active_stream.args == streamer.args
         assert active_stream.kwargs == streamer.kwargs
 
+        assert active_stream.is_activated_copy is True
+
+        # Now, we should be able to iterate on active_stream without it
+        # causing another copy.
+        with active_stream as test_stream:
+            assert active_stream is test_stream
+            assert streamer.active == 1
+
+        # Exhaust the stream once.
+        query = list(active_stream)
+        assert stream_len == len(query)
+
     assert streamer.active == 0
 
 

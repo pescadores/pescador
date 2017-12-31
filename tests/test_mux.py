@@ -572,22 +572,29 @@ class TestShuffledMux:
         mux = pescador.mux.ShuffledMux(streamers, random_state=1234)
 
         samples = []
-        # Iterate over the list manually so we can introspect the state
-        # in the middle.
-        for i, sample in enumerate(mux.iterate(30)):
-            samples.append(sample)
+        # We can't look at the state and iterate on a mux.
+        with mux as active_mux:
+            # The original streamer should be active
+            assert mux.active == 1
+            # the copied mux shouldn't be
+            assert active_mux.active == 0
 
-            assert mux.active > 0
-            # TODO: redesign this test so
-            # that we can introspect the inards of the mux.
-            # assert mux.weight_norm_ > 0
+            assert isinstance(active_mux, pescador.mux.ShuffledMux)
 
-            # # Check to make sure that the empty streams got their probabilities
-            # # set to 0 when they didn't produce any data.
-            # if i == 29:
-            #     assert mux.stream_weights_[1] == 0
-            #     assert mux.stream_weights_[3] == 0
-            #     assert mux.stream_weights_[4] == 0
+            assert active_mux.streams_ is not None and (
+                len(active_mux.streams_) == 6)
+            assert len(active_mux.stream_weights_) == 6
+            assert len(active_mux.stream_counts_) == 6
+            assert (active_mux.stream_counts_ == 0).all()
+
+            for i, s in enumerate(active_mux.iterate(30)):
+                samples.append(s)
+                # Check to make sure that the empty streams got their
+                # probabilities set to 0 when they didn't produce any data.
+                if i == 29:
+                    assert active_mux.stream_weights_[1] == 0
+                    assert active_mux.stream_weights_[3] == 0
+                    assert active_mux.stream_weights_[4] == 0
 
         assert len(samples) == 30
 
@@ -758,11 +765,11 @@ class TestChainMux:
 
     def test_chain_empty_streamer_of_streams(self):
         def stream_gen():
-            return iter(())
-        # stream_gen doesn't contain a yield statement, so we have to
-        # create the generator here
-        streamers = stream_gen()
-        mux = pescador.mux.ChainMux(streamers, mode="exhaustive")
+            # Yield causes it to be a generator, but the return exits first,
+            # creating an 'empty' generator.
+            return
+            yield
+        mux = pescador.mux.ChainMux(stream_gen, mode="exhaustive")
         result = "".join(list(mux.iterate()))
         assert len(result) == 0
         assert result == ''

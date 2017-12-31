@@ -185,6 +185,13 @@ class Mux(core.Streamer):
         # The number of copies is tracked with active_count_.
         self.active_count_ = 0
 
+    @property
+    def is_activated_copy(self):
+        """is_active is true if this object is a copy of the original Streamer
+        *and* has been activated.
+        """
+        return self.streams_ is not None
+
     def _activate(self):
         """Activates a number of streams"""
         self.distribution_ = 1. / self.n_streams * np.ones(self.n_streams)
@@ -370,6 +377,13 @@ class BaseMux(core.Streamer):
         # the core.Streamer context manager.
         # The number of copies is tracked with active_count_.
         self.active_count_ = 0
+
+    @property
+    def is_activated_copy(self):
+        """is_active is true if this object is a copy of the original Streamer
+        *and* has been activated.
+        """
+        return self.streams_ is not None
 
     @property
     def n_streams(self):
@@ -808,7 +822,7 @@ class ShuffledMux(BaseMux):
 
         self.weight_norm_ = np.sum(self.stream_weights_)
 
-    def deactivate(self):
+    def _deactivate(self):
         self.streams_ = None
         self.stream_weights_ = None
         self.stream_counts_ = None
