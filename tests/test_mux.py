@@ -146,6 +146,32 @@ def test_mux_bad_weights(mux_class):
         mux_class(streamers, weights=np.zeros(5))
 
 
+def test_mux_of_mux():
+    """Make sure that mux activate still works correctly when a mux
+    is passed a mux.
+    """
+    a = pescador.Streamer('aaaaaaaaaa')
+    b = pescador.Streamer('bbbbbbbb')
+    c = pescador.Streamer('cccccc')
+    d = pescador.Streamer('dddd')
+    e = pescador.Streamer('ee')
+    f = pescador.Streamer('fff')
+    g = pescador.Streamer('gggg')
+    h = pescador.Streamer('hhhhh')
+
+    base1 = pescador.mux.ShuffledMux([a, b], random_state=1)
+    base2 = pescador.mux.ShuffledMux([c, d, e], random_state=10)
+    base3 = pescador.mux.ShuffledMux([f, g, h], random_state=100)
+    train_mux = pescador.mux.PoissonMux(
+        [base1, base2, base3], k_active=2, rate=3, mode="with_replacement",
+        random_state=123)
+
+    train_result = list(train_mux.iterate(100))
+    sample_counts = collections.Counter(train_result)
+    assert set(sample_counts.keys()) == set([
+        'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'])
+
+
 class TestPoissonMux:
     @pytest.mark.parametrize(
         'mode', ['with_replacement', 'single_active', 'exhaustive',
@@ -543,7 +569,7 @@ class TestShuffledMux:
     def test_shuffled_mux_weights(self):
         "When sampling with weights, do the statistics line up?"
         a = pescador.Streamer(_cycle, 'a')
-        b = pescador.Streamer(_cycle, 'b')
+        b = pescador.Streamer(_cycle, 'b') 
         c = pescador.Streamer(_cycle, 'c')
 
         weights = [.6, .3, .1]
