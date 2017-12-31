@@ -187,6 +187,36 @@ class TestPoissonMux:
         output = list(mux.iterate(n_samples))
         assert len(output) == n_samples
 
+    def test_multiple_copies(self):
+        """Check that the Mux class can be activated multiple times successfully.
+        """
+        ab = pescador.Streamer('ab')
+        cde = pescador.Streamer('cde')
+        fghi = pescador.Streamer('fghi')
+        mux = pescador.mux.PoissonMux([ab, cde, fghi], k_active=5, rate=2)
+
+        gen1 = mux.iterate(6)
+        gen2 = mux.iterate(8)
+
+        # No streamers should be active until we actually start the generators
+        assert mux.active == 0
+
+        # grab one sample each to make sure we've actually started the
+        # generator
+        _ = next(gen1)
+        _ = next(gen2)
+        assert mux.active == 2
+
+        # the first one should die after 5 more samples
+        result1 = list(gen1)
+        assert len(result1) == 5
+        assert mux.active == 1
+
+        # The second should die after 7
+        result2 = list(gen2)
+        assert len(result2) == 7
+        assert mux.active == 0
+
 
 @pytest.mark.parametrize('mux_class', [
     functools.partial(pescador.mux.Mux, with_replacement=True),
