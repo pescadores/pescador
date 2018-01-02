@@ -52,6 +52,7 @@ This module defines the following Mux types:
     but is deprecated.
 '''
 from warnings import warn
+import copy
 import six
 import numpy as np
 
@@ -155,7 +156,9 @@ class Mux(core.Streamer):
 
         self._deactivate()
 
-        if isinstance(random_state, int) or random_state is None:
+        if random_state is None:
+            self.rng = np.random
+        elif isinstance(random_state, int):
             self.rng = np.random.RandomState(seed=random_state)
         elif isinstance(random_state, np.random.RandomState):
             self.rng = random_state
@@ -184,6 +187,22 @@ class Mux(core.Streamer):
         # the core.Streamer context manager.
         # The number of copies is tracked with active_count_.
         self.active_count_ = 0
+
+    def __deepcopy__(self, memo):
+        "This override is required to handle copying the random_state"
+        cls = self.__class__
+        copy_result = cls.__new__(cls)
+        memo[id(self)] = copy_result
+        for k, v in six.iteritems(self.__dict__):
+            # You can't deepcopy a module! If rng is np.random, just pass
+            # it over without trying.
+            if k == 'rng' and v == np.random:
+                setattr(copy_result, k, v)
+            # In all other cases, assume a deepcopy is the right choice.
+            else:
+                setattr(copy_result, k, copy.deepcopy(v, memo))
+
+        return copy_result
 
     @property
     def is_activated_copy(self):
@@ -363,7 +382,10 @@ class BaseMux(core.Streamer):
         """
         self.streamers = streamers
 
-        if isinstance(random_state, int) or random_state is None:
+        # If random_state is none, use the 'global' random_state.
+        if random_state is None:
+            self.rng = np.random
+        elif isinstance(random_state, int):
             self.rng = np.random.RandomState(seed=random_state)
         elif isinstance(random_state, np.random.RandomState):
             self.rng = random_state
@@ -377,6 +399,22 @@ class BaseMux(core.Streamer):
         # the core.Streamer context manager.
         # The number of copies is tracked with active_count_.
         self.active_count_ = 0
+
+    def __deepcopy__(self, memo):
+        "This override is required to handle copying the random_state"
+        cls = self.__class__
+        copy_result = cls.__new__(cls)
+        memo[id(self)] = copy_result
+        for k, v in six.iteritems(self.__dict__):
+            # You can't deepcopy a module! If rng is np.random, just pass
+            # it over without trying.
+            if k == 'rng' and v == np.random:
+                setattr(copy_result, k, v)
+            # In all other cases, assume a deepcopy is the right choice.
+            else:
+                setattr(copy_result, k, copy.deepcopy(v, memo))
+
+        return copy_result
 
     @property
     def is_activated_copy(self):

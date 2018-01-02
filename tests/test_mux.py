@@ -3,7 +3,7 @@ from __future__ import division
 
 import pytest
 
-
+import copy
 import collections
 import functools
 import itertools
@@ -170,6 +170,45 @@ def test_mux_of_mux():
     sample_counts = collections.Counter(train_result)
     assert set(sample_counts.keys()) == set([
         'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'])
+
+
+class TestCopyMux:
+    @pytest.mark.parametrize('mux_class', [
+        functools.partial(pescador.mux.Mux, k=10, rate=3,
+                          with_replacement=True),
+        functools.partial(pescador.mux.PoissonMux, k_active=10, rate=3,
+                          mode='with_replacement'),
+        pescador.mux.ShuffledMux,
+        pescador.mux.RoundRobinMux,
+        pescador.mux.ChainMux,
+    ],
+        ids=[
+        "DeprecatedMux",
+        "PoissonMux",
+        "ShuffledMux",
+        "RoundRobinMux",
+        "ChainMux"
+    ])
+    @pytest.mark.parametrize('random_state', [
+        None, 1, np.random.RandomState(10)])
+    @pytest.mark.xfail
+    def test_deepcopy__randomseed(self, mux_class, random_state):
+        n_streams = 10
+        streamers = [pescador.Streamer(T.infinite_generator)
+                     for _ in range(n_streams)]
+
+        mux = mux_class(streamers, random_state=random_state)
+
+        copy_mux = copy.deepcopy(mux)
+        assert mux.streamers is not copy_mux.streamers
+        assert len(mux.streamers) == len(copy_mux.streamers)
+
+        if random_state is None:
+            assert mux.rng == np.random
+            assert copy_mux.rng == np.random
+        else:
+            assert mux.rng is not copy_mux.rng
+            assert mux.rng == copy_mux.rng
 
 
 class TestPoissonMux:

@@ -102,14 +102,26 @@ class Streamer(object):
         # in the copy created.
         self.stream_ = None
 
-    def copy(self):
-        return copy.deepcopy(self)
+    def __copy__(self):
+        cls = self.__class__
+        copy_result = cls.__new__(cls)
+        copy_result.__dict__.update(self.__dict__)
+        return copy_result
+
+    def __deepcopy__(self, memo):
+        cls = self.__class__
+        copy_result = cls.__new__(cls)
+        memo[id(self)] = copy_result
+        for k, v in six.iteritems(self.__dict__):
+            setattr(copy_result, k, copy.deepcopy(v, memo))
+
+        return copy_result
 
     def __enter__(self, *args, **kwargs):
         # If this is the base / original streamer, create a copy and return
         # it
         if not self.is_activated_copy:
-            streamer_copy = self.copy()
+            streamer_copy = copy.deepcopy(self)
             streamer_copy._activate()
 
             # Increment the count of active streams.

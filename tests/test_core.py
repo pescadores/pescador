@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 '''Test the streamer object for reusable iterators'''
 from __future__ import print_function
+import copy
 import pytest
 
 import warnings
@@ -143,6 +144,44 @@ def test_streamer_bad_function():
 
     with pytest.raises(pescador.core.PescadorError):
         pescador.Streamer(__fail)
+
+
+def test_streamer_copy():
+    stream_len = 10
+    streamer = pescador.core.Streamer(T.finite_generator, stream_len)
+
+    s_copy = copy.copy(streamer)
+    assert streamer is not s_copy
+    assert streamer.streamer is s_copy.streamer
+    assert streamer.args is s_copy.args
+    assert streamer.kwargs is s_copy.kwargs
+    assert streamer.active_count_ == s_copy.active_count_
+    assert streamer.stream_ is s_copy.stream_
+
+
+def test_streamer_deepcopy():
+    stream_list = list(range(100))
+    stream_len = (10,)
+    kwargs = dict(a=10, b=20, c=30)
+
+    # As stream_list is not callable, the streamer won't actually pass the
+    # args or kwargs to it, but we can still check if they got copied!
+    streamer = pescador.core.Streamer(stream_list,
+                                      *stream_len, **kwargs)
+
+    s_copy = copy.deepcopy(streamer)
+    assert streamer is not s_copy
+    assert streamer.streamer is not s_copy.streamer
+    # args is a tuple and is immutable, so it won't actually get deepcopied.
+    assert streamer.args is s_copy.args
+    # But the kwargs dict will get a correct deepcopy.
+    assert streamer.kwargs is not s_copy.kwargs
+
+    assert streamer.streamer == s_copy.streamer
+    assert streamer.args == s_copy.args
+    assert streamer.kwargs == s_copy.kwargs
+    assert streamer.active_count_ == s_copy.active_count_
+    assert streamer.stream_ == s_copy.stream_
 
 
 def test_streamer_context_copy():
