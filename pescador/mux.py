@@ -189,7 +189,11 @@ class Mux(core.Streamer):
         self.active_count_ = 0
 
     def __deepcopy__(self, memo):
-        "This override is required to handle copying the random_state"
+        """This override is required to handle copying the random_state:
+        when using `random_state=None`, the global state is used;
+        modules are not 'deepcopy-able', so we have to make a special case for
+        it.
+        """
         cls = self.__class__
         copy_result = cls.__new__(cls)
         memo[id(self)] = copy_result
@@ -401,7 +405,11 @@ class BaseMux(core.Streamer):
         self.active_count_ = 0
 
     def __deepcopy__(self, memo):
-        "This override is required to handle copying the random_state"
+        """This override is required to handle copying the random_state:
+        when using `random_state=None`, the global state is used;
+        modules are not 'deepcopy-able', so we have to make a special case for
+        it.
+        """
         cls = self.__class__
         copy_result = cls.__new__(cls)
         memo[id(self)] = copy_result

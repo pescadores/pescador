@@ -54,11 +54,11 @@ def md_generator(dimension, n, size=2, items='X'):
                for j, item in enumerate(items)}
 
 
-def infinite_generator(size=2):
+def infinite_generator(size=2, offset=0):
 
     i = 0
     while True:
-        yield {'X': np.tile(np.array([[i]]), (size, 1))}
+        yield {'X': np.tile(np.array([[i]]), (size, 1)) + offset}
         i = i + 1
 
 

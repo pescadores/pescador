@@ -191,11 +191,13 @@ class TestCopyMux:
     ])
     @pytest.mark.parametrize('random_state', [
         None, 1, np.random.RandomState(10)])
-    @pytest.mark.xfail
     def test_deepcopy__randomseed(self, mux_class, random_state):
         n_streams = 10
-        streamers = [pescador.Streamer(T.infinite_generator)
-                     for _ in range(n_streams)]
+        # We use an offset to make sure each stream produces unique values.
+        # That way, we can tell when the mux copies have returned
+        # the same streamer or not.
+        streamers = [pescador.Streamer(T.infinite_generator, offset=i * 10)
+                     for i in range(n_streams)]
 
         mux = mux_class(streamers, random_state=random_state)
 
@@ -208,7 +210,20 @@ class TestCopyMux:
             assert copy_mux.rng == np.random
         else:
             assert mux.rng is not copy_mux.rng
-            assert mux.rng == copy_mux.rng
+
+            s1 = mux.rng.get_state()
+            s2 = copy_mux.rng.get_state()
+            # Only the second parameter in the state tuple is useful to
+            # compare.
+            assert np.allclose(s1[1], s2[1])
+
+            # Using global state (random_state=None), we can't necessarily
+            # guarantee that these will be the same withour resetting the seed,
+            # but here with the local random state, we can.
+            sample1 = list(mux.iterate(30))
+            sample2 = list(copy_mux.iterate(30))
+
+            assert T._eq_list_of_dicts(sample1, sample2)
 
 
 class TestPoissonMux:
