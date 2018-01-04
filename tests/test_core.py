@@ -241,6 +241,7 @@ def test_streamer_context_multiple_copies():
     # Active the streamer multiple times with iterate
     gen1 = streamer.iterate(5)
     gen2 = streamer.iterate(7)
+    assert id(gen1) != id(gen2)
 
     # No streamers should be active until we actually start the generators
     assert streamer.active == 0
