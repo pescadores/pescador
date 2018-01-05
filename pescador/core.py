@@ -90,6 +90,7 @@ class Streamer(object):
 
         # The iterable or callable to stream from
         self.streamer = streamer
+
         # Args and kwargs are passed to an instantiated function
         self.args = args
         self.kwargs = kwargs
@@ -118,8 +119,8 @@ class Streamer(object):
         return copy_result
 
     def __enter__(self, *args, **kwargs):
-        # If this is the base / original streamer, create a copy and return
-        # it
+        # If this is the base / original streamer,
+        #  create a copy and return it
         if not self.is_activated_copy:
             streamer_copy = copy.deepcopy(self)
             streamer_copy._activate()
@@ -127,7 +128,7 @@ class Streamer(object):
             # Increment the count of active streams.
             self.active_count_ += 1
 
-        # However, if this is an activated streamer, then it is a copy,
+        # However, if this is an "activated" streamer, then it is a copy,
         #  so just return self.
         else:
             streamer_copy = self
@@ -136,8 +137,6 @@ class Streamer(object):
 
     def __exit__(self, *exc):
         if not self.is_activated_copy:
-
-            self._deactivate()
 
             # Decrement the count of active streams.
             self.active_count_ -= 1
@@ -171,9 +170,6 @@ class Streamer(object):
         else:
             # If it's iterable, use it directly.
             self.stream_ = iter(self.streamer)
-
-    def _deactivate(self):
-        self.stream_ = None
 
     def iterate(self, max_iter=None):
         '''Instantiate an iterator.

@@ -154,7 +154,7 @@ class Mux(core.Streamer):
         self.prune_empty_streams = prune_empty_streams
         self.revive = revive
 
-        self._deactivate()
+        self._reset()
 
         if random_state is None:
             self.rng = np.random
@@ -208,6 +208,13 @@ class Mux(core.Streamer):
 
         return copy_result
 
+    def _reset(self):
+        self.streams_ = None
+        self.stream_weights_ = None
+        self.stream_counts_ = None
+        self.stream_idxs_ = None
+        self.weight_norm_ = None
+
     @property
     def is_activated_copy(self):
         """is_active is true if this object is a copy of the original Streamer
@@ -238,13 +245,6 @@ class Mux(core.Streamer):
                 self._new_stream(self.stream_idxs_[idx]))
 
         self.weight_norm_ = np.sum(self.stream_weights_)
-
-    def _deactivate(self):
-        self.streams_ = None
-        self.stream_weights_ = None
-        self.stream_counts_ = None
-        self.stream_idxs_ = None
-        self.weight_norm_ = None
 
     def iterate(self, max_iter=None):
         # Calls Streamer's __enter__, which calls _activate()
@@ -396,8 +396,8 @@ class BaseMux(core.Streamer):
         else:
             raise PescadorError('Invalid random_state={}'.format(random_state))
 
-        # Clear state and reset actiave/deactivate params.
-        self._deactivate()
+        # Clear state and reset activate params.
+        self._reset()
 
         # When a stream is activated, a copy of this mux is made via
         # the core.Streamer context manager.
@@ -460,7 +460,7 @@ class BaseMux(core.Streamer):
         """
         raise NotImplementedError()
 
-    def _deactivate(self):
+    def _reset(self):
         """Reset the Mux state."""
         pass
 
@@ -682,7 +682,7 @@ class PoissonMux(BaseMux):
 
         self.weight_norm_ = np.sum(self.stream_weights_)
 
-    def _deactivate(self):
+    def _reset(self):
         self.distribution_ = np.zeros(self.n_streams)
         self.valid_streams_ = np.zeros(self.n_streams)
 
@@ -868,7 +868,7 @@ class ShuffledMux(BaseMux):
 
         self.weight_norm_ = np.sum(self.stream_weights_)
 
-    def _deactivate(self):
+    def _reset(self):
         self.streams_ = None
         self.stream_weights_ = None
         self.stream_counts_ = None
@@ -987,7 +987,7 @@ class RoundRobinMux(BaseMux):
     def _activate(self):
         self._setup_streams(False)
 
-    def _deactivate(self):
+    def _reset(self):
         self.active_index_ = None
         self.streams_ = None
         self.stream_idxs_ = None
@@ -1177,7 +1177,7 @@ class ChainMux(BaseMux):
         # Setup a new streamer at this index.
         self._new_stream()
 
-    def _deactivate(self):
+    def _reset(self):
         self.chain_streamer_ = None
         self.chain_generator_ = None
         self.streams_ = None
