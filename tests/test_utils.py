@@ -22,6 +22,18 @@ def _eq_lists(b1, b2):
         assert np.allclose(i, j)
 
 
+def _eq_list_of_dicts(b1, b2):
+    results = []
+    results.append(len(b1) == len(b2))
+
+    if results[-1]:
+        for i in range(len(b1)):
+            for k in six.iterkeys(b1[i]):
+                results.append(np.allclose(b1[i][k], b2[i][k]))
+
+    return np.all(results)
+
+
 def finite_generator(n, size=2, lag=None):
 
     for i in range(n):
@@ -42,11 +54,11 @@ def md_generator(dimension, n, size=2, items='X'):
                for j, item in enumerate(items)}
 
 
-def infinite_generator(size=2):
+def infinite_generator(size=2, offset=0):
 
     i = 0
     while True:
-        yield {'X': np.tile(np.array([[i]]), (size, 1))}
+        yield {'X': np.tile(np.array([[i]]), (size, 1)) + offset}
         i = i + 1
 
 

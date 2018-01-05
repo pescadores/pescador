@@ -3,7 +3,7 @@ from __future__ import division
 
 import pytest
 
-
+import copy
 import collections
 import functools
 import itertools
@@ -48,7 +48,9 @@ def test_mux_single_finite(mux_class):
 
     mux = mux_class([stream])
     estimate = list(mux)
-    assert reference == estimate
+    assert len(reference) == len(estimate)
+    for i, d in enumerate(estimate):
+        assert d.items() == estimate[i].items()
 
 
 @pytest.mark.parametrize('mux_class', [
@@ -77,7 +79,13 @@ def test_mux_single_infinite(mux_class):
 
     mux = mux_class([stream])
     estimate = list(mux.iterate(max_iter=100))
-    assert (reference + reference) == estimate
+
+    assert len(estimate) == 2 * len(reference)
+    reference = (reference + reference)
+    for i in range(len(reference)):
+        assert set(reference[i].keys()) == set(estimate[i].keys())
+        for key in reference[i].keys():
+            assert np.all(reference[i][key] == estimate[i][key])
 
 
 @pytest.mark.parametrize('mux_class', [
@@ -138,6 +146,86 @@ def test_mux_bad_weights(mux_class):
         mux_class(streamers, weights=np.zeros(5))
 
 
+def test_mux_of_mux():
+    """Make sure that mux activate still works correctly when a mux
+    is passed a mux.
+    """
+    a = pescador.Streamer('aaaaaaaaaa')
+    b = pescador.Streamer('bbbbbbbb')
+    c = pescador.Streamer('cccccc')
+    d = pescador.Streamer('dddd')
+    e = pescador.Streamer('ee')
+    f = pescador.Streamer('fff')
+    g = pescador.Streamer('gggg')
+    h = pescador.Streamer('hhhhh')
+
+    base1 = pescador.mux.ShuffledMux([a, b], random_state=1)
+    base2 = pescador.mux.ShuffledMux([c, d, e], random_state=10)
+    base3 = pescador.mux.ShuffledMux([f, g, h], random_state=100)
+    train_mux = pescador.mux.PoissonMux(
+        [base1, base2, base3], k_active=2, rate=3, mode="with_replacement",
+        random_state=123)
+
+    train_result = list(train_mux.iterate(100))
+    sample_counts = collections.Counter(train_result)
+    assert set(sample_counts.keys()) == set([
+        'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'])
+
+
+class TestCopyMux:
+    @pytest.mark.parametrize('mux_class', [
+        functools.partial(pescador.mux.Mux, k=10, rate=3,
+                          with_replacement=True),
+        functools.partial(pescador.mux.PoissonMux, k_active=10, rate=3,
+                          mode='with_replacement'),
+        pescador.mux.ShuffledMux,
+        pescador.mux.RoundRobinMux,
+        pescador.mux.ChainMux,
+    ],
+        ids=[
+        "DeprecatedMux",
+        "PoissonMux",
+        "ShuffledMux",
+        "RoundRobinMux",
+        "ChainMux"
+    ])
+    @pytest.mark.parametrize('random_state', [
+        None, 1, np.random.RandomState(10)])
+    def test_deepcopy__randomseed(self, mux_class, random_state):
+        n_streams = 10
+        # We use an offset to make sure each stream produces unique values.
+        # That way, we can tell when the mux copies have returned
+        # the same streamer or not.
+        streamers = [pescador.Streamer(T.infinite_generator, offset=i * 10)
+                     for i in range(n_streams)]
+
+        mux = mux_class(streamers, random_state=random_state)
+
+        copy_mux = copy.deepcopy(mux)
+        assert mux.streamers is not copy_mux.streamers
+        assert len(mux.streamers) == len(copy_mux.streamers)
+
+        if random_state is None:
+            assert mux.rng == np.random
+            assert copy_mux.rng == np.random
+        else:
+            assert mux.rng is not copy_mux.rng
+
+            s1 = mux.rng.get_state()
+            s2 = copy_mux.rng.get_state()
+            # Only the second parameter in the state tuple is useful to
+            # compare.
+            assert np.allclose(s1[1], s2[1])
+
+            # Using global state (random_state=None), we can't necessarily
+            # guarantee that these will be the same withour resetting the seed,
+            # but here with the local random state, we can.
+            sample1 = list(mux.iterate(30))
+            sample2 = list(copy_mux.iterate(30))
+
+            assert T._eq_list_of_dicts(sample1, sample2)
+
+
 class TestPoissonMux:
     @pytest.mark.parametrize(
         'mode', ['with_replacement', 'single_active', 'exhaustive',
@@ -153,9 +241,40 @@ class TestPoissonMux:
         output = list(mux.iterate(n_samples))
         assert len(output) == n_samples
 
+    def test_multiple_copies(self):
+        """Check that the Mux class can be activated multiple times successfully.
+        """
+        ab = pescador.Streamer('ab')
+        cde = pescador.Streamer('cde')
+        fghi = pescador.Streamer('fghi')
+        mux = pescador.mux.PoissonMux([ab, cde, fghi], k_active=5, rate=2)
+
+        gen1 = mux.iterate(6)
+        gen2 = mux.iterate(8)
+
+        # No streamers should be active until we actually start the generators
+        assert mux.active == 0
+
+        # grab one sample each to make sure we've actually started the
+        # generator
+        _ = next(gen1)
+        _ = next(gen2)
+        assert mux.active == 2
+
+        # the first one should die after 5 more samples
+        result1 = list(gen1)
+        assert len(result1) == 5
+        assert mux.active == 1
+
+        # The second should die after 7
+        result2 = list(gen2)
+        assert len(result2) == 7
+        assert mux.active == 0
+
 
 @pytest.mark.parametrize('mux_class', [
-    pescador.mux.Mux, pescador.mux.PoissonMux],
+    functools.partial(pescador.mux.Mux, with_replacement=True),
+    functools.partial(pescador.mux.PoissonMux, mode='with_replacement')],
     ids=["DeprecatedMux",
          "PoissonMux"])
 class TestPoissonMux_WithReplacement:
@@ -183,6 +302,25 @@ class TestPoissonMux_WithReplacement:
         # Make sure we get the right number of samples
         assert len(estimate) == n_samples
 
+    @pytest.mark.parametrize('n_samples', [10, 20, 80])
+    @pytest.mark.parametrize('rate', [1.0, 2.0, 8.0])
+    @pytest.mark.parametrize('random_state', [100])
+    def test_mux_k_greater_n(self, mux_class, n_samples, rate, random_state):
+        """Test that replacement works correctly. See #112:
+        https://github.com/pescadores/pescador/issues/112
+
+        When streamers are activated, they should make copies of their
+        underlying streamers, and this should work. Before the bug
+        was fixed, this would fail. Note; this doesn't test underlying
+        state at all, however.
+        """
+        a = pescador.Streamer('a')
+        b = pescador.Streamer('b')
+
+        mux = mux_class([a, b], 6, rate, random_state=random_state)
+        result = list(mux.iterate(n_samples))
+        assert len(result) == n_samples
+
 
 class TestPoissonMux_Exhaustive:
     @pytest.mark.parametrize('mux_class', [
@@ -200,9 +338,9 @@ class TestPoissonMux_Exhaustive:
                         weights=[1.0, weight])
         estimate = list(mux)
         if weight == 0.0:
-            assert reference == estimate
+            assert T._eq_list_of_dicts(reference, estimate)
         else:
-            assert reference != estimate
+            assert not T._eq_list_of_dicts(reference, estimate)
 
     @pytest.mark.parametrize('mux_class', [
         functools.partial(pescador.mux.Mux, with_replacement=False),
@@ -219,7 +357,7 @@ class TestPoissonMux_Exhaustive:
         mux = mux_class([stream, stream2], 2, rate=256,
                         weights=weight)
         estimate = list(mux)
-        assert (reference + noise) == estimate
+        assert T._eq_list_of_dicts(reference + noise, estimate)
 
     @pytest.mark.parametrize('mux_class', [
         functools.partial(pescador.mux.Mux, k=2, with_replacement=False,
@@ -488,20 +626,29 @@ class TestShuffledMux:
         mux = pescador.mux.ShuffledMux(streamers, random_state=1234)
 
         samples = []
-        # Iterate over the list manually so we can introspect the state
-        # in the middle.
-        for i, sample in enumerate(mux.iterate(30)):
-            samples.append(sample)
+        # We can't look at the state and iterate on a mux.
+        with mux as active_mux:
+            # The original streamer should be active
+            assert mux.active == 1
+            # the copied mux shouldn't be
+            assert active_mux.active == 0
 
-            assert mux.streams_ is not None
-            assert mux.weight_norm_ > 0
+            assert isinstance(active_mux, pescador.mux.ShuffledMux)
 
-            # Check to make sure that the empty streams got their probabilities
-            # set to 0 when they didn't produce any data.
-            if i == 29:
-                assert mux.stream_weights_[1] == 0
-                assert mux.stream_weights_[3] == 0
-                assert mux.stream_weights_[4] == 0
+            assert active_mux.streams_ is not None and (
+                len(active_mux.streams_) == 6)
+            assert len(active_mux.stream_weights_) == 6
+            assert len(active_mux.stream_counts_) == 6
+            assert (active_mux.stream_counts_ == 0).all()
+
+            for i, s in enumerate(active_mux.iterate(30)):
+                samples.append(s)
+                # Check to make sure that the empty streams got their
+                # probabilities set to 0 when they didn't produce any data.
+                if i == 29:
+                    assert active_mux.stream_weights_[1] == 0
+                    assert active_mux.stream_weights_[3] == 0
+                    assert active_mux.stream_weights_[4] == 0
 
         assert len(samples) == 30
 
@@ -513,7 +660,7 @@ class TestShuffledMux:
     def test_shuffled_mux_weights(self):
         "When sampling with weights, do the statistics line up?"
         a = pescador.Streamer(_cycle, 'a')
-        b = pescador.Streamer(_cycle, 'b')
+        b = pescador.Streamer(_cycle, 'b') 
         c = pescador.Streamer(_cycle, 'c')
 
         weights = [.6, .3, .1]
@@ -574,8 +721,50 @@ class TestRoundRobinMux:
         assert counts['b'] == 6
         assert counts['c'] == 3
 
+    def test_rr_multiple_copies(self):
+        ab = pescador.Streamer('ab')
+        cde = pescador.Streamer('cde')
+        fghi = pescador.Streamer('fghi')
+        mux = pescador.mux.RoundRobinMux([ab, cde, fghi], 'exhaustive')
+
+        gen1 = mux.iterate(3)
+        gen2 = mux.iterate()  # n == 9
+
+        # No streamers should be active until we actually start the generators
+        assert mux.active == 0
+
+        # grab one sample each to make sure we've actually started the
+        # generator
+        _ = next(gen1)
+        _ = next(gen2)
+        assert mux.active == 2
+
+        # the first one should die after two more samples
+        result1 = list(gen1)
+        assert "".join(result1) == "cf"
+        assert len(result1) == 2
+        assert mux.active == 1
+
+        # The second should die after 6
+        result2 = list(gen2)
+        assert "".join(result2) == "cfbdgehi"
+        assert len(result2) == 8
+        assert mux.active == 0
+
 
 class TestChainMux:
+    @pytest.mark.parametrize('mode', [
+        "exhaustive", "cycle",
+        pytest.mark.xfail("foo")
+    ])
+    def test_modes(self, mode):
+        a = pescador.Streamer("abc")
+        b = pescador.Streamer("def")
+        mux = pescador.mux.ChainMux([a, b],
+                                    mode="exhaustive")
+        result = list(mux.iterate())
+        assert len(result) > 0
+
     def test_chain_mux_exhaustive(self):
         a = pescador.Streamer("abc")
         b = pescador.Streamer("def")
@@ -606,7 +795,10 @@ class TestChainMux:
                                     mode="cycle")
         assert "".join(list(mux.iterate(max_iter=12))) == "abcdefabcdef"
 
-    def test_chain_generator_of_streams(self):
+    def test_chain_streamer_of_streams(self):
+        """If you want to pass parameters to your generator function,
+        you have to do it with a streamer.
+        """
         def stream_gen(n, source_letters):
             """
             Parameters
@@ -618,24 +810,25 @@ class TestChainMux:
             for char in source_letters:
                 yield pescador.Streamer(char * n)
 
-        streamers = stream_gen(10, "abcde")
-
+        streamers = pescador.Streamer(stream_gen, 10, "abcde")
         mux = pescador.mux.ChainMux(streamers, mode="exhaustive")
         result = "".join(list(mux.iterate()))
         assert len(result) == 50
         assert result == "{}{}{}{}{}".format(
             'a' * 10, 'b' * 10, 'c' * 10, 'd' * 10, 'e' * 10)
 
-    def test_chain_empty_generator_of_streams(self):
+    def test_chain_empty_streamer_of_streams(self):
         def stream_gen():
-            return iter(())
-        streamers = stream_gen()
-        mux = pescador.mux.ChainMux(streamers, mode="exhaustive")
+            # Yield causes it to be a generator, but the return exits first,
+            # creating an 'empty' generator.
+            return
+            yield
+        mux = pescador.mux.ChainMux(stream_gen, mode="exhaustive")
         result = "".join(list(mux.iterate()))
         assert len(result) == 0
         assert result == ''
 
-    def test_chain_generator_with_empty_streams(self):
+    def test_chain_generatorfn_with_empty_streams(self):
         def stream_gen():
             things_to_generate = [
                 "aa", [], "bb", [], [], [], "cccc"
@@ -643,9 +836,41 @@ class TestChainMux:
             for item in things_to_generate:
                 yield pescador.Streamer(item)
 
-        streamers = stream_gen()
-
-        mux = pescador.mux.ChainMux(streamers, mode="exhaustive")
+        mux = pescador.mux.ChainMux(stream_gen, mode="exhaustive")
         result = "".join(list(mux.iterate()))
         assert len(result) == 8
         assert result == "aabbcccc"
+
+    def test_chain_generator_with_multiple_copies(self):
+        def stream_gen():
+            things_to_generate = [
+                "a", "bb", [], "ccc"
+            ]
+            for item in things_to_generate:
+                yield pescador.Streamer(item)
+
+        mux = pescador.mux.ChainMux(stream_gen, mode="exhaustive")
+
+        gen1 = mux.iterate(3)
+        gen2 = mux.iterate()  # n == 6
+
+        # No streamers should be active until we actually start the generators
+        assert mux.active == 0
+
+        # grab one sample each to make sure we've actually started the
+        # generator
+        _ = next(gen1)
+        _ = next(gen2)
+        assert mux.active == 2
+
+        # the first one should die after two more samples
+        result1 = list(gen1)
+        assert "".join(result1) == "bb"
+        assert len(result1) == 2
+        assert mux.active == 1
+
+        # The second should die after 6
+        result2 = list(gen2)
+        assert "".join(result2) == "bbccc"
+        assert len(result2) == 5
+        assert mux.active == 0

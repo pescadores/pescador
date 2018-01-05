@@ -52,6 +52,7 @@ This module defines the following Mux types:
     but is deprecated.
 '''
 from warnings import warn
+import copy
 import six
 import numpy as np
 
@@ -153,7 +154,7 @@ class Mux(core.Streamer):
         self.prune_empty_streams = prune_empty_streams
         self.revive = revive
 
-        self._deactivate()
+        self._reset()
 
         if random_state is None:
             self.rng = np.random
@@ -182,6 +183,45 @@ class Mux(core.Streamer):
 
         self.weights /= np.sum(self.weights)
 
+        # When a stream is activated, a copy of this mux is made via
+        # the core.Streamer context manager.
+        # The number of copies is tracked with active_count_.
+        self.active_count_ = 0
+
+    def __deepcopy__(self, memo):
+        """This override is required to handle copying the random_state:
+        when using `random_state=None`, the global state is used;
+        modules are not 'deepcopy-able', so we have to make a special case for
+        it.
+        """
+        cls = self.__class__
+        copy_result = cls.__new__(cls)
+        memo[id(self)] = copy_result
+        for k, v in six.iteritems(self.__dict__):
+            # You can't deepcopy a module! If rng is np.random, just pass
+            # it over without trying.
+            if k == 'rng' and v == np.random:
+                setattr(copy_result, k, v)
+            # In all other cases, assume a deepcopy is the right choice.
+            else:
+                setattr(copy_result, k, copy.deepcopy(v, memo))
+
+        return copy_result
+
+    def _reset(self):
+        self.streams_ = None
+        self.stream_weights_ = None
+        self.stream_counts_ = None
+        self.stream_idxs_ = None
+        self.weight_norm_ = None
+
+    @property
+    def is_activated_copy(self):
+        """is_active is true if this object is a copy of the original Streamer
+        *and* has been activated.
+        """
+        return self.streams_ is not None
+
     def _activate(self):
         """Activates a number of streams"""
         self.distribution_ = 1. / self.n_streams * np.ones(self.n_streams)
@@ -206,16 +246,9 @@ class Mux(core.Streamer):
 
         self.weight_norm_ = np.sum(self.stream_weights_)
 
-    def _deactivate(self):
-        self.streams_ = None
-        self.stream_weights_ = None
-        self.stream_counts_ = None
-        self.stream_idxs_ = None
-        self.weight_norm_ = None
-
     def iterate(self, max_iter=None):
         # Calls Streamer's __enter__, which calls _activate()
-        with self:
+        with self as active_mux:
 
             # Main sampling loop
             n = 0
@@ -223,65 +256,74 @@ class Mux(core.Streamer):
             if max_iter is None:
                 max_iter = np.inf
 
-            while n < max_iter and self.weight_norm_ > 0.0:
+            while n < max_iter and active_mux.weight_norm_ > 0.0:
                 # Pick a stream from the active set
-                idx = self.rng.choice(self.k, p=(self.stream_weights_ /
-                                                 self.weight_norm_))
+                idx = active_mux.rng.choice(
+                    active_mux.k,
+                    p=(active_mux.stream_weights_ /
+                       active_mux.weight_norm_))
 
                 # Can we sample from it?
                 try:
                     # Then yield the sample
-                    yield six.advance_iterator(self.streams_[idx])
+                    yield six.advance_iterator(active_mux.streams_[idx])
 
                     # Increment the sample counter
                     n += 1
-                    self.stream_counts_[idx] += 1
+                    active_mux.stream_counts_[idx] += 1
 
                 except StopIteration:
                     # Oops, this one's exhausted.
 
-                    if (self.prune_empty_streams and
-                            self.stream_counts_[idx] == 0):
+                    if (active_mux.prune_empty_streams and
+                            active_mux.stream_counts_[idx] == 0):
                         # If we're disabling empty seeds, see if this stream
                         # produced data; if it didn't, turn it off.
-                        self.distribution_[self.stream_idxs_[idx]] = 0.0
-                        self.valid_streams_[self.stream_idxs_[idx]] = False
+                        active_mux.distribution_[
+                            active_mux.stream_idxs_[idx]] = 0.0
+                        active_mux.valid_streams_[
+                            active_mux.stream_idxs_[idx]] = False
 
-                    if self.revive and not self.with_replacement:
+                    if active_mux.revive and not active_mux.with_replacement:
                         # When this case is hit, the `distribution_` for
                         # this "seed"/"stream" is 0.0, because it got set
                         # to when we activated it. (in `_new_stream`)
 
                         # Since revive mode is on, we set it to the max
                         # current probability to enable it to be used again.
-                        if self.distribution_.any():
-                            self.distribution_[self.stream_idxs_[idx]] = (
-                                np.max(self.distribution_))
+                        if active_mux.distribution_.any():
+                            active_mux.distribution_[
+                                active_mux.stream_idxs_[idx]] = (
+                                np.max(active_mux.distribution_))
                         else:
-                            self.distribution_[self.stream_idxs_[idx]] = 1.0
+                            active_mux.distribution_[
+                                active_mux.stream_idxs_[idx]] = 1.0
 
-                    if (self.distribution_ > 0).any():
+                    if (active_mux.distribution_ > 0).any():
                         # Replace it and move on if there are still seeds
                         # in the pool.
-                        self.distribution_[:] /= np.sum(self.distribution_)
+                        active_mux.distribution_[:] /= np.sum(
+                            active_mux.distribution_)
 
-                        self.stream_idxs_[idx] = self.rng.choice(
-                            self.n_streams, p=self.distribution_)
+                        active_mux.stream_idxs_[idx] = active_mux.rng.choice(
+                            active_mux.n_streams, p=active_mux.distribution_)
 
-                        self.streams_[idx], self.stream_weights_[idx] = (
-                            self._new_stream(self.stream_idxs_[idx]))
+                        active_mux.streams_[idx], active_mux.stream_weights_[
+                            idx] = (active_mux._new_stream(
+                                active_mux.stream_idxs_[idx]))
 
-                        self.stream_counts_[idx] = 0
+                        active_mux.stream_counts_[idx] = 0
 
                     else:
                         # Otherwise, this one's exhausted.
                         # Set its probability to 0
-                        self.stream_weights_[idx] = 0.0
+                        active_mux.stream_weights_[idx] = 0.0
 
-                    self.weight_norm_ = np.sum(self.stream_weights_)
+                    active_mux.weight_norm_ = np.sum(
+                        active_mux.stream_weights_)
 
                 # If everything has been pruned, kill the while loop
-                if not self.valid_streams_.any():
+                if not active_mux.valid_streams_.any():
                     break
 
     def _new_stream(self, idx):
@@ -344,6 +386,7 @@ class BaseMux(core.Streamer):
         """
         self.streamers = streamers
 
+        # If random_state is none, use the 'global' random_state.
         if random_state is None:
             self.rng = np.random
         elif isinstance(random_state, int):
@@ -353,8 +396,40 @@ class BaseMux(core.Streamer):
         else:
             raise PescadorError('Invalid random_state={}'.format(random_state))
 
-        # Clear state and reset actiave/deactivate params.
-        self._deactivate()
+        # Clear state and reset activate params.
+        self._reset()
+
+        # When a stream is activated, a copy of this mux is made via
+        # the core.Streamer context manager.
+        # The number of copies is tracked with active_count_.
+        self.active_count_ = 0
+
+    def __deepcopy__(self, memo):
+        """This override is required to handle copying the random_state:
+        when using `random_state=None`, the global state is used;
+        modules are not 'deepcopy-able', so we have to make a special case for
+        it.
+        """
+        cls = self.__class__
+        copy_result = cls.__new__(cls)
+        memo[id(self)] = copy_result
+        for k, v in six.iteritems(self.__dict__):
+            # You can't deepcopy a module! If rng is np.random, just pass
+            # it over without trying.
+            if k == 'rng' and v == np.random:
+                setattr(copy_result, k, v)
+            # In all other cases, assume a deepcopy is the right choice.
+            else:
+                setattr(copy_result, k, copy.deepcopy(v, memo))
+
+        return copy_result
+
+    @property
+    def is_activated_copy(self):
+        """is_active is true if this object is a copy of the original Streamer
+        *and* has been activated.
+        """
+        return self.streams_ is not None
 
     @property
     def n_streams(self):
@@ -385,7 +460,7 @@ class BaseMux(core.Streamer):
         """
         raise NotImplementedError()
 
-    def _deactivate(self):
+    def _reset(self):
         """Reset the Mux state."""
         pass
 
@@ -397,31 +472,31 @@ class BaseMux(core.Streamer):
             max_iter = np.inf
 
         # Calls Streamer's __enter__, which calls activate()
-        with self:
+        with self as active_mux:
             # Main sampling loop
             n = 0
 
-            while n < max_iter and self._streamers_available():
+            while n < max_iter and active_mux._streamers_available():
                 # Pick a stream from the active set
-                idx = self._next_sample_index()
+                idx = active_mux._next_sample_index()
 
                 # Can we sample from it?
                 try:
                     # Then yield the sample
-                    yield six.advance_iterator(self.streams_[idx])
+                    yield six.advance_iterator(active_mux.streams_[idx])
 
                     # Increment the sample counter
                     n += 1
-                    self.stream_counts_[idx] += 1
+                    active_mux.stream_counts_[idx] += 1
 
                 except StopIteration:
                     # Oops, this stream is exhausted.
 
                     # Call child-class exhausted-stream behavior
-                    self._on_stream_exhausted(idx)
+                    active_mux._on_stream_exhausted(idx)
 
                     # Setup a new stream for this index
-                    self._replace_stream(idx)
+                    active_mux._replace_stream(idx)
 
     def _streamers_available(self):
         "Override this to modify the behavior of the main iter loop condition."
@@ -607,7 +682,7 @@ class PoissonMux(BaseMux):
 
         self.weight_norm_ = np.sum(self.stream_weights_)
 
-    def _deactivate(self):
+    def _reset(self):
         self.distribution_ = np.zeros(self.n_streams)
         self.valid_streams_ = np.zeros(self.n_streams)
 
@@ -793,7 +868,7 @@ class ShuffledMux(BaseMux):
 
         self.weight_norm_ = np.sum(self.stream_weights_)
 
-    def _deactivate(self):
+    def _reset(self):
         self.streams_ = None
         self.stream_weights_ = None
         self.stream_counts_ = None
@@ -912,7 +987,7 @@ class RoundRobinMux(BaseMux):
     def _activate(self):
         self._setup_streams(False)
 
-    def _deactivate(self):
+    def _reset(self):
         self.active_index_ = None
         self.streams_ = None
         self.stream_idxs_ = None
@@ -1073,8 +1148,14 @@ class ChainMux(BaseMux):
             If None, the random number generator is the RandomState instance
             used by np.random.
         """
+        # if inspect.isgeneratorfunction(streamers):
+        #     streamers = core.Streamer(streamers)
+
         super(ChainMux, self).__init__(
             streamers, random_state=random_state)
+
+        if mode not in ["exhaustive", "cycle"]:
+            raise PescadorError("Invalid ChainMux mode '{}'".format(mode))
 
         self.mode = mode
 
@@ -1096,7 +1177,7 @@ class ChainMux(BaseMux):
         # Setup a new streamer at this index.
         self._new_stream()
 
-    def _deactivate(self):
+    def _reset(self):
         self.chain_streamer_ = None
         self.chain_generator_ = None
         self.streams_ = None

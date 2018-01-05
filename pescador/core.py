@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 """Core classes"""
 import collections
+import copy
 import inspect
 import six
 
@@ -87,23 +88,76 @@ class Streamer(object):
             raise PescadorError('`streamer` must be an iterable or callable '
                                 'function that returns an iterable object.')
 
+        # The iterable or callable to stream from
         self.streamer = streamer
+
+        # Args and kwargs are passed to an instantiated function
         self.args = args
         self.kwargs = kwargs
+
+        # When a stream is activated, a copy of this streamer is made.
+        # The number of copies is tracked with active_count_.
+        self.active_count_ = 0
+
+        # Stream points to the activated generator. This is only used
+        # in the copy created.
         self.stream_ = None
 
+    def __copy__(self):
+        cls = self.__class__
+        copy_result = cls.__new__(cls)
+        copy_result.__dict__.update(self.__dict__)
+        return copy_result
+
+    def __deepcopy__(self, memo):
+        cls = self.__class__
+        copy_result = cls.__new__(cls)
+        memo[id(self)] = copy_result
+        for k, v in six.iteritems(self.__dict__):
+            setattr(copy_result, k, copy.deepcopy(v, memo))
+
+        return copy_result
+
     def __enter__(self, *args, **kwargs):
-        self._activate()
-        return self
+        # If this is the base / original streamer,
+        #  create a copy and return it
+        if not self.is_activated_copy:
+            streamer_copy = copy.deepcopy(self)
+            streamer_copy._activate()
+
+            # Increment the count of active streams.
+            self.active_count_ += 1
+
+        # However, if this is an "activated" streamer, then it is a copy,
+        #  so just return self.
+        else:
+            streamer_copy = self
+
+        return streamer_copy
 
     def __exit__(self, *exc):
-        self._deactivate()
+        if not self.is_activated_copy:
+
+            # Decrement the count of active streams.
+            self.active_count_ -= 1
+
+            if self.active_count_ < 0:
+                raise PescadorError("Active stream count passed below 0 for {}"
+                                    .format(self))
+
         return False
 
     @property
     def active(self):
         """Returns true if the stream is active
-        (ie a StopIteration) has not been thrown.
+        (ie there are still open / existing streams)
+        """
+        return self.active_count_
+
+    @property
+    def is_activated_copy(self):
+        """is_active is true if this object is a copy of the original Streamer
+        *and* has been activated.
         """
         return self.stream_ is not None
 
@@ -116,9 +170,6 @@ class Streamer(object):
         else:
             # If it's iterable, use it directly.
             self.stream_ = iter(self.streamer)
-
-    def _deactivate(self):
-        self.stream_ = None
 
     def iterate(self, max_iter=None):
         '''Instantiate an iterator.
@@ -139,8 +190,8 @@ class Streamer(object):
 
         '''
         # Use self as context manager / calls __enter__() => _activate()
-        with self:
-            for n, obj in enumerate(self.stream_):
+        with self as active_streamer:
+            for n, obj in enumerate(active_streamer.stream_):
                 if max_iter is not None and n >= max_iter:
                     break
                 yield obj

@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 '''Test the streamer object for reusable iterators'''
 from __future__ import print_function
+import copy
 import pytest
 
 import warnings
@@ -143,3 +144,119 @@ def test_streamer_bad_function():
 
     with pytest.raises(pescador.core.PescadorError):
         pescador.Streamer(__fail)
+
+
+def test_streamer_copy():
+    stream_len = 10
+    streamer = pescador.core.Streamer(T.finite_generator, stream_len)
+
+    s_copy = copy.copy(streamer)
+    assert streamer is not s_copy
+    assert streamer.streamer is s_copy.streamer
+    assert streamer.args is s_copy.args
+    assert streamer.kwargs is s_copy.kwargs
+    assert streamer.active_count_ == s_copy.active_count_
+    assert streamer.stream_ is s_copy.stream_
+
+
+def test_streamer_deepcopy():
+    stream_list = list(range(100))
+    stream_len = (10,)
+    kwargs = dict(a=10, b=20, c=30)
+
+    # As stream_list is not callable, the streamer won't actually pass the
+    # args or kwargs to it, but we can still check if they got copied!
+    streamer = pescador.core.Streamer(stream_list,
+                                      *stream_len, **kwargs)
+
+    s_copy = copy.deepcopy(streamer)
+    assert streamer is not s_copy
+    assert streamer.streamer is not s_copy.streamer
+    # args is a tuple and is immutable, so it won't actually get deepcopied.
+    assert streamer.args is s_copy.args
+    # But the kwargs dict will get a correct deepcopy.
+    assert streamer.kwargs is not s_copy.kwargs
+
+    assert streamer.streamer == s_copy.streamer
+    assert streamer.args == s_copy.args
+    assert streamer.kwargs == s_copy.kwargs
+    assert streamer.active_count_ == s_copy.active_count_
+    assert streamer.stream_ == s_copy.stream_
+
+
+def test_streamer_context_copy():
+    """Check that the streamer produced by __enter__/activate
+    is a *different* streamer than the original.
+
+    Note: Do not use the streamer in this way in your code! You
+    can't actually extract samples from the streamer using the context
+    manager externally.
+    """
+    stream_len = 10
+    streamer = pescador.core.Streamer(T.finite_generator, stream_len)
+    assert streamer.stream_ is None
+    assert streamer.active == 0
+
+    with streamer as active_stream:
+        # the original streamer should be makred active now
+        assert streamer.active == 1
+        # The reference shouldn't be active
+        assert active_stream.active == 0
+
+        assert isinstance(active_stream, pescador.core.Streamer)
+        # Check that the objects are not the same
+        assert active_stream is not streamer
+
+        assert streamer.stream_ is None
+        # The active stream should have been activated.
+        assert active_stream.stream_ is not None
+        assert active_stream.streamer == streamer.streamer
+        assert active_stream.args == streamer.args
+        assert active_stream.kwargs == streamer.kwargs
+
+        assert active_stream.is_activated_copy is True
+
+        # Now, we should be able to iterate on active_stream without it
+        # causing another copy.
+        with active_stream as test_stream:
+            assert active_stream is test_stream
+            assert streamer.active == 1
+
+        # Exhaust the stream once.
+        query = list(active_stream)
+        assert stream_len == len(query)
+
+    assert streamer.active == 0
+
+
+def test_streamer_context_multiple_copies():
+    """Check that a streamer produced by __enter__/activate
+    multiple times yields streamers *different* than the original.
+    """
+    stream_len = 10
+    streamer = pescador.core.Streamer(T.finite_generator, stream_len)
+    assert streamer.stream_ is None
+    assert streamer.active == 0
+
+    # Active the streamer multiple times with iterate
+    gen1 = streamer.iterate(5)
+    gen2 = streamer.iterate(7)
+    assert id(gen1) != id(gen2)
+
+    # No streamers should be active until we actually start the generators
+    assert streamer.active == 0
+
+    # grab one sample each to make sure we've actually started the generator
+    _ = next(gen1)
+    _ = next(gen2)
+    assert streamer.active == 2
+
+    # the first one should die after four more samples
+    result1 = list(gen1)
+    assert len(result1) == 4
+    assert streamer.active == 1
+
+    # The second should die after 6
+    result2 = list(gen2)
+    assert len(result2) == 6
+    assert streamer.active == 0
