@@ -1,13 +1,16 @@
-'''Stream multiplexing
+#!/usr/bin/env python
+# -*- encoding: utf-8 -*-
+'''\
+Multiplexing
+------------
 
-Defines the interface and several varieties of "Mux". A "Mux" is
-a Streamer which wraps N other streamers, and at every step yields a
+Defines the interface and several varieties of *mux*. A *mux* is
+a `Streamer` which wraps N other `Streamer` objects, and at every step yields a
 sample from one of its sub-streamers.
 
 This module defines the following Mux types:
 
 `PoissonMux`
-
     A Mux which chooses its active streams stochastically, and chooses
     samples from the active streams stochastically. `PoissonMux` is equivalent
     to the `pescador.Mux` from versions <2.0.
@@ -18,12 +21,12 @@ This module defines the following Mux types:
     `with_replacement`
 
         Sample streamers with replacement.  This allows a single stream to
-        be used multiple times (even simultaneously).
+        be used multiple times simultaneously.
 
     `exhaustive`
 
         Each streamer is consumed at most once and never
-        revisited.
+        re-activated.
 
     `single_active`
 
@@ -34,22 +37,31 @@ This module defines the following Mux types:
         `with_replacement` allows the same stream to be used more than once.
 
 `ShuffledMux`
+    A `ShuffledMux` interleaves samples from all given streamers.
 
-    A `ShuffledMux` samples from each provided streamer with equal probability.
 
 `RoundRobinMux`
-
     Iterates over all the streamers in strict order.
 
 `ChainMux`
-
     As in itertools.chain(), runs the first streamer to exhaustion, then
     the second, then the third, etc. Uses only a single stream at a time.
 
 `Mux`
-
     The pescador<2.0 `Mux` is still available and works the same,
     but is deprecated.
+
+    We recommend replacing all uses of `Mux` with `PoissonMux`.
+
+
+.. autosummary::
+    :toctree: generated/
+
+    PoissonMux
+    ShuffledMux
+    RoundRobinMux
+    ChainMux
+    Mux
 '''
 from warnings import warn
 import copy
@@ -66,14 +78,17 @@ class Mux(core.Streamer):
     Examples
     --------
     >>> # Create a collection of streamers
-    >>> seeds = [pescador.Streamer(my_generator) for i in range(10)]
+    >>> a = pescador.Streamer("a")
+    >>> b = pescador.Streamer("b")
+    >>> c = pescador.Streamer("c")
     >>> # Multiplex them together into a single streamer
-    >>> # Use at most 3 streams at once
-    >>> mux = pescador.Mux(seeds, k=3)
-    >>> for batch in mux():
-    ...     MY_FUNCTION(batch)
-
-    Mux([stream, range(8), stream2])
+    >>> # Use at most 2 streams at once
+    >>> # Each stream generates 5 examples on average
+    >>> mux = pescador.Mux([a, b, c], 2, rate=5)
+    >>> print("".join(mux(max_iter=9)))
+    'accacbcba'
+    >>> print("".join(mux(max_iter=30)))
+    'abaccbbabccbbbccaccbacbccbbbbc'
     '''
     def __init__(self, streamers, k,
                  rate=256.0, weights=None, with_replacement=True,
@@ -81,8 +96,8 @@ class Mux(core.Streamer):
                  random_state=None):
         """Given an array (pool) of streamer types, do the following:
 
-        1. Select ``k`` streams at random to iterate from
-        2. Assign each activated stream a sample count ~ Poisson(lam)
+        1. Select ``k`` streams at random to activate
+        2. Assign each activated stream a sample count ~ 1 + Poisson(rate)
         3. Yield samples from the streams by randomly multiplexing
            from the active set.
         4. When a stream is exhausted, select a new one from `streamers`.
@@ -98,7 +113,7 @@ class Mux(core.Streamer):
         rate : float > 0 or None
             Rate parameter for the Poisson distribution governing sample counts
             for individual streams.
-            If ``None``, sample infinitely from each stream.
+            If ``None``, each active stream is sampled until exhaustion.
 
         weights : np.ndarray or None
             Optional weighting for ``streamers``.
@@ -119,7 +134,7 @@ class Mux(core.Streamer):
             If ``True``, streamers that previously produced no data are never
             revisited.
             Note:
-            1. This may be undesireable for streams where past emptiness
+            1. This may be undesirable for streams where past emptiness
             may not imply future emptiness.
             2. Failure to prune truly empty streams with `revive=True` can
             result in infinite looping behavior. Disable with caution.
@@ -217,7 +232,7 @@ class Mux(core.Streamer):
 
     @property
     def is_activated_copy(self):
-        """is_active is true if this object is a copy of the original Streamer
+        """is_activated_copy is true if this object is a copy of the original Streamer
         *and* has been activated.
         """
         return self.streams_ is not None
@@ -426,7 +441,7 @@ class BaseMux(core.Streamer):
 
     @property
     def is_activated_copy(self):
-        """is_active is true if this object is a copy of the original Streamer
+        """is_activated_copy is true if this object is a copy of the original Streamer
         *and* has been activated.
         """
         return self.streams_ is not None
@@ -556,14 +571,17 @@ class PoissonMux(BaseMux):
     Examples
     --------
     >>> # Create a collection of streamers
-    >>> seeds = [pescador.Streamer(my_generator) for i in range(10)]
+    >>> a = pescador.Streamer("a")
+    >>> b = pescador.Streamer("b")
+    >>> c = pescador.Streamer("c")
     >>> # Multiplex them together into a single streamer
-    >>> # Use at most 3 streams at once
-    >>> mux = pescador.PoissonMux(seeds, k=3)
-    >>> for batch in mux():
-    ...     MY_FUNCTION(batch)
-
-    PoissonMux([stream, range(8), stream2])
+    >>> # Use at most 2 streams at once
+    >>> # Each stream generates 5 examples on average
+    >>> mux = pescador.PoissonMux([a, b, c], 2, rate=5)
+    >>> print("".join(mux(max_iter=9)))
+    'accacbcba'
+    >>> print("".join(mux(max_iter=30)))
+    'abaccbbabccbbbccaccbacbccbbbbc'
     '''
     def __init__(self, streamers, n_active, rate,
                  weights=None,
@@ -589,7 +607,7 @@ class PoissonMux(BaseMux):
         rate : float > 0 or None
             Rate parameter for the Poisson distribution governing sample counts
             for individual streams.
-            If ``None``, sample infinitely from each stream.
+            If ``None``, sample each stream to exhaustion before de-activating.
 
         weights : np.ndarray or None
             Optional weighting for ``streamers``.
@@ -794,11 +812,33 @@ class PoissonMux(BaseMux):
 
 class ShuffledMux(BaseMux):
     """A variation on a mux, which takes N streamers, and samples
-    from them equally, guaranteeing all N streamers to be "active",
-    unlike the base Mux, which randomly chooses streams when activating.
+    from them equally, guaranteeing all N streamers to be "active".
 
-    `ShuffledMux` automatically restarts streams when they die. For a more
-    nuanced behavior, consider using `PoissonMux` with `single_active=True`.
+    `ShuffledMux` automatically restarts streams when they die.
+
+    For a more nuanced behavior, consider using `PoissonMux` with
+    `single_active=True`.
+
+    Examples
+    --------
+    Sample three streams equally:
+
+    >>> a = pescador.Streamer("a")
+    >>> b = pescador.Streamer("b")
+    >>> c = pescador.Streamer("c")
+    >>> mux = pescador.ShuffledMux([a, b, c])
+    >>> print("".join(mux(max_iter=9)))
+    'babcbcabb'
+    >>> print("".join(mux(max_iter=30)))
+    'bacbabcaabccbcaccbabccbcaaccba'
+
+    Sample stream 'a' twice as often as 'b' or 'c':
+
+    >>> wmux = pescador.ShuffledMux([a, b, c], weights=[0.5, 0.25, 0.25])
+    >>> print("".join(wmux(max_iter=9)))
+    'caaabaaab'
+    >>> print("".join(wmux(max_iter=30)))
+    'acacababcaabcaaacaaccabcbaaaaa'
     """
     def __init__(self, streamers, weights=None,
                  random_state=None):
@@ -928,9 +968,7 @@ class RoundRobinMux(BaseMux):
     """A Mux which iterates over all streamers in strict order.
 
     Based on the roundrobin() example in python itertools:
-     https://docs.python.org/3/library/itertools.html#itertools-recipes
-
-    TODO: (maybe) handle stream exhaustion?
+    https://docs.python.org/3/library/itertools.html#itertools-recipes
 
     Examples
     --------
@@ -938,15 +976,15 @@ class RoundRobinMux(BaseMux):
     >>> b = pescador.Streamer("b")
     >>> c = pescador.Streamer("c")
     >>> mux = pescador.RoundRobinMux([a, b, c])
-    >>> print("".join(mux.iterate(9)))
+    >>> print("".join(mux(max_iter=9)))
     "abc"
 
     >>> mux = pescador.RoundRobinMux([a, b, c], mode="cycle")
-    >>> print("".join(mux.iterate(9)))
+    >>> print("".join(mux(max_iter=9)))
     "abcabcabc"
 
     >>> mux = pescador.RoundRobinMux([a, b, c], mode="permuted_cycle")
-    >>> print("".join(mux.iterate(20)))
+    >>> print("".join(mux(max_iter=20)))
     "abcacbacbacbbcabacac"
     """
     def __init__(self, streamers, mode="exhaustive", random_state=None):
@@ -966,7 +1004,7 @@ class RoundRobinMux(BaseMux):
                 Restart streamer once streams are exhausted, and permute
                 the order of the streams.
 
-        random_state : None, int, or np.random.RandomState
+        random_state : None, int, or `np.random.RandomState`
             If int, random_state is the seed used by the random number
             generator;
 
@@ -974,7 +1012,7 @@ class RoundRobinMux(BaseMux):
             generator;
 
             If None, the random number generator is the RandomState instance
-            used by np.random.
+            used by `np.random.`
         """
         self.mode = mode
         super(RoundRobinMux, self).__init__(
@@ -1098,28 +1136,32 @@ class ChainMux(BaseMux):
 
     Examples
     --------
-    # Run Chain once through until the end.
+    Run Chain once through until the end.
+
     >>> a = pescador.Streamer("abc")
     >>> b = pescador.Streamer("def")
-    >>> mux = pescador.mux.ChainMux([a, b], mode="exhaustive")
-    >>> "".join(list(mux.iterate()))
+    >>> mux = pescador.ChainMux([a, b], mode="exhaustive")
+    >>> "".join(mux)
     "abcdef"
 
-    # Chain restarts from the beginning once exhausted.
+
+    Chain restarts from the beginning once exhausted.
+
     >>> a = pescador.Streamer("abc")
     >>> b = pescador.Streamer("def")
-    >>> mux = pescador.mux.ChainMux([a, b], mode="cycle")
-    >>> "".join(list(mux.iterate(max_iter=12)))
+    >>> mux = pescador.ChainMux([a, b], mode="cycle")
+    >>> "".join(mux(max_iter=12))
     "abcdefabcdef"
 
-    # Chain a generator of streamers
-    >>> import string
-    def gen_streamers(n_streamers, n_copies):
-        for i in range(n_streamers):
-            yield pescador.Streamer(string.ascii_letters[i] * n_copies)
 
-    >>> mux = pescador.mux.ChainMux(gen_streamers(3, 5))
-    >>> "".join(list(mux.iterate()))
+    Chain a generator of streamers
+
+    >>> import string
+    >>> def gen_streamers(n_streamers, n_copies):
+    ...     for i in range(n_streamers):
+    ...         yield pescador.Streamer(string.ascii_letters[i] * n_copies)
+    >>> mux = pescador.ChainMux(gen_streamers(3, 5))
+    >>> "".join(mux)
     "aaaaabbbbbccccc"
     """
     def __init__(self, streamers, mode="exhaustive",
