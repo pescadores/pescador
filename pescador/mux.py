@@ -1,9 +1,6 @@
 #!/usr/bin/env python
 # -*- encoding: utf-8 -*-
 '''\
-Multiplexing
-------------
-
 Defines the interface and several varieties of *mux*. A *mux* is
 a `Streamer` which wraps N other `Streamer` objects, and at every step yields a
 sample from one of its sub-streamers.
