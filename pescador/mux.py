@@ -565,7 +565,7 @@ class PoissonMux(BaseMux):
 
     PoissonMux([stream, range(8), stream2])
     '''
-    def __init__(self, streamers, k_active, rate,
+    def __init__(self, streamers, n_active, rate,
                  weights=None,
                  mode="with_replacement",
                  prune_empty_streams=True,
@@ -583,7 +583,7 @@ class PoissonMux(BaseMux):
         streamers : iterable of streamers
             The collection of streamer-type objects
 
-        k_active : int > 0
+        n_active : int > 0
             The number of streams to keep active at any time.
 
         rate : float > 0 or None
@@ -620,7 +620,7 @@ class PoissonMux(BaseMux):
             See `BaseMux`
         """
         self.mode = mode
-        self.k_active = k_active
+        self.n_active = n_active
         self.rate = rate
         self.prune_empty_streams = prune_empty_streams
 
@@ -661,18 +661,18 @@ class PoissonMux(BaseMux):
 
         # But the following do depend on the number of active streams.
         # The active streamers
-        self.streams_ = [None] * self.k_active
+        self.streams_ = [None] * self.n_active
 
         # Weights of the active streams.
         # Once a stream is exhausted, it is set to 0
-        self.stream_weights_ = np.zeros(self.k_active)
+        self.stream_weights_ = np.zeros(self.n_active)
         # How many samples have been draw from each (active) stream.
-        self.stream_counts_ = np.zeros(self.k_active, dtype=int)
+        self.stream_counts_ = np.zeros(self.n_active, dtype=int)
         # Array of pointers into `self.streamers`
-        self.stream_idxs_ = np.zeros(self.k_active, dtype=int)
+        self.stream_idxs_ = np.zeros(self.n_active, dtype=int)
 
         # Initialize each active stream.
-        for idx in range(self.k_active):
+        for idx in range(self.n_active):
 
             if not (self.distribution_ > 0).any():
                 break
@@ -697,7 +697,7 @@ class PoissonMux(BaseMux):
 
     def _next_sample_index(self):
         """PoissonMux chooses its next sample stream randomly"""
-        return self.rng.choice(self.k_active,
+        return self.rng.choice(self.n_active,
                                p=(self.stream_weights_ /
                                   self.weight_norm_))
 
@@ -850,7 +850,7 @@ class ShuffledMux(BaseMux):
 
     def _activate(self):
         """ShuffledMux's activate is similar to PoissonMux,
-        but there is no 'k_active', since all the streams are always available.
+        but there is no 'n_active', since all the streams are always available.
         """
         self.streams_ = [None] * self.n_streams
 
