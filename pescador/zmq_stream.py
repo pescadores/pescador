@@ -1,5 +1,17 @@
 #!/usr/bin/env python
-'''ZMQ-based data streaming'''
+'''
+Parallel streaming
+------------------
+
+Streaming from background processes is implemented with the ZeroMQ library.
+The `ZMQStreamer` object wraps ordinary streamers (or muxes) for background execution.
+
+.. autosummary::
+    :toctree: generated/
+
+    ZMQStreamer
+
+'''
 
 import multiprocessing as mp
 import zmq

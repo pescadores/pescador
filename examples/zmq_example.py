@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
 """
 ==================
-ZMQ Example
+Parallel streaming
 ==================
 
-An example of how to use a ZMQStreamer to generate samples,
-with some small benchmarks along the way.
+An example of how to use a ZMQStreamer to generate samples
+in a background process, with some small benchmarks along the way.
 """
 
 # Imports
