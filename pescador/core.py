@@ -220,7 +220,7 @@ class Streamer(object):
 
         count = 0
         while True:
-            for obj in self:
+            for obj in self.iterate():
                 count += 1
                 if max_iter is not None and count > max_iter:
                     return
