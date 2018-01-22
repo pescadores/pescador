@@ -30,13 +30,13 @@ def _choice(vals, seed=11111):
 
 @pytest.mark.parametrize('mux_class', [
     functools.partial(pescador.mux.Mux, k=1, with_replacement=False),
-    functools.partial(pescador.mux.PoissonMux, n_active=1, rate=None,
+    functools.partial(pescador.mux.StochasticMux, n_active=1, rate=None,
                       mode="exhaustive"),
     pescador.mux.RoundRobinMux,
     pescador.mux.ChainMux,
 ],
     ids=["DeprecatedMux",
-         "PoissonMux-exhaustive",
+         "StochasticMux-exhaustive",
          "RoundRobin",
          "ChainMux",
          ])
@@ -55,17 +55,17 @@ def test_mux_single_finite(mux_class):
 
 @pytest.mark.parametrize('mux_class', [
     functools.partial(pescador.mux.Mux, k=1, with_replacement=True),
-    functools.partial(pescador.mux.PoissonMux, n_active=1, rate=None,
+    functools.partial(pescador.mux.StochasticMux, n_active=1, rate=None,
                       mode="with_replacement"),
-    functools.partial(pescador.mux.PoissonMux, n_active=1, rate=None,
+    functools.partial(pescador.mux.StochasticMux, n_active=1, rate=None,
                       mode="single_active"),
     pescador.mux.ShuffledMux,
     functools.partial(pescador.mux.RoundRobinMux, mode="cycle"),
     functools.partial(pescador.mux.ChainMux, mode="cycle"),
 ],
     ids=["DeprecatedMux",
-         "PoissonMux-with_replacement",
-         "PoissonMux-single_active",
+         "StochasticMux-with_replacement",
+         "StochasticMux-single_active",
          "ShuffledMux",
          "RoundRobinMux",
          "ChainMux-cycle"
@@ -90,7 +90,7 @@ def test_mux_single_infinite(mux_class):
 
 @pytest.mark.parametrize('mux_class', [
     functools.partial(pescador.mux.Mux, k=1),
-    functools.partial(pescador.mux.PoissonMux, n_active=1, rate=256),
+    functools.partial(pescador.mux.StochasticMux, n_active=1, rate=256),
     pescador.mux.ShuffledMux,
     pescador.mux.RoundRobinMux,
     pytest.mark.xfail(pescador.mux.ChainMux,
@@ -99,7 +99,7 @@ def test_mux_single_infinite(mux_class):
                       strict=True),
 ],
     ids=["DeprecatedMux",
-         "PoissonMux-exhaustive",
+         "StochasticMux-exhaustive",
          "ShuffledMux",
          "RoundRobinMux",
          "ChainMux"
@@ -112,11 +112,11 @@ def test_mux_empty(mux_class):
 
 @pytest.mark.parametrize('mux_class', [
     functools.partial(pescador.mux.Mux, k=None),
-    functools.partial(pescador.mux.PoissonMux, n_active=None, rate=256),
+    functools.partial(pescador.mux.StochasticMux, n_active=None, rate=256),
     pescador.mux.ShuffledMux,
 ],
     ids=["DeprecatedMux",
-         "PoissonMux",
+         "StochasticMux",
          "ShuffledMux",
          ])
 def test_mux_bad_streamers(mux_class):
@@ -130,11 +130,11 @@ def test_mux_bad_streamers(mux_class):
 
 @pytest.mark.parametrize('mux_class', [
     functools.partial(pescador.mux.Mux, k=None),
-    functools.partial(pescador.mux.PoissonMux, n_active=None, rate=256),
+    functools.partial(pescador.mux.StochasticMux, n_active=None, rate=256),
     pescador.mux.ShuffledMux,
 ],
     ids=["DeprecatedMux",
-         "PoissonMux",
+         "StochasticMux",
          "ShuffledMux",
          ])
 def test_mux_bad_weights(mux_class):
@@ -162,7 +162,7 @@ def test_mux_of_mux():
     base1 = pescador.mux.ShuffledMux([a, b], random_state=1)
     base2 = pescador.mux.ShuffledMux([c, d, e], random_state=10)
     base3 = pescador.mux.ShuffledMux([f, g, h], random_state=100)
-    train_mux = pescador.mux.PoissonMux(
+    train_mux = pescador.mux.StochasticMux(
         [base1, base2, base3], n_active=2, rate=3, mode="with_replacement",
         random_state=123)
 
@@ -176,7 +176,7 @@ class TestCopyMux:
     @pytest.mark.parametrize('mux_class', [
         functools.partial(pescador.mux.Mux, k=10, rate=3,
                           with_replacement=True),
-        functools.partial(pescador.mux.PoissonMux, n_active=10, rate=3,
+        functools.partial(pescador.mux.StochasticMux, n_active=10, rate=3,
                           mode='with_replacement'),
         pescador.mux.ShuffledMux,
         pescador.mux.RoundRobinMux,
@@ -184,7 +184,7 @@ class TestCopyMux:
     ],
         ids=[
         "DeprecatedMux",
-        "PoissonMux",
+        "StochasticMux",
         "ShuffledMux",
         "RoundRobinMux",
         "ChainMux"
@@ -226,7 +226,7 @@ class TestCopyMux:
             assert T._eq_list_of_dicts(sample1, sample2)
 
 
-class TestPoissonMux:
+class TestStochasticMux:
     @pytest.mark.parametrize(
         'mode', ['with_replacement', 'single_active', 'exhaustive',
                  pytest.mark.xfail('foo', raises=pescador.PescadorError),
@@ -237,7 +237,7 @@ class TestPoissonMux:
         streamers = [pescador.Streamer(T.infinite_generator)
                      for _ in range(4)]
 
-        mux = pescador.mux.PoissonMux(streamers, 1, rate=10, mode=mode)
+        mux = pescador.mux.StochasticMux(streamers, 1, rate=10, mode=mode)
         output = list(mux.iterate(n_samples))
         assert len(output) == n_samples
 
@@ -247,7 +247,7 @@ class TestPoissonMux:
         ab = pescador.Streamer('ab')
         cde = pescador.Streamer('cde')
         fghi = pescador.Streamer('fghi')
-        mux = pescador.mux.PoissonMux([ab, cde, fghi], n_active=5, rate=2)
+        mux = pescador.mux.StochasticMux([ab, cde, fghi], n_active=5, rate=2)
 
         gen1 = mux.iterate(6)
         gen2 = mux.iterate(8)
@@ -274,10 +274,10 @@ class TestPoissonMux:
 
 @pytest.mark.parametrize('mux_class', [
     functools.partial(pescador.mux.Mux, with_replacement=True),
-    functools.partial(pescador.mux.PoissonMux, mode='with_replacement')],
+    functools.partial(pescador.mux.StochasticMux, mode='with_replacement')],
     ids=["DeprecatedMux",
-         "PoissonMux"])
-class TestPoissonMux_WithReplacement:
+         "StochasticMux"])
+class TestStochasticMux_WithReplacement:
     @pytest.mark.parametrize('n_streams', [1, 2, 4])
     @pytest.mark.parametrize('n_samples', [10, 20, 80])
     @pytest.mark.parametrize('n_active', [1, 2, 4])
@@ -322,12 +322,12 @@ class TestPoissonMux_WithReplacement:
         assert len(result) == n_samples
 
 
-class TestPoissonMux_Exhaustive:
+class TestStochasticMux_Exhaustive:
     @pytest.mark.parametrize('mux_class', [
         functools.partial(pescador.mux.Mux, with_replacement=False),
-        functools.partial(pescador.mux.PoissonMux, mode="exhaustive")],
+        functools.partial(pescador.mux.StochasticMux, mode="exhaustive")],
         ids=["DeprecatedMux",
-             "PoissonMux-exhaustive"])
+             "StochasticMux-exhaustive"])
     @pytest.mark.parametrize('weight', [0.0, 0.5])
     def test_mux_weighted(self, weight, mux_class):
         reference = list(T.finite_generator(50))
@@ -344,9 +344,9 @@ class TestPoissonMux_Exhaustive:
 
     @pytest.mark.parametrize('mux_class', [
         functools.partial(pescador.mux.Mux, with_replacement=False),
-        functools.partial(pescador.mux.PoissonMux, mode="exhaustive")],
+        functools.partial(pescador.mux.StochasticMux, mode="exhaustive")],
         ids=["DeprecatedMux",
-             "PoissonMux-exhaustive"])
+             "StochasticMux-exhaustive"])
     @pytest.mark.parametrize('weight', ([1e10, 1e-10],))
     def test_mux_rare(self, weight, mux_class):
         "This should give us all the reference before all the noise"
@@ -362,10 +362,10 @@ class TestPoissonMux_Exhaustive:
     @pytest.mark.parametrize('mux_class', [
         functools.partial(pescador.mux.Mux, k=2, with_replacement=False,
                           rate=None),
-        functools.partial(pescador.mux.PoissonMux,
+        functools.partial(pescador.mux.StochasticMux,
                           n_active=2, mode="exhaustive", rate=None)],
         ids=["DeprecatedMux",
-             "PoissonMux-exhaustive"])
+             "StochasticMux-exhaustive"])
     def test_weighted_empty_streams(self, mux_class):
 
         def __empty():
@@ -387,9 +387,9 @@ class TestPoissonMux_Exhaustive:
     @pytest.mark.parametrize('mux_class', [
         functools.partial(pescador.mux.Mux,
                           with_replacement=False, revive=False),
-        functools.partial(pescador.mux.PoissonMux, mode="exhaustive")],
+        functools.partial(pescador.mux.StochasticMux, mode="exhaustive")],
         ids=["DeprecatedMux",
-             "PoissonMux"])
+             "StochasticMux"])
     def test_critical_mux(self, mux_class):
         """This test checks the following:
 
@@ -415,9 +415,9 @@ class TestPoissonMux_Exhaustive:
     @pytest.mark.parametrize('mux_class', [
         functools.partial(pescador.mux.Mux,
                           with_replacement=False, revive=False),
-        functools.partial(pescador.mux.PoissonMux, mode="exhaustive")],
+        functools.partial(pescador.mux.StochasticMux, mode="exhaustive")],
         ids=["DeprecatedMux",
-             "PoissonMux"])
+             "StochasticMux"])
     def test_sampled_mux_of_muxes(self, mux_class):
         # Build some sample streams
         ab = pescador.Streamer(_cycle, 'ab')
@@ -453,10 +453,10 @@ class TestPoissonMux_Exhaustive:
 @pytest.mark.parametrize('mux_class', [
     functools.partial(pescador.mux.Mux,
                       with_replacement=False, revive=True),
-    functools.partial(pescador.mux.PoissonMux, mode="single_active")],
+    functools.partial(pescador.mux.StochasticMux, mode="single_active")],
     ids=["DeprecatedMux",
-         "PoissonMux"])
-class TestPoissonMux_SingleActive:
+         "StochasticMux"])
+class TestStochasticMux_SingleActive:
     @pytest.mark.parametrize('n_streams', [1, 2, 4])
     @pytest.mark.parametrize('n_samples', [512])
     @pytest.mark.parametrize('k', [1, 2, 4])

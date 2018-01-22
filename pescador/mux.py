@@ -7,12 +7,12 @@ sample from one of its sub-streamers.
 
 This module defines the following Mux types:
 
-`PoissonMux`
+`StochasticMux`
     A Mux which chooses its active streams stochastically, and chooses
-    samples from the active streams stochastically. `PoissonMux` is equivalent
+    samples from the active streams stochastically. `StochasticMux` is equivalent
     to the `pescador.Mux` from versions <2.0.
 
-     `PoissonMux` has a `mode` parameter which selects how it operates, with
+     `StochasticMux` has a `mode` parameter which selects how it operates, with
      the following modes:
 
     `with_replacement`
@@ -48,13 +48,13 @@ This module defines the following Mux types:
     The pescador<2.0 `Mux` is still available and works the same,
     but is deprecated.
 
-    We recommend replacing all uses of `Mux` with `PoissonMux`.
+    We recommend replacing all uses of `Mux` with `StochasticMux`.
 
 
 .. autosummary::
     :toctree: generated/
 
-    PoissonMux
+    StochasticMux
     ShuffledMux
     RoundRobinMux
     ChainMux
@@ -108,7 +108,7 @@ class Mux(core.Streamer):
             The number of streams to keep active at any time.
 
         rate : float > 0 or None
-            Rate parameter for the Poisson distribution governing sample counts
+            Rate parameter for the poisson distribution governing sample counts
             for individual streams.
             If ``None``, each active stream is sampled until exhaustion.
 
@@ -154,7 +154,7 @@ class Mux(core.Streamer):
             used by np.random.
         """
         warn('`Mux` is deprecated in pescador 2.0. '
-             'Please use `PoissonMux` instead to maintain forward-compatibility.'
+             'Please use `StochasticMux` instead to maintain forward-compatibility.'
              'This class will be removed in pescador 2.1.', DeprecationWarning)
 
         self.streamers = streamers
@@ -562,7 +562,7 @@ class BaseMux(core.Streamer):
                                   " a child class.")
 
 
-class PoissonMux(BaseMux):
+class StochasticMux(BaseMux):
     '''Stochastic Mux
 
     Examples
@@ -574,7 +574,7 @@ class PoissonMux(BaseMux):
     >>> # Multiplex them together into a single streamer
     >>> # Use at most 2 streams at once
     >>> # Each stream generates 5 examples on average
-    >>> mux = pescador.PoissonMux([a, b, c], 2, rate=5)
+    >>> mux = pescador.StochasticMux([a, b, c], 2, rate=5)
     >>> print("".join(mux(max_iter=9)))
     'accacbcba'
     >>> print("".join(mux(max_iter=30)))
@@ -588,7 +588,7 @@ class PoissonMux(BaseMux):
         """Given an array (pool) of streamer types, do the following:
 
         1. Select ``k`` streams at random to iterate from
-        2. Assign each activated stream a sample count ~ Poisson(rate)
+        2. Assign each activated stream a sample count ~ 1 + Poisson(rate)
         3. Yield samples from the streams by randomly multiplexing
            from the active set.
         4. When a stream is exhausted, select a new one from `streamers`.
@@ -602,7 +602,7 @@ class PoissonMux(BaseMux):
             The number of streams to keep active at any time.
 
         rate : float > 0 or None
-            Rate parameter for the Poisson distribution governing sample counts
+            Rate parameter for the distribution governing sample counts
             for individual streams.
             If ``None``, sample each stream to exhaustion before de-activating.
 
@@ -639,7 +639,7 @@ class PoissonMux(BaseMux):
         self.rate = rate
         self.prune_empty_streams = prune_empty_streams
 
-        super(PoissonMux, self).__init__(
+        super(StochasticMux, self).__init__(
             streamers, random_state=random_state)
 
         if not self.n_streams:
@@ -647,7 +647,7 @@ class PoissonMux(BaseMux):
 
         if self.mode not in [
                 "with_replacement", "single_active", "exhaustive"]:
-            raise PescadorError("{} is not a valid mode for PoissonMux".format(
+            raise PescadorError("{} is not a valid mode for StochasticMux".format(
                 self.mode))
 
         self.weights = weights
@@ -711,7 +711,7 @@ class PoissonMux(BaseMux):
         return self.weight_norm_ > 0.0 and self.valid_streams_.any()
 
     def _next_sample_index(self):
-        """PoissonMux chooses its next sample stream randomly"""
+        """StochasticMux chooses its next sample stream randomly"""
         return self.rng.choice(self.n_active,
                                p=(self.stream_weights_ /
                                   self.weight_norm_))
@@ -738,7 +738,7 @@ class PoissonMux(BaseMux):
     def _activate_stream(self, idx):
         '''Randomly select and create a stream.
 
-        PoissonMux adds mode handling to _activate_stream, making it so that
+        StochasticMux adds mode handling to _activate_stream, making it so that
         if we're not sampling "with_replacement", the distribution for this
         chosen streamer is set to 0, causing the streamer not to be available
         until it is exhausted.
@@ -813,7 +813,7 @@ class ShuffledMux(BaseMux):
 
     `ShuffledMux` automatically restarts streams when they die.
 
-    For a more nuanced behavior, consider using `PoissonMux` with
+    For a more nuanced behavior, consider using `StochasticMux` with
     `single_active=True`.
 
     Examples
@@ -886,7 +886,7 @@ class ShuffledMux(BaseMux):
         self.weights /= np.sum(self.weights)
 
     def _activate(self):
-        """ShuffledMux's activate is similar to PoissonMux,
+        """ShuffledMux's activate is similar to StochasticMux,
         but there is no 'n_active', since all the streams are always available.
         """
         self.streams_ = [None] * self.n_streams

@@ -15,7 +15,7 @@ Perhaps the total number of images is larger than fits comfortably
 in memory, but you still want to produce a stream of training data
 with uniform class presentation.
 
-To solve this in pescador, we will first create a `PoissonMux` for each
+To solve this in pescador, we will first create a `StochasticMux` for each
 sub-population (e.g., one for cars, one for boats, etc.), which will
 maintain a small active set.
 We will then combine those sub-population muxen using `ShuffledMux` to
@@ -51,11 +51,11 @@ pop2 = [pescador.Streamer(letter, c) for c in 'abcdefghijklmnopqrstuvwxyz']
 # We'll sample population 1 with 3 streamers active at any time.
 # Each streamer will generate, on average, 5 samples before being
 # replaced.
-mux1 = pescador.PoissonMux(pop1, 3, 5)
+mux1 = pescador.StochasticMux(pop1, 3, 5)
 
 # Let's have 5 active streamers for population 2, and replace
 # them after 2 examples on average.
-mux2 = pescador.PoissonMux(pop2, 5, 2)
+mux2 = pescador.StochasticMux(pop2, 5, 2)
 
 ####################
 # Mux composition
