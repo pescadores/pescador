@@ -17,7 +17,7 @@ depending on the exact sampling properties you have in mind.
   the model.
 
 - If you want random presentation order, but want to ensure that
-  all data is touched once per epoch, then the `PoissonMux` can be
+  all data is touched once per epoch, then the `StochasticMux` can be
   used in `cycle` mode to restart all streamers once they've been
   exhausted.
   
@@ -63,9 +63,9 @@ def data_gen(filename, m):
 streams = [pescador.Streamer(data_gen, fn, M) for fn in files]
 
 ###############################
-# Epochs with PoissonMux
+# Epochs with StochasticMux
 ###############################
-# The `PoissonMux` has three modes of operation, which control
+# The `StochasticMux` has three modes of operation, which control
 # how its input streams are activated and replaced:
 # - `mode='with_replacement'` allows each streamer to be activated
 #   multiple times, even simultaneously.
@@ -86,7 +86,7 @@ k = 100  # or however many streamers you want simultaneously active
 
 # We'll use `rate=None` here so that the number of samples per stream is
 # determined by the streamer (`M`) and not the mux.
-mux = pescador.PoissonMux(streams, k, rate=None, mode='exhaustive')
+mux = pescador.StochasticMux(streams, k, rate=None, mode='exhaustive')
 
 epoch_stream = mux(cycle=True)
 

@@ -7,8 +7,8 @@ We will assume a working understanding of the simple example in the previous sec
 Stream re-use and multiplexing
 ==============================
 
-The `Mux` streamer provides a powerful interface for randomly interleaving samples from multiple input streams.
-`Mux` can also dynamically activate and deactivate individual `Streamers`, which allows it to operate on a bounded subset of streams at any given time.
+The `StochasticMux` streamer provides a powerful interface for randomly interleaving samples from multiple input streams.
+`StochasticMux` can also dynamically activate and deactivate individual `Streamers`, which allows it to operate on a bounded subset of streams at any given time.
 
 As a concrete example, we can simulate a mixture of noisy streams with differing variances.
 
@@ -24,7 +24,7 @@ As a concrete example, we can simulate a mixture of noisy streams with differing
     from sklearn.model_selection import ShuffleSplit
     from sklearn.metrics import accuracy_score
 
-    from pescador import Streamer, Mux
+    from pescador import Streamer, StochasticMux
 
     def noisy_samples(X, Y, sigma=1.0):
         '''Copied over from the previous example'''
@@ -54,9 +54,9 @@ As a concrete example, we can simulate a mixture of noisy streams with differing
                    for sigma in [0, 0.5, 1.0, 2.0, 4.0]]
 
         # Build a mux stream, keeping 3 streams alive at once
-        mux_stream = Mux(streams,
-                         k=3,    # Keep 3 streams alive at once
-                         rate=64) # Use a poisson rate of 64
+        mux_stream = StochasticMux(streams,
+                                   3,        # Keep 3 streams alive at once
+                                   rate=64)  # Use a poisson rate of 64
 
         # Fit the model to the stream, use at most 5000 samples
         for sample in mux_stream(max_iter=5000):
@@ -67,15 +67,15 @@ As a concrete example, we can simulate a mixture of noisy streams with differing
         print('Test accuracy: {:.3f}'.format(accuracy_score(Y[test], Ypred)))
 
 
-In the above example, each `Streamer` in `streams` can make infinitely many samples. The `rate=64` argument to `Mux` says that each stream should produce some `n` samples, where `n` is sampled from a Poisson distribution of rate `rate`.
+In the above example, each `Streamer` in `streams` can make infinitely many samples. The `rate=64` argument to
+`StochasticMux` says that each stream should produce some `n` samples, where `n` is sampled from a Poisson distribution of rate `rate`.
 When a stream exceeds its bound, it is deactivated, and a new streamer is activated to fill its place.
 
-Setting `rate=None` disables the random stream bounding, and `mux()` simply runs each active stream until exhaustion.
+Setting `rate=None` disables the random stream bounding, and simply runs each active stream until exhaustion.
 
-The `Mux` streamer can sampled with or without replacement from its input streams, according to the `with_replacement` option.
-Setting this parameter to `False` means that each stream can be active at most once.
+The `StochasticMux` streamer can sampled with or without replacement from its input streams, according to the `mode` option.
+Setting this parameter to `single_active` means that each stream can be active at most once.
 
 Streams can also be sampled with non-uniform weighting by specifying a vector of `weights`.
 
-Finally, exhausted streams can be removed by setting `prune_empty_streams` to `True`.
-If `False`, then exhausted streams may be reactivated at any time.
+Finally, exhausted streams can be removed by setting `mode='exhaustive'`.
