@@ -137,6 +137,18 @@ def test_streamer_cycle(generate):
     assert (len(data_results) == count_max and all(data_results))
 
 
+@pytest.mark.parametrize('max_iter', [3, 10])
+def test_streamer_cycle_maxiter(max_iter):
+
+    s = pescador.Streamer(T.finite_generator, 6)
+
+    r1 = list(s.cycle(max_iter=max_iter))
+    assert len(r1) == max_iter
+
+    r2 = list(s(max_iter=max_iter, cycle=True))
+    assert len(r2) == max_iter
+
+
 def test_streamer_bad_function():
 
     def __fail():

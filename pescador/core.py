@@ -55,6 +55,11 @@ class Streamer(object):
     >>> for i in stream.cycle():
     ...     print(i)  # Displays 0, 1, 2, 3, 4, 0, 1, 2, ...
 
+    Or finitely many examples, restarting the generator as needed
+
+    >>> for i in stream.cycle(max_iter=7):
+    ...     print(i)  # Displays 0, 1, 2, 3, 4, 0, 1
+
 
     An alternate interface for the same:
 
@@ -196,19 +201,29 @@ class Streamer(object):
                     break
                 yield obj
 
-    def cycle(self):
+    def cycle(self, max_iter=None):
         '''Iterate from the streamer infinitely.
 
         This function will force an infinite stream, restarting
         the streamer even if a StopIteration is raised.
+
+        Parameters
+        ----------
+        max_iter : None or int > 0
+            Maximum number of iterations to yield.
+            If `None`, iterate indefinitely.
 
         Yields
         ------
         obj : Objects yielded by the streamer provided on init.
         '''
 
+        count = 0
         while True:
-            for obj in self:
+            for obj in self.iterate():
+                count += 1
+                if max_iter is not None and count > max_iter:
+                    return
                 yield obj
 
     def __call__(self, max_iter=None, cycle=False):
@@ -235,7 +250,7 @@ class Streamer(object):
         cycle
         '''
         if cycle:
-            gen = self.cycle()
+            gen = self.cycle(max_iter=max_iter)
         else:
             gen = self.iterate(max_iter=max_iter)
 
