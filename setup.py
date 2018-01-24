@@ -31,13 +31,14 @@ setup(
     license='ISC',
     install_requires=[
         'joblib>=0.9',
-        'six',
-        'pyzmq',
-        'numpy',
-        'decorator'
+        'six>=1.8',
+        'pyzmq>=15.0',
+        'numpy>=1.9',
+        'decorator>=4.0'
     ],
     extras_require={
-        'docs': ['numpydoc', 'sphinx-gallery'],
-        'tests': ['pytest-timeout']
+        'docs': ['numpydoc>=0.6',
+                 'sphinx-gallery>=0.1.10'],
+        'tests': ['pytest-timeout>=1.2']
     }
 )
