@@ -8,6 +8,90 @@ import six
 from .exceptions import PescadorError
 
 
+class CallbackList(object):
+    """Container for abstracting a list of callbacks"""
+    def __init__(self, callbacks=None):
+        callbacks = callbacks or []
+        self.callbacks = [c for c in callbacks]
+
+    def append(self, callback):
+        self.callbacks.append(callback)
+
+    def set_streamer(self, streamer):
+        for callback in self.callbacks:
+            callback.set_streamer(streamer)
+
+    def on_activated(self, logs=None):
+        """Called when a streamer is activated.
+
+        Parameters
+        ----------
+        logs : dict
+            Dictionary of logs
+        """
+        logs = logs or {}
+        for callback in self.callbacks:
+            callback.on_activated(logs)
+
+    def on_completed(self, logs=None):
+        """Called when a streamer is exhausted, or otherwise completed.
+
+        Parameters
+        ----------
+        logs : dict
+            Dictionary of logs
+        """
+        logs = logs or {}
+        for callback in self.callbacks:
+            callback.on_completed(logs)
+
+    def on_exit(self, logs=None):
+        """Called when a streamer raises a StopIteration
+
+        Parameters
+        ----------
+        logs : dict
+            Dictionary of logs
+        """
+        logs = logs or {}
+        for callback in self.callbacks:
+            callback.on_exit(logs)
+
+    def on_cycle(self, logs=None):
+        """Called when a streamer is exhausted, and about to be restarted,
+        when using `cycle()`. Note: not called the first time through the loop.
+
+        Parameters
+        ----------
+        logs : dict
+            Dictionary of logs
+        """
+        logs = logs or {}
+        for callback in self.callbacks:
+            callback.on_cycle(logs)
+
+
+class PescadorCallback(object):
+    """Abstract base class for new callbacks"""
+    def __init__(self):
+        pass
+
+    def set_streamer(self, streamer):
+        self.streamer = streamer
+
+    def on_activated(self, logs=None):
+        pass
+
+    def on_completed(self, logs=None):
+        pass
+
+    def on_exit(self, logs=None):
+        pass
+
+    def on_cycle(self, logs=None):
+        pass
+
+
 class Streamer(object):
     '''A wrapper class for recycling iterables and generator functions, i.e.
     streamers.
@@ -100,6 +184,10 @@ class Streamer(object):
         self.args = args
         self.kwargs = kwargs
 
+        callbacks = self.kwargs.pop('callbacks', None) or []
+        self.callbacks = CallbackList(callbacks)
+        self.callbacks.set_streamer(self)
+
         # When a stream is activated, a copy of this streamer is made.
         # The number of copies is tracked with active_count_.
         self.active_count_ = 0
@@ -128,6 +216,12 @@ class Streamer(object):
         #  create a copy and return it
         if not self.is_activated_copy:
             streamer_copy = copy.deepcopy(self)
+            # Make sure the streamer callbacks talk to their own streamer.
+            streamer_copy.callbacks.set_streamer(streamer_copy)
+            # TODO: I *think* we want to call the child callback here, not
+            # the Factory/parent one. but I'm not sure about that.
+            streamer_copy.callbacks.on_activated()
+
             streamer_copy._activate()
 
             # Increment the count of active streams.
@@ -141,6 +235,7 @@ class Streamer(object):
         return streamer_copy
 
     def __exit__(self, *exc):
+        self.callbacks.on_exit()
         if not self.is_activated_copy:
 
             # Decrement the count of active streams.
@@ -201,6 +296,9 @@ class Streamer(object):
                     break
                 yield obj
 
+            # This is the *child* streamer's on_completed
+            active_streamer.callbacks.on_completed()
+
     def cycle(self, max_iter=None):
         '''Iterate from the streamer infinitely.
 
@@ -225,6 +323,8 @@ class Streamer(object):
                 if max_iter is not None and count > max_iter:
                     return
                 yield obj
+
+            self.callbacks.on_cycle()
 
     def __call__(self, max_iter=None, cycle=False):
         '''Convenience interface for interacting with the Streamer.
