@@ -55,12 +55,13 @@ Streaming Data
 
 Multiplexing Data Streams
 -------------------------
-1. Pescador defines an object called a `Mux` for the purposes of multiplexing streams of data.
+1. Pescador defines a family of multiplexer or `Mux` classes for the purposes of multiplexing streams of data.
+   For stochastic sampling applications, `ShuffledMux` and `StochasticMux` are the most useful classes.
 
-2. `Mux` inherits from `Streamer`, which makes it both iterable and recomposable.  Muxes allow you to
-   construct arbitrary trees of data streams.  This is useful for hierarchical sampling.
+2. `BaseMux` inherits from `Streamer`, which makes all muxes both iterable and recomposable.
+   Muxes allow you to construct arbitrary trees of data streams.  This is useful for hierarchical sampling.
 
-3. A `Mux` is initialized with a container of one or more iterables, and parameters to control the stochastic behavior of the object.
+3. Muxes are initialized with a container of one or more streamers, and parameters to control the mux's sampling behavior..
 
 4. As a subclass of `Streamer`, a `Mux` also transparently yields the stream flowing through it, i.e. :ref:`streaming-data`.
 

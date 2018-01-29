@@ -24,8 +24,8 @@ It can also be useful when dealing with data that has natural grouping substruct
 For example, when modeling a large collection of audio files, each file may generate multiple observations, which will all be mutually correlated.
 Hierarchical sampling can be useful in neutralizing this bias during the training process.
 
-Pescador implements hierarchical sampling via the :ref:`Mux` abstraction.
-In its simplest form, `Mux` takes as input a set of :ref:`Streamer` objects from which samples are drawn randomly.
+Pescador implements hierarchical sampling through a family of :ref:`Mux` classes.
+In its simplest form, the `ShuffledMux` takes as input a set of :ref:`Streamer` objects from which samples are drawn randomly.
 This effectively generates data by a process similar to the following pseudo-code:
 
 .. code-block:: python
@@ -35,10 +35,10 @@ This effectively generates data by a process similar to the following pseudo-cod
         stream_id = random_choice(streamers)
         yield next(streamers[stream_id])
 
-The `Mux` object also lets you specify an arbitrary distribution over the set of streamers, giving you fine-grained control over the resulting distribution of samples.
+The `ShuffledMux` object also lets you specify an arbitrary distribution over the set of streamers, giving you fine-grained control over the resulting distribution of samples.
 
 
-The `Mux` object is also a `Streamer`, so sampling hierarchies can be nested arbitrarily deep.
+Muxes are also `Streamers`, so sampling hierarchies can be nested arbitrarily deep.
 
 Out-of-core sampling
 --------------------
@@ -46,7 +46,7 @@ Out-of-core sampling
 Another common problem occurs when the size of the dataset is too large for the machine to fit in RAM simultaneously.
 Going back to the audio example above, consider a problem where there are 30,000 source files,  each of which generates 1GB of observation data, and the machine can only fit 100 source files in memory at any given time.
 
-To facilitate this use case, the `Mux` object allows you to specify a maximum number of simultaneously active streams (i.e., the *working set*).
+To facilitate this use case, the `StochasticMux` object allows you to specify a maximum number of simultaneously active streams (i.e., the *working set*).
 In this case, you would most likely implement a `generator` for each file as follows:
 
 .. code-block:: python
@@ -66,12 +66,14 @@ In this case, you would most likely implement a `generator` for each file as fol
         model.partial_fit(item['X'])
 
 Note that data is not loaded until the generator is instantiated.
-If you specify a working set of size `k=100`, then `Mux` will select 100 streamers at random to form the working set, and only sample data from within that set.
-`Mux` will then randomly evict streamers from the working set and replace them with new streamers, according to its `rate` parameter.
+If you specify a working set of size `n_active=100`, then `StochasticMux` will select 100 streamers at random to form the working set, and only sample data from within that set.
+`StochasticMux` will then randomly evict streamers from the working set and replace them with new streamers, according to its `rate` parameter.
 This results in a simple interface to draw data from all input sources but using limited memory.
 
-`Mux` provides a great deal of flexibility over how streamers are replaced, what to do when streamers are exhausted, etc.
+`StochasticMux` provides a great deal of flexibility over how streamers are replaced, what to do when streamers are exhausted, etc.
 
+In addition to `ShuffledMux` and `StochasticMux`, there are also deterministic multiplexers `ChainMux` and
+`RoundRobinMux`, which are useful when random sampling is undesirable.
 
 Parallel processing
 -------------------
@@ -86,7 +88,7 @@ Continuing the above example:
 .. code-block:: python
     :linenos:
 
-    mux_stream = pescador.Mux(streamers, 100)
+    mux_stream = pescador.StochasticMux(streamers, n_active=100, rate=8)
 
     for item in pescador.ZMQStreamer(mux_stream):
         model.partial_fit(item['X'])
