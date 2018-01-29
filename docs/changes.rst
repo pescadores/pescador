@@ -1,8 +1,8 @@
 Changes
 =======
 
-v2.0.0
-------
+v2.0.0 (2018-01-29)
+-------------------
 This release is the second major revision of the pescador architecture, and
 includes many substantial changes to the API.
 
@@ -26,8 +26,8 @@ includes many substantial changes to the API.
 .. _#121: https://github.com/pescadores/pescador/pull/121
 .. _#106: https://github.com/pescadores/pescador/pull/106
 
-v1.1.0
-------
+v1.1.0 (2017-08-25)
+-------------------
 This is primarily a maintenance release, and will be the last in the 1.x series.
 
 - `#97`_ Fixed an infinite loop in `Mux`
@@ -46,8 +46,8 @@ This is primarily a maintenance release, and will be the last in the 1.x series.
 .. _#97: https://github.com/pescadores/pescador/pull/97
 .. _#100: https://github.com/pescadores/pescador/pull/100
 
-v1.0.0
-------
+v1.0.0 (2017-03-18)
+-------------------
 This release constitutes a major revision over the 0.x series, and the new interface
 is not backward-compatible.
 
@@ -80,24 +80,24 @@ is not backward-compatible.
 .. _#34: https://github.com/pescadores/pescador/pull/34
 .. _#23: https://github.com/pescadores/pescador/pull/23
 
-v0.1.3
-------
+v0.1.3 (2016-07-28)
+-------------------
 - Added support for ``joblib>=0.10``
 
-v0.1.2
-------
+v0.1.2 (2016-02-22)
+-------------------
 
 - Added ``pescador.mux`` parameter `revive`.  Calling with `with_replacement=False, revive=True`
   will use each seed at most once at any given time.
 - Added ``pescador.zmq_stream`` parameter `timeout`. Setting this to a positive number will terminate
   dangling worker threads after `timeout` is exceeded on join.  See also: ``multiprocessing.Process.join``.
 
-v0.1.1
-------
+v0.1.1 (2016-01-07)
+-------------------
 
 - ``pescador.mux`` now throws a ``RuntimeError`` exception if the seed pool is empty
 
 
-v0.1.0
-------
+v0.1.0 (2015-10-20)
+-------------------
 Initial public release
