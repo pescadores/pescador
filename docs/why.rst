@@ -62,7 +62,9 @@ In this case, you would most likely implement a `generator` for each file as fol
 
     streamers = [pescador.Streamer(sample_file, fname) for fname in ALL_30K_FILES]
 
-    for item in pescador.Mux(streamers, 100):
+    # Keep 100 streamers active at a time
+    # Replace a streamer after it has generated (on average) 8 samples
+    for item in pescador.StochasticMux(streamers, n_active=100, rate=8):
         model.partial_fit(item['X'])
 
 Note that data is not loaded until the generator is instantiated.
