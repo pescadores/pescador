@@ -191,11 +191,11 @@ stream = pescador.Streamer(sampler, X_train, Y_train)
 noisy_stream = pescador.Streamer(additive_noise, stream, 'X')
 
 # Multiplex the two streamers together.
-mux = pescador.Mux([stream, noisy_stream],
-                   # Two streams, always active.
-                   k=2,
-                   # We want to sample from each stream infinitely.
-                   rate=None)
+mux = pescador.StochasticMux([stream, noisy_stream],
+                             # Two streams, always active.
+                             n_active=2,
+                             # We want to sample from each stream infinitely.
+                             rate=None)
 
 # Buffer the stream into minibatches.
 batches = pescador.buffer_stream(mux, batch_size)
