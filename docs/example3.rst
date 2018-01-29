@@ -44,7 +44,7 @@ Applying the `sample_npz` function above to a list of `npz_files`, we can make a
 
     # Keep 32 streams alive at once
     # Draw on average 16 patches from each stream before deactivating
-    mux_stream = pescador.Mux(streams, k=32, rate=16)
+    mux_stream = pescador.StochasticMux(streams, n_active=32, rate=16)
 
     for batch in mux_stream(max_iter=1000):
         # DO LEARNING HERE
@@ -97,7 +97,7 @@ Alternatively, *memory-mapping* can be used to only load data as needed, but req
     streams = [pescador.Streamer(sample_npz, npy_x, npy_y n)
                for (npy_x, npy_y) in zip(npy_x_files, npy_y_files)]
 
-    # Then construct the `Mux` from the streams, as above
-    mux_streame = pescador.Mux(streams, k=32, rate=16)
+    # Then construct the `StochasticMux` from the streams, as above
+    mux_streame = pescador.StochasticMux(streams, n_active=32, rate=16)
 
     ...
