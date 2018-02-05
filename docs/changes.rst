@@ -1,10 +1,12 @@
 Changes
 =======
 
-v2.0.0 (2018-01-29)
+v2.0.0 (2018-02-05)
 -------------------
 This release is the second major revision of the pescador architecture, and
 includes many substantial changes to the API.
+
+This release contains no changes from the release candidate 2.0.0rc0.
 
 - `#103`_ Deprecation and refactor of the `Mux` class.  Its functionality has 
   been superseded by new classes `StochasticMux`, `ShuffledMux`, `ChainMux`,
