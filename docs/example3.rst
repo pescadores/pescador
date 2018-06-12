@@ -94,10 +94,10 @@ Alternatively, *memory-mapping* can be used to only load data as needed, but req
     # NPY file for each X and Y
     npy_x_files = #LIST OF PRE-COMPUTED NPY FILES (X)
     npy_y_files = #LIST OF PRE-COMPUTED NPY FILES (Y)
-    streams = [pescador.Streamer(sample_npz, npy_x, npy_y n)
+    streams = [pescador.Streamer(sample_npy_mmap, npy_x, npy_y, n)
                for (npy_x, npy_y) in zip(npy_x_files, npy_y_files)]
 
     # Then construct the `StochasticMux` from the streams, as above
-    mux_streame = pescador.StochasticMux(streams, n_active=32, rate=16)
+    mux_streamer = pescador.StochasticMux(streams, n_active=32, rate=16)
 
     ...
