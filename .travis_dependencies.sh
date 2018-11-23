@@ -11,7 +11,7 @@ conda_create ()
     conda update -q conda
     conda config --add channels pypi
     conda info -a
-    deps='pip numpy scipy pytest pyzmq scikit-learn'
+    deps='pip numpy scipy pyzmq'
 
     conda create -q -n $ENV_NAME "python=$TRAVIS_PYTHON_VERSION" $deps
 }
@@ -31,8 +31,6 @@ if [ ! -f "$HOME/env/miniconda.sh" ]; then
         conda_create
 
         source activate $ENV_NAME
-
-        pip install python-coveralls pytest-cov
 
         source deactivate
 
