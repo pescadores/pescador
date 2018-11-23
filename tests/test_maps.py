@@ -10,30 +10,47 @@ def test___stack_data():
     n_items = 10
     data = [{"X": np.array([n])} for n in range(n_items)]
     expected = {"X": np.arange(n_items).reshape(-1, 1)}
-    output = pescador.maps.__stack_data(data)
+    output = pescador.maps.__stack_data(data, None)
     T._eq_batch(expected, output)
 
 
-def test_buffer_stream():
-    inputs = [{"X": np.array([n])} for n in range(10)]
+def test___stack_data_axis():
+    # This tests data stacking along a chosen axis
+    # test data are [[n]]
+    n_items = 10
+    data = [{"X": np.array([[n]])} for n in range(n_items)]
+    expected = {'X': np.arange(n_items).reshape(-1, 1)}
+    output = pescador.maps.__stack_data(data, 0)
+    T._eq_batch(expected, output)
+
+
+@pytest.mark.parametrize('axis', [None, 0])
+def test_buffer_stream(axis):
+    if axis is None:
+        inputs = [{"X": np.array([n])} for n in range(10)]
+    else:
+        inputs = [{"X": np.array([[n]])} for n in range(10)]
+
     expected = [{"X": np.array([0, 1, 2, 3]).reshape(-1, 1)},
                 {"X": np.array([4, 5, 6, 7]).reshape(-1, 1)},
                 {"X": np.array([8, 9]).reshape(-1, 1)}]
 
-    stream = pescador.maps.buffer_stream(inputs, buffer_size=4)
+    stream = pescador.maps.buffer_stream(inputs, buffer_size=4, axis=axis)
     outputs = list(stream)
     assert len(outputs) == (len(expected) - 1)
     for exp, obs in zip(expected, outputs):
         T._eq_batch(exp, obs)
 
-    stream = pescador.maps.buffer_stream(inputs, buffer_size=4, partial=True)
+    stream = pescador.maps.buffer_stream(inputs, buffer_size=4,
+                                         partial=True, axis=axis)
     outputs = list(stream)
     assert len(outputs) == len(expected)
     for exp, obs in zip(expected, outputs):
         T._eq_batch(exp, obs)
 
     with pytest.raises(pescador.maps.DataError):
-        for not_data in pescador.maps.buffer_stream([1, 2, 3, 4], 2):
+        for not_data in pescador.maps.buffer_stream([1, 2, 3, 4], 2,
+                                                    axis=axis):
             pass
 
 
