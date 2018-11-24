@@ -32,6 +32,8 @@ if [ ! -f "$HOME/env/miniconda.sh" ]; then
 
         source activate $ENV_NAME
 
+        pip install coveralls
+
         source deactivate
 
     popd

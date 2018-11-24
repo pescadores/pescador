@@ -4,9 +4,6 @@ import six
 import pescador
 import test_utils as T
 
-import warnings
-warnings.simplefilter('always')
-
 
 @pytest.mark.parametrize('copy', [False, True])
 @pytest.mark.parametrize('timeout', [None, 0.5, 2, 5])
@@ -28,24 +25,23 @@ def test_zmq_align():
     stream = pescador.Streamer(T.finite_generator, 200, size=3, lag=0.001)
 
     reference = list(stream)
-    warnings.resetwarnings()
 
     zmq_stream = pescador.ZMQStreamer(stream)
-    with warnings.catch_warnings(record=True) as out:
+
+    if six.PY2:
+        with pytest.warns(RuntimeWarning, match='array alignment'):
+            query = list(zmq_stream)
+    else:
         query = list(zmq_stream)
-        assert len(reference) == len(query)
 
+    assert len(reference) == len(query)
+
+    for b1, b2 in zip(reference, query):
+        T._eq_batch(b1, b2)
         if six.PY2:
-            assert len(out) > 0
-            assert out[0].category is RuntimeWarning
-            assert 'align' in str(out[0].message).lower()
-
-        for b1, b2 in zip(reference, query):
-            T._eq_batch(b1, b2)
-            if six.PY2:
-                continue
-            for key in b2:
-                assert b2[key].flags['ALIGNED']
+            continue
+        for key in b2:
+            assert b2[key].flags['ALIGNED']
 
 
 @pytest.mark.xfail(raises=pescador.PescadorError)
