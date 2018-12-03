@@ -1,6 +1,13 @@
 Changes
 =======
 
+v2.0.1 (2018-12-02)
+-------------------
+- `#127`_ Allow a target axis in the `buffer_stream`
+
+.. _#127: https://github.com/pescadores/pescador/pull/127
+
+
 v2.0.0 (2018-02-05)
 -------------------
 This release is the second major revision of the pescador architecture, and
