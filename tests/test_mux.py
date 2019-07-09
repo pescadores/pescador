@@ -685,9 +685,17 @@ class TestShuffledMux:
         b = pescador.Streamer(_cycle, 'b') 
         c = pescador.Streamer(_cycle, 'c')
 
-        weights = [6, 3, 1]
-        mux = pescador.ShuffledMux([a, b, c], weights=weights, random_state=10)
-        assert "".join(list(mux.iterate(max_iter=20))) == 'babbaaabaabcaabbbacb'
+        int_weights = [6, 3, 1]
+        int_mux = pescador.ShuffledMux(
+            [a, b, c], weights=int_weights, random_state=10)
+        int_seq = "".join(list(int_mux.iterate(max_iter=20)))
+     
+        float_weights = [6.0, 3.0, 1.0]
+        float_mux = pescador.ShuffledMux(
+            [a, b, c], weights=float_weights, random_state=10)
+        float_seq = "".join(list(float_mux.iterate(max_iter=20)))
+        
+        assert int_seq == float_seq
         
     
 class TestRoundRobinMux:
