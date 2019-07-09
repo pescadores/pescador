@@ -873,7 +873,7 @@ class ShuffledMux(BaseMux):
         self.weights = weights
         if self.weights is None:
             self.weights = 1. / self.n_streams * np.ones(self.n_streams)
-        self.weights = np.atleast_1d(self.weights)
+        self.weights = np.atleast_1d(self.weights).astype('float')
 
         if len(self.weights) != len(self.streamers):
             raise PescadorError('`weights` must be the same '

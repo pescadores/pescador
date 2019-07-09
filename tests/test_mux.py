@@ -678,8 +678,26 @@ class TestShuffledMux:
             np.testing.assert_approx_equal(counter[key] / len(samples),
                                            weights[i],
                                            significant=1)
+            
+    def test_shuffled_mux_integer_weights(self):
+        "Tests that integer-valued weights are supported (issue #143)."
+        a = pescador.Streamer(_cycle, 'a')
+        b = pescador.Streamer(_cycle, 'b') 
+        c = pescador.Streamer(_cycle, 'c')
 
-
+        int_weights = [6, 3, 1]
+        int_mux = pescador.ShuffledMux(
+            [a, b, c], weights=int_weights, random_state=10)
+        int_seq = "".join(list(int_mux.iterate(max_iter=20)))
+     
+        float_weights = [6.0, 3.0, 1.0]
+        float_mux = pescador.ShuffledMux(
+            [a, b, c], weights=float_weights, random_state=10)
+        float_seq = "".join(list(float_mux.iterate(max_iter=20)))
+        
+        assert int_seq == float_seq
+        
+    
 class TestRoundRobinMux:
     """The RoundRobinMux is guaranteed to reproduce samples in the
     same order as original streams.
