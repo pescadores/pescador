@@ -39,6 +39,6 @@ setup(
     extras_require={
         'docs': ['numpydoc>=0.6',
                  'sphinx-gallery>=0.1.10'],
-        'tests': ['pytest', 'pytest-timeout>=1.2', 'pytest-cov']
+        'tests': ['pytest<=4.6', 'pytest-timeout>=1.2', 'pytest-cov']
     }
 )
