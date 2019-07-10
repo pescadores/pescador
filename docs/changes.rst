@@ -1,9 +1,17 @@
 Changes
 =======
 
+v2.0.2 (2019-07-10)
+-------------------
+- `#145`_ Fixed `ShuffledMux` to support integer-typed weights
+- `#146`_ Expanded documentation for `buffer_stream`
+
+.. _#146: https://github.com/pescadores/pescador/pull/146
+.. _#145: https://github.com/pescadores/pescador/pull/145
+
 v2.0.1 (2018-12-02)
 -------------------
-- `#127`_ Allow a target axis in the `buffer_stream`
+- `#127`_ Allow a target axis in `buffer_stream`
 
 .. _#127: https://github.com/pescadores/pescador/pull/127
 
