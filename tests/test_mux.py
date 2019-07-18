@@ -162,6 +162,31 @@ def test_mux_of_mux():
         'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'])
 
 
+@pytest.mark.parametrize('mux_class', [
+    functools.partial(pescador.mux.StochasticMux, n_active=1, rate=10,
+                      mode='exhaustive'),
+    pescador.mux.ShuffledMux,
+    pescador.mux.RoundRobinMux,
+    pescador.mux.ChainMux,
+    ],
+    ids=[
+    "StochasticMux",
+    "ShuffledMux",
+    "RoundRobinMux",
+    "ChainMux"])
+def test_make_streamers(mux_class):
+
+    data = 'abcde'
+    data_s = pescador.Streamer(data)
+
+    reference = list(mux_class([data], random_state=0).iterate(max_iter=10))
+    estimate = list(mux_class([data_s], random_state=0).iterate(max_iter=10))
+
+    assert len(reference) == len(estimate)
+    for i, d in enumerate(estimate):
+        assert reference[i] == estimate[i]
+
+
 class TestCopyMux:
     @pytest.mark.parametrize('mux_class', [
         functools.partial(pescador.mux.StochasticMux, n_active=10, rate=3,

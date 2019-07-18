@@ -52,7 +52,6 @@ This module defines the following Mux types:
     RoundRobinMux
     ChainMux
 '''
-from warnings import warn
 import copy
 import six
 import numpy as np
@@ -78,8 +77,10 @@ class BaseMux(core.Streamer):
         """
         Parameters
         ----------
-        streamers : iterable of streamers
-            The collection of streamer-type objects
+        streamers : iterable of streamer or iterables
+            The collection of streamer-type objects.
+            If `streamers` are iterables, they will be automatically converted to
+            `Streamer` objects.
 
         random_state : None, int, or np.random.RandomState
             If int, random_state is the seed used by the random number
@@ -91,7 +92,8 @@ class BaseMux(core.Streamer):
             If None, the random number generator is the RandomState instance
             used by np.random.
         """
-        self.streamers = streamers
+        self.streamers = [s if isinstance(s, core.Streamer) else core.Streamer(s)
+                          for s in streamers]
 
         # If random_state is none, use the 'global' random_state.
         if random_state is None:
