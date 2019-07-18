@@ -8,6 +8,8 @@ import copy
 import inspect
 import six
 
+from decorator import decorator
+
 from .exceptions import PescadorError
 
 
@@ -262,3 +264,34 @@ class Streamer(object):
 
     def __iter__(self):
         return self.iterate()
+
+
+@decorator
+def streamable(function, *args, **kwargs):
+    '''Create a Streamer object by decoration.
+
+    This is a convenient shortcut for declaring generator
+    functions as Streamable, rather than having to construct
+    object wrappers explicitly every time.
+
+    Examples
+    --------
+    This example constructs a generator and then wraps it
+    in a Streamer object:
+
+    >>> def myfunc(n):
+    ...     for i in range(n):
+    ...         yield i
+    >>> s1 = Streamer(myfunc, 5)
+
+    Equivalently, you can use the decorator to achieve the
+    same effect:
+
+    >>> @pescador.streamable
+    ... def myfunc2(n):
+    ...     for i in range(n):
+    ...         yield i
+    >>> s2 = myfunc2(5)
+    '''
+
+    return Streamer(function, *args, **kwargs)
