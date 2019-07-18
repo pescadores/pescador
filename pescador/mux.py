@@ -92,8 +92,13 @@ class BaseMux(core.Streamer):
             If None, the random number generator is the RandomState instance
             used by np.random.
         """
-        self.streamers = [s if isinstance(s, core.Streamer) else core.Streamer(s)
-                          for s in streamers]
+        try:
+            self.streamers = [s if isinstance(s, core.Streamer) else core.Streamer(s)
+                              for s in streamers]
+        except TypeError:
+            # If we couldn't iterate over streamers, then it must / had better be a
+            # generator of Streamers.  Just set it directly and hope for the best.
+            self.streamers = streamers
 
         # If random_state is none, use the 'global' random_state.
         if random_state is None:
@@ -864,7 +869,7 @@ class ChainMux(BaseMux):
         Parameters
         ----------
         streamers : list of pescador.Streamers OR generator of
-            pescador.Streamrers
+            pescador.Streamers
 
         mode : ["exhaustive", "cycle"]
             `exhaustive`

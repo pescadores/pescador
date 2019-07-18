@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """Core classes"""
-import collections
+import collections.abc
 import copy
 import inspect
 import six
@@ -89,7 +89,7 @@ class Streamer(object):
         '''
 
         if not (inspect.isgeneratorfunction(streamer) or
-                isinstance(streamer, (collections.Iterable, Streamer))):
+                isinstance(streamer, (collections.abc.Iterable, Streamer))):
             raise PescadorError('`streamer` must be an iterable or callable '
                                 'function that returns an iterable object.')
 
