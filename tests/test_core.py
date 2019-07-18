@@ -272,3 +272,16 @@ def test_streamer_context_multiple_copies():
     result2 = list(gen2)
     assert len(result2) == 6
     assert streamer.active == 0
+
+
+def test_decorator():
+
+    @pescador.streamable
+    def my_generator(n):
+        for i in range(n):
+            yield i
+
+    s = my_generator(5)
+    assert isinstance(s, pescador.Streamer)
+    assert list(s) == [0, 1, 2, 3, 4]
+
