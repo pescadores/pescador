@@ -28,7 +28,7 @@ These use cases arise in the following common scenarios:
   Pescador makes it easy to interleave these sources while maintaining a small `working set`.
   Not all sources are simultaneously active, but Pescador manages the working set so you don't have to.
 
-- If loading data incurs substantial latency (e.g., due to accessing storage access
+- If loading data incurs substantial latency (e.g., due to accessing on-disk storage
   or pre-processing), this can be a problem.
   
   Pescador can seamlessly move data generation into a background process, so that your main thread can continue working.
