@@ -2,10 +2,12 @@
 # -*- encoding: utf-8 -*-
 '''Deprecation utilities'''
 
-from decorator import decorator
 import inspect
-import six
 import warnings
+import six
+from decorator import decorator
+
+import numpy as np
 
 from .exceptions import PescadorError
 
@@ -148,3 +150,34 @@ def batch_length(batch):
             raise PescadorError('Unequal field lengths')
 
     return n
+
+
+def get_rng(random_state):
+    '''Get a random number generator (RandomState) object
+    from a seed or existing state.
+
+    Parameters
+    ----------
+    random_state : None, int, or np.random.RandomState
+        If int, random_state is the seed used by the random number generator;
+
+        If RandomState instance, random_state is the random number generator;
+
+        If None, the random number generator is the RandomState instance
+        used by np.random.
+
+    Returns
+    -------
+    rng : np.random.RandomState
+        The RandomState object
+    '''
+    if random_state is None:
+        rng = np.random
+    elif isinstance(random_state, int):
+        rng = np.random.RandomState(seed=random_state)
+    elif isinstance(random_state, np.random.RandomState):
+        rng = random_state
+    else:
+        raise PescadorError('Invalid random_state={}'.format(random_state))
+
+    return rng

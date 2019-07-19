@@ -11,13 +11,15 @@ the function in a Streamer again.
     buffer_stream
     tuples
     keras_tuples
+    cache
 '''
 import numpy as np
 import six
 
+from .util import get_rng
 from .exceptions import DataError, PescadorError
 
-__all__ = ['buffer_stream', 'tuples', 'keras_tuples']
+__all__ = ['buffer_stream', 'tuples', 'keras_tuples', 'cache']
 
 
 def __stack_data(data, axis):
@@ -236,3 +238,84 @@ def keras_tuples(stream, inputs=None, outputs=None):
             yield (x, y)
         except TypeError:
             raise DataError("Malformed data stream: {}".format(data))
+
+
+def cache(stream, n_cache, prob=0.5, random_state=None):
+    '''Stochastic stream caching.
+
+    With probability `prob`: yield a new item from `stream` and place it in the cache
+
+    With probability `1-prob`: yield a previously seen item from the cache
+
+    When the cache exceeds size `n_cache`, a previously seen item is selected at
+    random for eviction.
+
+    A cached stream will generate at least as many items as the raw stream.
+    Cached streams will terminate when they attempt to collect a new item
+    from the input and the input has terminated.
+
+    .. note:: The first `n_cache` items will be generated from `stream` in order.
+              Caching only becomes active after this startup phase.
+
+    Parameters
+    ----------
+    stream : iterable
+        The stream from which to sample
+
+    n_cache : int > 0
+        The size of the cache
+
+    prob : float in (0, 1]
+        The probability with which to select a new item.
+        Small values of `prob` lead to high reuse of data; `prob=1` is equivalent
+        to not caching at all.
+
+    random_state : None, int, or np.random.RandomState
+        If int, random_state is the seed used by the random number generator;
+
+        If RandomState instance, random_state is the random number generator;
+
+        If None, the random number generator is the RandomState instance
+        used by np.random.
+
+    Yields
+    ------
+    data
+        elements of `stream`
+    '''
+
+    if n_cache <= 0:
+        raise PescadorError('n_cache={} must be a positive integer'.format(n_cache))
+
+    if not 0 < prob <= 1:
+        raise PescadorError('prob={} must be a number between 0 and 1.'.format(prob))
+
+    rng = get_rng(random_state)
+
+    data_cache = []
+
+    while True:
+        if len(data_cache) < n_cache:
+            # We don't have enough data yet; grab an item and yield it
+            try:
+                item = next(stream)
+                yield item
+            except StopIteration:
+                break
+            data_cache.append(item)
+
+        else:
+            # Otherwise, the cache is now full.
+            # Pick a random index
+            idx = rng.randint(low=0, high=n_cache)
+
+            # Then flip a coin to decide whether or not to replace it
+            # with a new item
+            if rng.rand() <= prob:
+                try:
+                    data_cache[idx] = next(stream)
+                except StopIteration:
+                    break
+
+            # Now yield the item
+            yield data_cache[idx]

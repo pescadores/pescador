@@ -57,6 +57,7 @@ import six
 import numpy as np
 
 from . import core
+from .util import get_rng
 from .exceptions import PescadorError
 
 
@@ -101,14 +102,7 @@ class BaseMux(core.Streamer):
             self.streamers = streamers
 
         # If random_state is none, use the 'global' random_state.
-        if random_state is None:
-            self.rng = np.random
-        elif isinstance(random_state, int):
-            self.rng = np.random.RandomState(seed=random_state)
-        elif isinstance(random_state, np.random.RandomState):
-            self.rng = random_state
-        else:
-            raise PescadorError('Invalid random_state={}'.format(random_state))
+        self.rng = get_rng(random_state)
 
         # Clear state and reset activate params.
         self._reset()
