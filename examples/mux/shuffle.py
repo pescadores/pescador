@@ -26,7 +26,6 @@ produce the output stream.
 # Code source: Brian McFee
 # License: BSD 3 Clause
 
-from __future__ import print_function
 import pescador
 
 #####################
