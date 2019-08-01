@@ -6,7 +6,6 @@ except ImportError:
     import collections as collections_abc
 import copy
 import inspect
-import six
 
 from decorator import decorator
 

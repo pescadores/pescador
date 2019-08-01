@@ -1,6 +1,5 @@
 import pytest
 import numpy as np
-import six
 import pescador
 import test_utils as T
 
@@ -34,8 +33,6 @@ def test_zmq_align():
 
     for b1, b2 in zip(reference, query):
         T._eq_batch(b1, b2)
-        if six.PY2:
-            continue
         for key in b2:
             assert b2[key].flags['ALIGNED']
 

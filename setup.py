@@ -30,7 +30,6 @@ setup(
     license='ISC',
     install_requires=[
         'joblib>=0.9',
-        'six>=1.8',
         'pyzmq>=15.0',
         'numpy>=1.9',
         'decorator>=4.0'
