@@ -10,7 +10,7 @@ import pescador.util
 
 def _eq_batch(b1, b2):
 
-    for k in six.iterkeys(b1):
+    for k in b1.keys():
         assert np.allclose(b1[k], b2[k])
 
 
@@ -28,7 +28,7 @@ def _eq_list_of_dicts(b1, b2):
 
     if results[-1]:
         for i in range(len(b1)):
-            for k in six.iterkeys(b1[i]):
+            for k in b1[i].keys():
                 results.append(np.allclose(b1[i][k], b2[i][k]))
 
     return np.all(results)

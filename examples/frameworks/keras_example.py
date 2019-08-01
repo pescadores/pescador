@@ -215,4 +215,4 @@ finally:
     print("Finished: {}".format(datetime.datetime.now()))
     scores = model.evaluate(X_test, Y_test, verbose=0)
     for val, name in zip(scores, model.metrics_names):
-        print('Test {}: {:0.4f}'.format(name, val))
+        print(f'Test {name}: {val:0.4f}')

@@ -28,11 +28,7 @@ def test_zmq_align():
 
     zmq_stream = pescador.ZMQStreamer(stream)
 
-    if six.PY2:
-        with pytest.warns(RuntimeWarning, match='array alignment'):
-            query = list(zmq_stream)
-    else:
-        query = list(zmq_stream)
+    query = list(zmq_stream)
 
     assert len(reference) == len(query)
 

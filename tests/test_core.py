@@ -278,8 +278,7 @@ def test_decorator():
 
     @pescador.streamable
     def my_generator(n):
-        for i in range(n):
-            yield i
+        yield from range(n)
 
     s = my_generator(5)
     assert isinstance(s, pescador.Streamer)

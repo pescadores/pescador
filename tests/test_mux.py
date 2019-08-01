@@ -17,8 +17,7 @@ import test_utils as T
 
 def _cycle(values):
     while True:
-        for v in values:
-            yield v
+        yield from values
 
 
 def _choice(vals, seed=11111):

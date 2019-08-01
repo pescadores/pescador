@@ -136,7 +136,7 @@ def buffer_stream(stream, buffer_size, partial=False, axis=None):
         try:
             yield __stack_data(data, axis=axis)
         except (TypeError, AttributeError):
-            raise DataError("Malformed data stream: {}".format(data))
+            raise DataError(f"Malformed data stream: {data}")
         finally:
             data = []
             count = 0
@@ -175,7 +175,7 @@ def tuples(stream, *keys):
         try:
             yield tuple(data[key] for key in keys)
         except TypeError:
-            raise DataError("Malformed data stream: {}".format(data))
+            raise DataError(f"Malformed data stream: {data}")
 
 
 def keras_tuples(stream, inputs=None, outputs=None):
@@ -213,10 +213,10 @@ def keras_tuples(stream, inputs=None, outputs=None):
         If the stream contains items that are not data-like.
     """
     flatten_inputs, flatten_outputs = False, False
-    if inputs and isinstance(inputs, six.string_types):
+    if inputs and isinstance(inputs, str):
         inputs = [inputs]
         flatten_inputs = True
-    if outputs and isinstance(outputs, six.string_types):
+    if outputs and isinstance(outputs, str):
         outputs = [outputs]
         flatten_outputs = True
 
@@ -237,7 +237,7 @@ def keras_tuples(stream, inputs=None, outputs=None):
 
             yield (x, y)
         except TypeError:
-            raise DataError("Malformed data stream: {}".format(data))
+            raise DataError(f"Malformed data stream: {data}")
 
 
 def cache(stream, n_cache, prob=0.5, random_state=None):
@@ -288,10 +288,10 @@ def cache(stream, n_cache, prob=0.5, random_state=None):
     '''
 
     if n_cache <= 0:
-        raise PescadorError('n_cache={} must be a positive integer'.format(n_cache))
+        raise PescadorError(f'n_cache={n_cache} must be a positive integer')
 
     if not 0 < prob <= 1:
-        raise PescadorError('prob={} must be a number in the range (0, 1].'.format(prob))
+        raise PescadorError(f'prob={prob} must be a number in the range (0, 1].')
 
     rng = get_rng(random_state)
 
