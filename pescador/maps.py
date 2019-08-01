@@ -243,12 +243,15 @@ def keras_tuples(stream, inputs=None, outputs=None):
 def cache(stream, n_cache, prob=0.5, random_state=None):
     '''Stochastic stream caching.
 
-    With probability `prob`: yield a new item from `stream` and place it in the cache
+    - With probability `prob`: yield a new item from `stream` and place it in the cache
+    - With probability `1-prob`: yield a previously seen item from the cache
+    - When the cache exceeds size `n_cache`, a previously seen item is selected at
+      random for eviction.
 
-    With probability `1-prob`: yield a previously seen item from the cache
-
-    When the cache exceeds size `n_cache`, a previously seen item is selected at
-    random for eviction.
+    Stream caching can reduce latency in producing items, particularly when the items
+    are large or take a non-trivial amount of time for the underlying `stream` to produce.
+    Note that the statistics of the cached stream will differ from those of `stream` because
+    items in the cache may be relatively over-represented, so use with caution.
 
     A cached stream will generate at least as many items as the raw stream.
     Cached streams will terminate when they attempt to collect a new item
@@ -288,7 +291,7 @@ def cache(stream, n_cache, prob=0.5, random_state=None):
         raise PescadorError('n_cache={} must be a positive integer'.format(n_cache))
 
     if not 0 < prob <= 1:
-        raise PescadorError('prob={} must be a number between 0 and 1.'.format(prob))
+        raise PescadorError('prob={} must be a number in the range (0, 1].'.format(prob))
 
     rng = get_rng(random_state)
 
