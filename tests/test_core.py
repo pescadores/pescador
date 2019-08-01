@@ -131,7 +131,7 @@ def test_streamer_cycle(generate):
         gen = streamer(cycle=True)
 
     for i, x in enumerate(gen):
-        data_results.append((isinstance(x, dict) and 'X' in x))
+        data_results.append(isinstance(x, dict) and 'X' in x)
         if (i + 1) >= count_max:
             break
     assert (len(data_results) == count_max and all(data_results))
@@ -278,8 +278,7 @@ def test_decorator():
 
     @pescador.streamable
     def my_generator(n):
-        for i in range(n):
-            yield i
+        yield from range(n)
 
     s = my_generator(5)
     assert isinstance(s, pescador.Streamer)

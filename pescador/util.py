@@ -12,7 +12,7 @@ import numpy as np
 from .exceptions import PescadorError
 
 
-class Deprecated(object):
+class Deprecated:
     '''A dummy class to catch usage of deprecated variable names'''
 
     def __repr__(self):
@@ -80,7 +80,7 @@ def moved(moved_from, version, version_removed):
 
     def __wrapper(func, *args, **kwargs):
         '''Warn the user, and then proceed.'''
-        code = six.get_function_code(func)
+        code = func.__code__
         warnings.warn_explicit(
             "{:s}\n\tThis function was moved to '{:s}.{:s}' in "
             "version {:s}."
@@ -105,7 +105,7 @@ def deprecated(version, version_removed):
 
     def __wrapper(func, *args, **kwargs):
         '''Warn the user, and then proceed.'''
-        code = six.get_function_code(func)
+        code = func.__code__
         warnings.warn_explicit(
             "{:s}.{:s}\n\tDeprecated as of version {:s}."
             "\n\tIt will be removed in version {:s}."
@@ -142,7 +142,7 @@ def batch_length(batch):
     '''
     n = None
 
-    for value in six.itervalues(batch):
+    for value in batch.values():
         if n is None:
             n = len(value)
 
@@ -178,6 +178,6 @@ def get_rng(random_state):
     elif isinstance(random_state, np.random.RandomState):
         rng = random_state
     else:
-        raise PescadorError('Invalid random_state={}'.format(random_state))
+        raise PescadorError(f'Invalid random_state={random_state}')
 
     return rng

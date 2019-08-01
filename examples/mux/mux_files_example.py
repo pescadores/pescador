@@ -110,4 +110,4 @@ mux = pescador.Mux(streams,
 # At this point, you can use the Mux as a streamer normally:
 
 for data in mux(max_iter=10):
-    print(dict((k, v.shape) for k, v in data.items()))
+    print({k: v.shape for k, v in data.items()})
