@@ -53,7 +53,6 @@ This module defines the following Mux types:
     ChainMux
 '''
 import copy
-import six
 import numpy as np
 
 from . import core

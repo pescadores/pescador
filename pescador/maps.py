@@ -14,7 +14,6 @@ the function in a Streamer again.
     cache
 '''
 import numpy as np
-import six
 
 from .util import get_rng
 from .exceptions import DataError, PescadorError
