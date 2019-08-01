@@ -15,8 +15,6 @@ As a concrete example, we can simulate a mixture of noisy streams with differing
 .. code-block:: python
     :linenos:
 
-    from __future__ import print_function
-
     import numpy as np
 
     from sklearn.datasets import load_breast_cancer

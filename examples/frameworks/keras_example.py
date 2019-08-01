@@ -14,7 +14,6 @@ https://github.com/fchollet/keras/blob/master/examples/mnist_cnn.py
 # Setup and Definitions
 ##############################################
 
-from __future__ import print_function
 import datetime
 import keras
 from keras.datasets import mnist

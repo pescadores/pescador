@@ -1,6 +1,3 @@
-# This makes '/' do in python2 what you expect in python3.
-from __future__ import division
-
 import pytest
 
 import copy

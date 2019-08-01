@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 '''Test the streamer object for reusable iterators'''
-from __future__ import print_function
 import copy
 import pytest
 
