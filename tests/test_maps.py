@@ -122,3 +122,26 @@ def test_keras_tuples(sample_data):
     with pytest.raises(KeyError):
         for x in pescador.maps.keras_tuples(sample_data, 'apple'):
             pass
+
+
+@pytest.mark.parametrize('n_cache', [2, 4, 8, 64,
+                                     pytest.mark.xfail(-1,
+                                     raises=pescador.PescadorError)])
+@pytest.mark.parametrize('prob', [0.1, 0.5, 1,
+                                     pytest.mark.xfail(-1,
+                                     raises=pescador.PescadorError),
+                                     pytest.mark.xfail(0,
+                                     raises=pescador.PescadorError),
+                                     pytest.mark.xfail(1.5,
+                                     raises=pescador.PescadorError)])
+def test_cache(n_cache, prob):
+    data = list(range(32))
+
+    cache = pescador.maps.cache(iter(range(32)), n_cache, prob, random_state=0)
+
+    output = list(cache)
+
+    if n_cache >= len(data) or prob == 1.0:
+        T._eq_lists(data, output), (data, output)
+    else:
+        assert len(output) >= len(data)
