@@ -1,9 +1,6 @@
 #!/usr/bin/env python
 """Core classes"""
-try:
-    import collections.abc as collections_abc  # only works on python 3.3+
-except ImportError:
-    import collections as collections_abc
+import collections.abc
 import copy
 import inspect
 
@@ -93,7 +90,7 @@ class Streamer:
         '''
 
         if not (inspect.isgeneratorfunction(streamer) or
-                isinstance(streamer, (collections_abc.Iterable, Streamer))):
+                isinstance(streamer, (collections.abc.Iterable, Streamer))):
             raise PescadorError('`streamer` must be an iterable or callable '
                                 'function that returns an iterable object.')
 
