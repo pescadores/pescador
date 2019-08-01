@@ -13,6 +13,11 @@ python:
     - "3.5"
     - "3.6"
 
+matrix:
+  include:
+    - python: 3.7
+      dist: xenial
+
 before_install:
     - bash .travis_dependencies.sh
     - export PATH="$HOME/env/miniconda$TRAVIS_PYTHON_VERSION/bin:$PATH";
