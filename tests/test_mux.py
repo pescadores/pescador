@@ -158,8 +158,8 @@ def test_mux_of_mux():
 
     train_result = list(train_mux.iterate(100))
     sample_counts = collections.Counter(train_result)
-    assert set(sample_counts.keys()) == set([
-        'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'])
+    assert set(sample_counts.keys()) == {
+        'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'}
 
 
 @pytest.mark.parametrize('mux_class', [
@@ -647,7 +647,7 @@ class TestShuffledMux:
         assert len(samples) == 30
 
         counter = collections.Counter(samples)
-        assert set(counter.keys()) == set(['a', 'b', 'c'])
+        assert set(counter.keys()) == {'a', 'b', 'c'}
         for key in ['a', 'b', 'c']:
             assert counter[key] > 0
 
@@ -664,7 +664,7 @@ class TestShuffledMux:
         counter = collections.Counter(samples)
 
         # Test that there is [a, b, c] in the set
-        assert set(counter.keys()) == set(['a', 'b', 'c'])
+        assert set(counter.keys()) == {'a', 'b', 'c'}
 
         # Test the statistics on the counts.
         # Does the sampling approximately match the weights?
