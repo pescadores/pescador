@@ -71,13 +71,16 @@ streams = [data_gen(fn, M) for fn in files]
 ###############################
 # The `StochasticMux` has three modes of operation, which control
 # how its input streams are activated and replaced:
+#
 # - `mode='with_replacement'` allows each streamer to be activated
-#   multiple times, even simultaneously.
+#    multiple times, even simultaneously.
+#
 # - `mode='single_active'` does not allow a streamer to be active
-#   more than once at a time, but an inactive streamer can be activated
-#   at any time.
+#    more than once at a time, but an inactive streamer can be activated
+#    at any time.
+#
 # - `mode='exhaustive'` is like `single_active`, but does not allow
-#   previously used streamers to be re-activated.
+#    previously used streamers to be re-activated.
 #
 # For epoch-based sampling, we will use `exhaustive` mode to ensure
 # that streamers are not reactivated within the epoch.
