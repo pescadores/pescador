@@ -1,6 +1,20 @@
 Changes
 =======
 
+v2.1.0 (2019-08-27)
+-------------------
+- `#156`_ Added support for python 3.7
+- `#153`_ Added the `cache` map
+- `#151`_ Added the decorator interface for defining streamers
+- `#150`_ `Streamer` objects now directly support iterator inputs
+- `#150`_ Removed deprecated `Mux` class, which has been replaced by
+  `StochastixMux`.
+
+.. _#156: https://github.com/pescadores/pescador/pull/156
+.. _#153: https://github.com/pescadores/pescador/pull/153
+.. _#151: https://github.com/pescadores/pescador/pull/151
+.. _#150: https://github.com/pescadores/pescador/pull/150
+
 v2.0.2 (2019-07-10)
 -------------------
 - `#145`_ Fixed `ShuffledMux` to support integer-typed weights
