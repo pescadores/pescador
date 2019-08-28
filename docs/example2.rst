@@ -12,6 +12,12 @@ The `StochasticMux` streamer provides a powerful interface for randomly interlea
 
 As a concrete example, we can simulate a mixture of noisy streams with differing variances.
 
+In this example, we use a slightly different notation for defining streamers, introduced in pescador 2.1.
+Instead of defining an iterator function `noisy_samples` and then wrapping it with a `Streamer` object,
+we can instead decorate the generator function with `@pescador.streamable`.
+The result is qualitatively the same in both cases, but the decorator interface produces a slightly
+cleaner syntax.
+
 .. code-block:: python
     :linenos:
 
@@ -26,6 +32,7 @@ As a concrete example, we can simulate a mixture of noisy streams with differing
 
     from pescador import Streamer, StochasticMux
 
+    @pescador.streamable
     def noisy_samples(X, Y, sigma=1.0):
         '''Copied over from the previous example'''
         n, d = X.shape
@@ -50,7 +57,7 @@ As a concrete example, we can simulate a mixture of noisy streams with differing
         estimator = SGDClassifier()
 
         # Build a collection of Streamers with different noise scales
-        streams = [Streamer(noisy_samples, X[train], Y[train], sigma=sigma)
+        streams = [noisy_samples(X[train], Y[train], sigma=sigma)
                    for sigma in [0, 0.5, 1.0, 2.0, 4.0]]
 
         # Build a mux stream, keeping 3 streams alive at once
