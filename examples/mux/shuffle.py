@@ -40,13 +40,14 @@ import pescador
 
 # First, let's make a simple generator that makes an infinite
 # sequence of a given letter.
+@pescador.streamable
 def letter(c):
     while True:
         yield c
 
 # Let's make the two populations of streamers
-pop1 = [pescador.Streamer(letter, c) for c in 'ABCDEFGHIJKLMNOPQRSTUVWXYZ']
-pop2 = [pescador.Streamer(letter, c) for c in 'abcdefghijklmnopqrstuvwxyz']
+pop1 = [letter(c) for c in 'ABCDEFGHIJKLMNOPQRSTUVWXYZ']
+pop2 = [letter(c) for c in 'abcdefghijklmnopqrstuvwxyz']
 
 # We'll sample population 1 with 3 streamers active at any time.
 # Each streamer will generate, on average, 5 samples before being

@@ -110,3 +110,25 @@ Iterating over any of these would then look like the following:
     for sample in streamer:
         # do something
         ...
+
+Stream decorators
+-----------------
+In the example above, we implemented a streamer by first defining a generator function, and then wrapping it inside a `Streamer` object.
+This allows the function to be used either directly as an iterator, or indirectly through pescador.
+However, if you are implementing a generator which will only be used via pescador, and do not need direct iterator access, you can accomplish
+this with a slightly cleaner syntax like in the following example:
+
+.. code-block:: python
+   :linenos:
+
+   import pescador
+
+   @pescador.streamable
+   def my_generator(n):
+      for i in range(n):
+         yield i**2
+
+
+Using the above syntax, when you call `my_generator(5)`, the result is itself a `Streamer` object, rather than an iterator.
+We generally recommend using this syntax unless direct access to the iterator is necessary, as the resulting code tends to be more readable.
+Further examples are given elsewhere in the documentation.
