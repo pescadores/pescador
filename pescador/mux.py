@@ -837,7 +837,6 @@ class ChainMux(BaseMux):
     >>> "".join(mux)
     "abcdef"
 
-
     Chain restarts from the beginning once exhausted.
 
     >>> a = pescador.Streamer("abc")
@@ -845,7 +844,6 @@ class ChainMux(BaseMux):
     >>> mux = pescador.ChainMux([a, b], mode="cycle")
     >>> "".join(mux(max_iter=12))
     "abcdefabcdef"
-
 
     Chain a generator of streamers
 
@@ -856,6 +854,7 @@ class ChainMux(BaseMux):
     >>> mux = pescador.ChainMux(gen_streamers(3, 5))
     >>> "".join(mux)
     "aaaaabbbbbccccc"
+
     """
     def __init__(self, streamers, mode="exhaustive",
                  random_state=None):
@@ -867,10 +866,10 @@ class ChainMux(BaseMux):
 
         mode : ["exhaustive", "cycle"]
             `exhaustive`
-                `ChainMux will exit after each stream has been exhausted.
+                `ChainMux` will exit after each stream has been exhausted.
 
             `cycle`
-                `ChainMux will restart from the beginning after each
+                `ChainMux` will restart from the beginning after each
                 streamer has been run to exhaustion.
 
         random_state : None, int, or np.random.RandomState

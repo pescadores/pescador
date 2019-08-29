@@ -17,6 +17,7 @@ We will define infinite samplers that pull `n` examples per iterate.
     import numpy as np
     import pescador
 
+    @pescador.streamable
     def sample_npz(npz_file, n):
         '''Generate an infinite sequence of contiguous samples
         from the input `npz_file`.
@@ -40,7 +41,7 @@ Applying the `sample_npz` function above to a list of `npz_files`, we can make a
 
     n = 16
     npz_files = #LIST OF PRE-COMPUTED NPZ FILES
-    streams = [pescador.Streamer(sample_npz, npz_f, n) for npz_f in npz_files]
+    streams = [sample_npz(npz_f, n) for npz_f in npz_files]
 
     # Keep 32 streams alive at once
     # Draw on average 16 patches from each stream before deactivating
@@ -58,17 +59,18 @@ The `NPZ` file format requires loading the entire contents of each archive into 
 
 .. code-block:: python
 
-    def sample_npz_copy(npz_file, n):
-        with np.load(npz_file) as data:
-            # How many rows are in the data?
-            # We assume that data['Y'] has the same length
-            n_total = len(data['X'])
+   @pescador.streamable
+   def sample_npz_copy(npz_file, n):
+      with np.load(npz_file) as data:
+         # How many rows are in the data?
+         # We assume that data['Y'] has the same length
+         n_total = len(data['X'])
 
-            while True:
-                # Compute the index offset
-                idx = np.random.randint(n_total - n)
-                yield dict(X=data['X'][idx:idx + n].copy(),  # <-- Note the explicit copy
-                           Y=data['Y'][idx:idx + n].copy())
+         while True:
+            # Compute the index offset
+            idx = np.random.randint(n_total - n)
+            yield dict(X=data['X'][idx:idx + n].copy(),  # <-- Note the explicit copy
+                       Y=data['Y'][idx:idx + n].copy())
 
 The above modification will ensure that memory is freed as quickly as possible.
 
@@ -76,28 +78,29 @@ Alternatively, *memory-mapping* can be used to only load data as needed, but req
 
 .. code-block:: python
 
-    def sample_npy_mmap(npy_x, npy_y, n):
+   @pescador.streamable
+   def sample_npy_mmap(npy_x, npy_y, n):
 
-        # Open each file in "copy-on-write" mode, so that the files are read-only
-        X = np.load(npy_x, mmap_mode='c')
-        Y = np.load(npy_y, mmap_mode='c')
+      # Open each file in "copy-on-write" mode, so that the files are read-only
+      X = np.load(npy_x, mmap_mode='c')
+      Y = np.load(npy_y, mmap_mode='c')
 
-        n_total = len(X)
+      n_total = len(X)
 
-        while True:
-            # Compute the index offset
-            idx = np.random.randint(n_total - n)
-            yield dict(X=X[idx:idx + n],
-                       Y=Y[idx:idx + n])
+      while True:
+         # Compute the index offset
+         idx = np.random.randint(n_total - n)
+         yield dict(X=X[idx:idx + n],
+                    Y=Y[idx:idx + n])
 
-    # Using this streamer is similar to the first example, but now you need a separate
-    # NPY file for each X and Y
-    npy_x_files = #LIST OF PRE-COMPUTED NPY FILES (X)
-    npy_y_files = #LIST OF PRE-COMPUTED NPY FILES (Y)
-    streams = [pescador.Streamer(sample_npy_mmap, npy_x, npy_y, n)
-               for (npy_x, npy_y) in zip(npy_x_files, npy_y_files)]
+   # Using this streamer is similar to the first example, but now you need a separate
+   # NPY file for each X and Y
+   npy_x_files = #LIST OF PRE-COMPUTED NPY FILES (X)
+   npy_y_files = #LIST OF PRE-COMPUTED NPY FILES (Y)
+   streams = [sample_npy_mmap(npy_x, npy_y, n)
+              for (npy_x, npy_y) in zip(npy_x_files, npy_y_files)]
 
-    # Then construct the `StochasticMux` from the streams, as above
-    mux_streamer = pescador.StochasticMux(streams, n_active=32, rate=16)
+   # Then construct the `StochasticMux` from the streams, as above
+   mux_streamer = pescador.StochasticMux(streams, n_active=32, rate=16)
 
-    ...
+   ...

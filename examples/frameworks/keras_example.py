@@ -121,6 +121,7 @@ def build_model(input_shape):
 # Define Data Sampler
 ##############################################
 
+@pescador.streamable
 def sampler(X, y):
     '''A basic generator for sampling data.
 
@@ -152,6 +153,7 @@ def sampler(X, y):
 # Define a Custom Map Function
 ##############################################
 
+@pescador.streamable
 def additive_noise(stream, key='X', scale=1e-1):
     '''Add noise to a data stream.
 
@@ -187,8 +189,8 @@ steps_per_epoch = len(X_train) // batch_size
 # Create two streams from the same data, where one of the streams
 # adds a small amount of Gaussian noise. You could easily perform
 # other data augmentations using the same 'map' strategy.
-stream = pescador.Streamer(sampler, X_train, Y_train)
-noisy_stream = pescador.Streamer(additive_noise, stream, 'X')
+stream = sampler(X_train, Y_train)
+noisy_stream = additive_noise(stream, 'X')
 
 # Multiplex the two streamers together.
 mux = pescador.StochasticMux([stream, noisy_stream],

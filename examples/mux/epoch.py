@@ -20,7 +20,6 @@ depending on the exact sampling properties you have in mind.
   all data is touched once per epoch, then the `StochasticMux` can be
   used in `cycle` mode to restart all streamers once they've been
   exhausted.
-  
 """
 
 # Imports
@@ -47,7 +46,12 @@ M = 10  # or whatever the number of examples per file is
 # The npz file is assumed to store two arrays: X and Y
 # containing inputs and outputs.
 # Once the streamer produces m examples, it exits.
+#
+# Here, we'll use the decorator interface to declare this
+# generator as a pescador Streamer
 
+
+@pescador.streamable
 def data_gen(filename, m):
     data = np.load(filename)
     X = data['X']
@@ -60,20 +64,23 @@ def data_gen(filename, m):
 ###############################
 # We'll make a streamer for each source file
 
-streams = [pescador.Streamer(data_gen, fn, M) for fn in files]
+streams = [data_gen(fn, M) for fn in files]
 
 ###############################
 # Epochs with StochasticMux
 ###############################
 # The `StochasticMux` has three modes of operation, which control
 # how its input streams are activated and replaced:
+#
 # - `mode='with_replacement'` allows each streamer to be activated
-#   multiple times, even simultaneously.
+#    multiple times, even simultaneously.
+#
 # - `mode='single_active'` does not allow a streamer to be active
-#   more than once at a time, but an inactive streamer can be activated
-#   at any time.
+#    more than once at a time, but an inactive streamer can be activated
+#    at any time.
+#
 # - `mode='exhaustive'` is like `single_active`, but does not allow
-#   previously used streamers to be re-activated.
+#    previously used streamers to be re-activated.
 #
 # For epoch-based sampling, we will use `exhaustive` mode to ensure
 # that streamers are not reactivated within the epoch.
@@ -81,11 +88,13 @@ streams = [pescador.Streamer(data_gen, fn, M) for fn in files]
 # Since each data stream produces exactly `M` examples, this would lead
 # to a finite sample stream (i.e., only one epoch).
 # To prevent the mux from exiting after the first epoch, we'll use `cycle` mode.
+#
 
 k = 100  # or however many streamers you want simultaneously active
 
 # We'll use `rate=None` here so that the number of samples per stream is
 # determined by the streamer (`M`) and not the mux.
+
 mux = pescador.StochasticMux(streams, k, rate=None, mode='exhaustive')
 
 epoch_stream = mux(cycle=True)
@@ -100,3 +109,4 @@ epoch_stream = mux(cycle=True)
 # `fit_generator` method, you need to be able to explicitly calculate
 # the duration of an epoch, which  means that the number of samples
 # per streamer (`M` here) must be known in advance.
+#

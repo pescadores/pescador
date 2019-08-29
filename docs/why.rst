@@ -52,6 +52,7 @@ In this case, you would most likely implement a `generator` for each file as fol
 .. code-block:: python
     :linenos:
 
+    @pescador.streamable
     def sample_file(filename):
         # Load observation data
         X = np.load(filename)
@@ -60,7 +61,7 @@ In this case, you would most likely implement a `generator` for each file as fol
             # Generate a random row as a dictionary
             yield dict(X=X[np.random.choice(len(X))])
 
-    streamers = [pescador.Streamer(sample_file, fname) for fname in ALL_30K_FILES]
+    streamers = [sample_file(fname) for fname in ALL_30K_FILES]
 
     # Keep 100 streamers active at a time
     # Replace a streamer after it has generated (on average) 8 samples

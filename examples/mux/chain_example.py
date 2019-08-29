@@ -43,6 +43,7 @@ M = 10  # or whatever the number of examples per file is
 # containing inputs and outputs (eg, images and class labels)
 # Once the streamer produces m examples, it exits.
 
+@pescador.streamable
 def data_gen(filename, m):
 
     data = np.load(filename)
@@ -56,9 +57,9 @@ def data_gen(filename, m):
 # Constructing the streamers
 ############################
 # First, we'll make a streamer for each validation example.
-# 
+#
 
-val_streams = [pescador.Streamer(data_gen, fn, M) for fn in val_files]
+val_streams = [data_gen(fn, M) for fn in val_files]
 
 
 ############################

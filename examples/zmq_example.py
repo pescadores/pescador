@@ -38,6 +38,7 @@ def costly_function(X, n_ops=100):
 # some simple data. We'll run some computation on the inside to
 # slow things down a bit.
 
+@pescador.streamable
 def data_gen(n_ops=100):
     """Yield data, while optionally burning compute cycles.
 
@@ -71,8 +72,7 @@ def timed_sampling(stream, n_iter, desc):
 max_iter = 1e2
 
 # Construct a streamer
-stream = pescador.Streamer(data_gen)
-timed_sampling(stream, max_iter, 'Single-threaded')
+timed_sampling(data_gen, max_iter, 'Single-threaded')
 # Single-threaded :: Average time per iteration: 0.024 sec
 
 
@@ -84,7 +84,7 @@ timed_sampling(stream, max_iter, 'Single-threaded')
 # do with the batches you receive here.
 
 # Wrap the streamer in a ZMQ streamer
-zstream = pescador.ZMQStreamer(stream)
+zstream = pescador.ZMQStreamer(data_gen)
 timed_sampling(zstream, max_iter, 'ZMQ')
 # ZMQ :: Average time per iteration: 0.012 sec
 
@@ -98,7 +98,7 @@ timed_sampling(zstream, max_iter, 'ZMQ')
 buffer_size = 16
 
 # Get batches from the stream as you would normally.
-batches = pescador.Streamer(pescador.buffer_stream, stream, buffer_size)
+batches = pescador.Streamer(pescador.buffer_stream, data_gen, buffer_size)
 timed_sampling(batches, max_iter, 'Single-threaded Batches')
 # Single-threaded Batches :: Average time per iteration: 0.392 sec
 

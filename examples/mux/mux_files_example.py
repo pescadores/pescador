@@ -57,6 +57,7 @@ split_and_save_datasets(X_train, Y_train, datasets)
 #################################################
 
 
+@pescador.streamable
 def npz_generator(npz_path):
     """Generate data from an npz file."""
     npz_data = np.load(npz_path)
@@ -71,7 +72,7 @@ def npz_generator(npz_path):
         yield {'X': X[i], 'Y': y[i]}
 
 
-streams = [pescador.Streamer(npz_generator, x) for x in datasets]
+streams = [npz_generator(x) for x in datasets]
 
 
 ##############################################
@@ -80,13 +81,13 @@ streams = [pescador.Streamer(npz_generator, x) for x in datasets]
 # If you can easily fit all the datasets in memory and you want to
 # sample from then equally, you would set up your Mux as follows:
 
-mux = pescador.Mux(streams,
-                   # Three streams, always active.
-                   k=len(streams),
-                   # We want to sample from each stream infinitely,
-                   # so we turn off the rate parameter, which
-                   # controls how long to sample from each stream.
-                   rate=None)
+mux = pescador.StochasticMux(streams,
+                             # Three streams, always active.
+                             n_active=len(streams),
+                             # We want to sample from each stream infinitely,
+                             # so we turn off the rate parameter, which
+                             # controls how long to sample from each stream.
+                             rate=None)
 
 
 ##############################################
@@ -96,12 +97,12 @@ mux = pescador.Mux(streams,
 # Now, the rate parameter controls (statistically) how long to sample
 # from a stream before activating a new stream.
 
-mux = pescador.Mux(streams,
-                   # Only allow one active stream
-                   k=1,
-                   # Sample on average 1000 samples from a stream before
-                   # moving onto another one.
-                   rate=1000)
+mux = pescador.StochasticMux(streams,
+                             # Only allow one active stream
+                             n_active=1,
+                             # Sample on average 1000 samples from a stream before
+                             # moving onto another one.
+                             rate=1000)
 
 
 ##############################################
