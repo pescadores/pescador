@@ -1,7 +1,7 @@
 Changes
 =======
 
-v2.1.0 (2019-08-27)
+v2.1.0 (2019-08-29)
 -------------------
 - `#156`_ Added support for python 3.7
 - `#153`_ Added the `cache` map
