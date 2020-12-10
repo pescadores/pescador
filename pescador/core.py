@@ -49,9 +49,9 @@ class Streamer(object):
     ...     print(i)  # Displays 0, 1, 2, 3, 4
 
 
-    Or with a maximum number of items
+    Or with a maximum number of examples
 
-    >>> for i in stream(max_items=3):
+    >>> for i in stream(max_iter=3):
     ...     print(i)  # Displays 0, 1, 2
 
 
