@@ -234,8 +234,8 @@ class TestCopyMux:
 class TestStochasticMux:
     @pytest.mark.parametrize(
         'mode', ['with_replacement', 'single_active', 'exhaustive',
-                 pytest.mark.xfail('foo', raises=pescador.PescadorError),
-                 pytest.mark.xfail(None, raises=pescador.PescadorError)])
+                 pytest.param('foo', marks=pytest.mark.xfail(raises=pescador.PescadorError)),
+                 pytest.param(None, marks=pytest.mark.xfail(raises=pescador.PescadorError))])
     @pytest.mark.parametrize('n_samples', [10])
     def test_valid_modes(self, mode, n_samples):
         """Simply tests the modes to make sure they work."""
@@ -247,8 +247,7 @@ class TestStochasticMux:
         assert len(output) == n_samples
 
     def test_multiple_copies(self):
-        """Check that the Mux class can be activated multiple times successfully.
-        """
+        """Check that the Mux class can be activated multiple times successfully."""
         ab = pescador.Streamer('ab')
         cde = pescador.Streamer('cde')
         fghi = pescador.Streamer('fghi')
@@ -260,8 +259,7 @@ class TestStochasticMux:
         # No streamers should be active until we actually start the generators
         assert mux.active == 0
 
-        # grab one sample each to make sure we've actually started the
-        # generator
+        # grab one sample each to make sure we've actually started the generators
         _ = next(gen1)
         _ = next(gen2)
         assert mux.active == 2
@@ -285,21 +283,17 @@ class TestStochasticMux_WithReplacement:
     @pytest.mark.parametrize('n_samples', [10, 20, 80])
     @pytest.mark.parametrize('n_active', [1, 2, 4])
     @pytest.mark.parametrize('rate', [1.0, 2.0, 8.0])
-    @pytest.mark.parametrize('random_state',
-                             [None,
-                              1000,
-                              np.random.RandomState(seed=1000),
-                              pytest.mark.xfail(
-                                  'foo', raises=pescador.PescadorError,
-                                  strict=True),
-                              ])
-    def test_mux_replacement(self, mux_class, n_streams, n_samples, n_active,
-                             rate, random_state):
+    @pytest.mark.parametrize('random_state', [
+        None,
+        1000,
+        np.random.RandomState(seed=1000),
+        pytest.param('foo', marks=pytest.mark.xfail(raises=pescador.PescadorError, strict=True)),
+    ])
+    def test_mux_replacement(self, mux_class, n_streams, n_samples, n_active, rate, random_state):
         streamers = [pescador.Streamer(T.infinite_generator)
                      for _ in range(n_streams)]
 
-        mux = mux_class(streamers, n_active, rate=rate,
-                        random_state=random_state)
+        mux = mux_class(streamers, n_active, rate=rate, random_state=random_state)
         estimate = list(mux.iterate(n_samples))
 
         # Make sure we get the right number of samples
@@ -320,9 +314,11 @@ class TestStochasticMux_WithReplacement:
         a = pescador.Streamer('a')
         b = pescador.Streamer('b')
 
-        mux = mux_class([a, b], 6, rate, random_state=random_state)
+        mux = mux_class([a, b], 6, rate=rate, random_state=random_state)
         result = list(mux.iterate(n_samples))
         assert len(result) == n_samples
+
+
 
 
 class TestStochasticMux_Exhaustive:
