@@ -124,16 +124,18 @@ def test_keras_tuples(sample_data):
             pass
 
 
-@pytest.mark.parametrize('n_cache', [2, 4, 8, 64,
-                                     pytest.mark.xfail(-1,
-                                     raises=pescador.PescadorError)])
-@pytest.mark.parametrize('prob', [0.1, 0.5, 1,
-                                     pytest.mark.xfail(-1,
-                                     raises=pescador.PescadorError),
-                                     pytest.mark.xfail(0,
-                                     raises=pescador.PescadorError),
-                                     pytest.mark.xfail(1.5,
-                                     raises=pescador.PescadorError)])
+@pytest.mark.parametrize(
+    'n_cache',
+    [2, 4, 8, 64,
+     pytest.param(-1, marks=pytest.mark.xfail(raises=pescador.PescadorError))]
+)
+@pytest.mark.parametrize(
+    'prob',
+    [0.1, 0.5, 1,
+     pytest.param(-1, marks=pytest.mark.xfail(raises=pescador.PescadorError)),
+     pytest.param(0, marks=pytest.mark.xfail(raises=pescador.PescadorError)),
+     pytest.param(1.5, marks=pytest.mark.xfail(raises=pescador.PescadorError))]
+)
 def test_cache(n_cache, prob):
     data = list(range(32))
 

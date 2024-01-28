@@ -25,13 +25,6 @@ try:
 except ImportError:
     import json
 
-try:
-    # joblib <= 0.9.4
-    from joblib.parallel import SafeFunction
-except ImportError:
-    # joblib >= 0.10.0
-    from joblib._parallel_backends import SafeFunction
-
 from .core import Streamer
 from .exceptions import DataError
 
@@ -191,7 +184,7 @@ class ZMQStreamer(Streamer):
                                               max_tries=self.max_tries)
             terminate = mp.Event()
 
-            worker = mp.Process(target=SafeFunction(zmq_worker),
+            worker = mp.Process(target=zmq_worker,
                                 args=[port, self.streamer, terminate],
                                 kwargs=dict(copy=self.copy,
                                             max_iter=max_iter))
