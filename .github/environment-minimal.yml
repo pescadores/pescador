@@ -6,7 +6,7 @@ dependencies:
   # required
   - pip
   - six~=1.8
-  - pyzmq~=15.0
+  - pyzmq~=18.0
   - decorator~=4.0
 
   # optional, but required for testing
