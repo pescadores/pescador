@@ -88,16 +88,9 @@ def test_mux_single_infinite(mux_class):
     functools.partial(pescador.mux.StochasticMux, n_active=1, rate=256),
     pescador.mux.ShuffledMux,
     pescador.mux.RoundRobinMux,
-    pytest.mark.xfail(pescador.mux.ChainMux,
-                      reason="ChainMux can accept an empty iterable or "
-                             "generator, and will simply return empty.",
-                      strict=True),
-],
-    ids=["StochasticMux-exhaustive",
-         "ShuffledMux",
-         "RoundRobinMux",
-         "ChainMux"
-         ])
+    pytest.param(pescador.mux.ChainMux, marks=pytest.mark.xfail(reason="ChainMux can accept an empty iterable or generator, and will simply return empty.", strict=True)),
+], ids=["StochasticMux-exhaustive", "ShuffledMux", "RoundRobinMux", "ChainMux"])
+
 def test_mux_empty(mux_class):
     "Make sure an empty list of streamers raises an error."
     with pytest.raises(pescador.PescadorError):
