@@ -132,8 +132,8 @@ def buffer_stream(stream, buffer_size, partial=False, axis=None):
             continue
         try:
             yield __stack_data(data, axis=axis)
-        except (TypeError, AttributeError):
-            raise DataError(f"Malformed data stream: {data}")
+        except (TypeError, AttributeError) as ex:
+            raise DataError(f"Malformed data stream: {data}") from ex
         finally:
             data = []
             count = 0
@@ -169,8 +169,8 @@ def tuples(stream, *keys):
     for data in stream:
         try:
             yield tuple(data[key] for key in keys)
-        except TypeError:
-            raise DataError(f"Malformed data stream: {data}")
+        except TypeError as ex:
+            raise DataError(f"Malformed data stream: {data}") from ex
 
 
 def keras_tuples(stream, inputs=None, outputs=None):
@@ -230,8 +230,8 @@ def keras_tuples(stream, inputs=None, outputs=None):
                 y = y[0]
 
             yield (x, y)
-        except TypeError:
-            raise DataError(f"Malformed data stream: {data}")
+        except TypeError as ex:
+            raise DataError(f"Malformed data stream: {data}") from ex
 
 
 def cache(stream, n_cache, prob=0.5, random_state=None):
