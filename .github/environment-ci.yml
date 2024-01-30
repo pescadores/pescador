@@ -1,0 +1,17 @@
+name: pescador-dev
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  # required
+  - pip
+  - six>=1.8
+  - pyzmq>=18.0
+  - decorator>=4.0
+
+  # optional, but required for testing
+  - pytest
+  - pytest-cov
+  - pytest-timeout>=1.2
+  - coverage
+  - scipy

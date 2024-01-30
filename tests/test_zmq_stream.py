@@ -44,13 +44,13 @@ def test_zmq_align():
             assert b2[key].flags['ALIGNED']
 
 
+def __bad_generator():
+    for _ in range(100):
+        yield dict(X=list(range(100)))
+
+
 @pytest.mark.xfail(raises=pescador.PescadorError)
 def test_zmq_bad_type():
-
-    def __bad_generator():
-
-        for _ in range(100):
-            yield dict(X=list(range(100)))
 
     stream = pescador.Streamer(__bad_generator)
 

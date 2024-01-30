@@ -70,11 +70,13 @@ def __zip_generator(n, size1, size2):
 
 
 @pytest.mark.parametrize(
-    'n1,n2', [pytest.mark.xfail((5, 10), raises=pescador.util.PescadorError),
-              pytest.mark.xfail((5, 15), raises=pescador.util.PescadorError),
-              pytest.mark.xfail((10, 5), raises=pescador.util.PescadorError),
-              pytest.mark.xfail((15, 5), raises=pescador.util.PescadorError),
-              (5, 5), (10, 10), (15, 15)])
+    'n1, n2',
+    [pytest.param(5, 10, marks=pytest.mark.xfail(raises=pescador.util.PescadorError)),
+     pytest.param(5, 15, marks=pytest.mark.xfail(raises=pescador.util.PescadorError)),
+     pytest.param(10, 5, marks=pytest.mark.xfail(raises=pescador.util.PescadorError)),
+     pytest.param(15, 5, marks=pytest.mark.xfail(raises=pescador.util.PescadorError)),
+     (5, 5), (10, 10), (15, 15)]
+)
 def test_batch_length(n1, n2):
     generator, n = __zip_generator(3, n1, n2), n1
 

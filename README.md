@@ -2,8 +2,8 @@ pescador
 ========
 [![PyPI](https://img.shields.io/pypi/v/pescador.svg)](https://pypi.python.org/pypi/pescador)
 [![Anaconda-Server Badge](https://anaconda.org/conda-forge/pescador/badges/version.svg)](https://anaconda.org/conda-forge/pescador)
-[![Build Status](https://travis-ci.org/pescadores/pescador.svg?branch=master)](https://travis-ci.org/pescadores/pescador)
-[![Coverage Status](https://coveralls.io/repos/pescadores/pescador/badge.svg)](https://coveralls.io/r/pescadores/pescador)
+[![Build Status](https://github.com/pescadores/pescador/actions/workflows/ci.yml/badge.svg)](https://github.com/pescadores/pescador/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/pescadores/pescador/graph/badge.svg?token=aCgfizw6O5)](https://codecov.io/gh/pescadores/pescador)
 [![Documentation Status](https://readthedocs.org/projects/pescador/badge/?version=latest)](https://readthedocs.org/projects/pescador/?badge=latest)
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.400700.svg)](https://doi.org/10.5281/zenodo.400700)
 

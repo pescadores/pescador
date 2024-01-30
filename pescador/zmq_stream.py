@@ -16,32 +16,17 @@ The `ZMQStreamer` object wraps ordinary streamers (or muxes) for background exec
 import multiprocessing as mp
 import zmq
 import numpy as np
-import six
-import sys
-import warnings
 
 try:
     import ujson as json
 except ImportError:
     import json
 
-try:
-    # joblib <= 0.9.4
-    from joblib.parallel import SafeFunction
-except ImportError:
-    # joblib >= 0.10.0
-    from joblib._parallel_backends import SafeFunction
-
 from .core import Streamer
 from .exceptions import DataError
 
 
 __all__ = ['ZMQStreamer']
-
-
-# A hack to support buffers in py3
-if six.PY3:
-    buffer = memoryview
 
 
 def zmq_send_data(socket, data, flags=0, copy=True, track=False):
@@ -82,12 +67,9 @@ def zmq_recv_data(socket, flags=0, copy=True, track=False):
         raise StopIteration
 
     for header, payload in zip(headers, msg[1:]):
-        data[header['key']] = np.frombuffer(buffer(payload),
+        data[header['key']] = np.frombuffer(memoryview(payload),
                                             dtype=header['dtype'])
         data[header['key']].shape = header['shape']
-        if six.PY2:
-            # Legacy python won't let us preserve alignment, skip this step
-            continue
         data[header['key']].flags['ALIGNED'] = header['aligned']
 
     return data
@@ -178,10 +160,6 @@ class ZMQStreamer(Streamer):
         """
         context = zmq.Context()
 
-        if six.PY2:
-            warnings.warn('zmq_stream cannot preserve numpy array alignment '
-                          'in Python 2', RuntimeWarning)
-
         try:
             socket = context.socket(zmq.PAIR)
 
@@ -191,7 +169,7 @@ class ZMQStreamer(Streamer):
                                               max_tries=self.max_tries)
             terminate = mp.Event()
 
-            worker = mp.Process(target=SafeFunction(zmq_worker),
+            worker = mp.Process(target=zmq_worker,
                                 args=[port, self.streamer, terminate],
                                 kwargs=dict(copy=self.copy,
                                             max_iter=max_iter))
@@ -206,13 +184,10 @@ class ZMQStreamer(Streamer):
         except StopIteration:
             pass
 
-        except:
-            # pylint: disable-msg=W0702
-            six.reraise(*sys.exc_info())
-
         finally:
             terminate.set()
-            worker.join(self.timeout)
+            if worker.is_alive():
+                worker.join(self.timeout)
             if worker.is_alive():
                 worker.terminate()
             context.destroy()
