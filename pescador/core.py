@@ -161,7 +161,7 @@ class Streamer(object):
 
     @property
     def active(self):
-        """Returns true if the stream is active
+        """Return true if the stream is active
         (ie there are still open / existing streams)
         """
         return self.active_count_
