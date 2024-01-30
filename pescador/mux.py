@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # -*- encoding: utf-8 -*-
-'''\
+"""\
 Defines the interface and several varieties of *mux*. A *mux* is
 a `Streamer` which wraps N other `Streamer` objects, and at every step yields a
 sample from one of its sub-streamers.
@@ -51,7 +51,7 @@ This module defines the following Mux types:
     ShuffledMux
     RoundRobinMux
     ChainMux
-'''
+"""
 import copy
 import numpy as np
 
@@ -73,6 +73,7 @@ class BaseMux(core.Streamer):
        chooses which active substream to stream from.
      * Handles exhaustion of streams (restarting, replacing, ...)
     """
+
     def __init__(self, streamers, random_state=None):
         """
         Parameters
@@ -93,8 +94,10 @@ class BaseMux(core.Streamer):
             used by np.random.
         """
         try:
-            self.streamers = [s if isinstance(s, core.Streamer) else core.Streamer(s)
-                              for s in streamers]
+            self.streamers = [
+                s if isinstance(s, core.Streamer) else core.Streamer(s)
+                for s in streamers
+            ]
         except TypeError:
             # If we couldn't iterate over streamers, then it must / had better be a
             # generator of Streamers.  Just set it directly and hope for the best.
@@ -123,7 +126,7 @@ class BaseMux(core.Streamer):
         for k, v in self.__dict__.items():
             # You can't deepcopy a module! If rng is np.random, just pass
             # it over without trying.
-            if k == 'rng' and v == np.random:
+            if k == "rng" and v == np.random:
                 setattr(copy_result, k, v)
             # In all other cases, assume a deepcopy is the right choice.
             else:
@@ -233,8 +236,9 @@ class BaseMux(core.Streamer):
 
         to replace the exhausted stream.
         """
-        raise NotImplementedError("_replace_stream() must be implemented in"
-                                  " a child class.")
+        raise NotImplementedError(
+            "_replace_stream() must be implemented in" " a child class."
+        )
 
     def _new_stream(self, idx):
         """Activate a new stream, given the index into the stream pool.
@@ -244,8 +248,9 @@ class BaseMux(core.Streamer):
         idx : int, [0:n_streams - 1]
             The stream index to replace
         """
-        raise NotImplementedError("_new_stream() must be implemented in"
-                                  " a child class.")
+        raise NotImplementedError(
+            "_new_stream() must be implemented in" " a child class."
+        )
 
     def _next_sample_index(self):
         """Returns the index in self.streams_ for the streamer from which
@@ -253,12 +258,13 @@ class BaseMux(core.Streamer):
 
         Implementation required in any child class.
         """
-        raise NotImplementedError("_next_sample_index() must be implemented in"
-                                  " a child class.")
+        raise NotImplementedError(
+            "_next_sample_index() must be implemented in" " a child class."
+        )
 
 
 class StochasticMux(BaseMux):
-    '''Stochastic Mux
+    """Stochastic Mux
 
     Examples
     --------
@@ -274,12 +280,18 @@ class StochasticMux(BaseMux):
     'accacbcba'
     >>> print("".join(mux(max_iter=30)))
     'abaccbbabccbbbccaccbacbccbbbbc'
-    '''
-    def __init__(self, streamers, n_active, rate,
-                 weights=None,
-                 mode="with_replacement",
-                 prune_empty_streams=True,
-                 random_state=None):
+    """
+
+    def __init__(
+        self,
+        streamers,
+        n_active,
+        rate,
+        weights=None,
+        mode="with_replacement",
+        prune_empty_streams=True,
+        random_state=None,
+    ):
         """Given an array (pool) of streamer types, do the following:
 
         1. Select ``k`` streams at random to iterate from
@@ -334,40 +346,38 @@ class StochasticMux(BaseMux):
         self.rate = rate
         self.prune_empty_streams = prune_empty_streams
 
-        super(StochasticMux, self).__init__(
-            streamers, random_state=random_state)
+        super(StochasticMux, self).__init__(streamers, random_state=random_state)
 
         if not self.n_streams:
-            raise PescadorError('Cannot mux an empty collection')
+            raise PescadorError("Cannot mux an empty collection")
 
-        if self.mode not in [
-                "with_replacement", "single_active", "exhaustive"]:
-            raise PescadorError("{} is not a valid mode for StochasticMux".format(
-                self.mode))
+        if self.mode not in ["with_replacement", "single_active", "exhaustive"]:
+            raise PescadorError(
+                "{} is not a valid mode for StochasticMux".format(self.mode)
+            )
 
         self.weights = weights
         if self.weights is None:
-            self.weights = 1. / self.n_streams * np.ones(self.n_streams)
+            self.weights = 1.0 / self.n_streams * np.ones(self.n_streams)
         self.weights = np.atleast_1d(self.weights)
 
         if len(self.weights) != len(self.streamers):
-            raise PescadorError('`weights` must be the same '
-                                'length as `streamers`')
+            raise PescadorError("`weights` must be the same " "length as `streamers`")
 
         if not (self.weights > 0.0).any():
-            raise PescadorError('`weights` must contain at least '
-                                'one positive value')
+            raise PescadorError("`weights` must contain at least " "one positive value")
 
         self.weights /= np.sum(self.weights)
 
     def _activate(self):
         # These do not depend on the number of streams, k
-        self.distribution_ = 1. / self.n_streams * np.ones(self.n_streams)
+        self.distribution_ = 1.0 / self.n_streams * np.ones(self.n_streams)
         self.valid_streams_ = np.ones(self.n_streams, dtype=bool)
 
         if len(self.streamers) != len(self.distribution_):
-            raise PescadorError('`streamers` must have the same '
-                                'length as `distribution`')
+            raise PescadorError(
+                "`streamers` must have the same " "length as `distribution`"
+            )
 
         # But the following do depend on the number of active streams.
         # The active streamers
@@ -383,7 +393,6 @@ class StochasticMux(BaseMux):
 
         # Initialize each active stream.
         for idx in range(self.n_active):
-
             if not (self.distribution_ > 0).any():
                 break
 
@@ -407,15 +416,14 @@ class StochasticMux(BaseMux):
 
     def _next_sample_index(self):
         """StochasticMux chooses its next sample stream randomly"""
-        return self.rng.choice(self.n_active,
-                               p=(self.stream_weights_ /
-                                  self.weight_norm_))
+        return self.rng.choice(
+            self.n_active, p=(self.stream_weights_ / self.weight_norm_)
+        )
 
     def _on_stream_exhausted(self, idx):
         # If we're disabling empty seeds, see if this stream
         # produced any data; if it didn't, turn it off.
-        if (self.prune_empty_streams is True and
-                self.stream_counts_[idx] == 0):
+        if self.prune_empty_streams is True and self.stream_counts_[idx] == 0:
             self.distribution_[self.stream_idxs_[idx]] = 0.0
             self.valid_streams_[self.stream_idxs_[idx]] = False
 
@@ -425,13 +433,12 @@ class StochasticMux(BaseMux):
             # If we need to revive a seed, give it the max
             # current probability
             if self.distribution_.any():
-                self.distribution_[self.stream_idxs_[idx]] = (
-                    np.max(self.distribution_))
+                self.distribution_[self.stream_idxs_[idx]] = np.max(self.distribution_)
             else:
                 self.distribution_[self.stream_idxs_[idx]] = 1.0
 
     def _activate_stream(self, idx):
-        '''Randomly select and create a stream.
+        """Randomly select and create a stream.
 
         StochasticMux adds mode handling to _activate_stream, making it so that
         if we're not sampling "with_replacement", the distribution for this
@@ -442,7 +449,7 @@ class StochasticMux(BaseMux):
         ----------
         idx : int, [0:n_streams - 1]
             The stream index to replace
-        '''
+        """
         # Get the number of samples for this streamer.
         n_samples_to_stream = None
         if self.rate is not None:
@@ -466,20 +473,20 @@ class StochasticMux(BaseMux):
         return streamer, weight
 
     def _new_stream(self, idx):
-        '''Randomly select and create a new stream.
+        """Randomly select and create a new stream.
 
         Parameters
         ----------
         idx : int, [0:n_streams - 1]
             The stream index to replace
-        '''
+        """
         # Choose the stream index from the candidate pool
-        self.stream_idxs_[idx] = self.rng.choice(
-            self.n_streams, p=self.distribution_)
+        self.stream_idxs_[idx] = self.rng.choice(self.n_streams, p=self.distribution_)
 
         # Activate the Streamer, and get the weights
         self.streams_[idx], self.stream_weights_[idx] = self._activate_stream(
-            self.stream_idxs_[idx])
+            self.stream_idxs_[idx]
+        )
 
         # Reset the sample count to zero
         self.stream_counts_[idx] = 0
@@ -532,8 +539,8 @@ class ShuffledMux(BaseMux):
     >>> print("".join(wmux(max_iter=30)))
     'acacababcaabcaaacaaccabcbaaaaa'
     """
-    def __init__(self, streamers, weights=None,
-                 random_state=None):
+
+    def __init__(self, streamers, weights=None, random_state=None):
         """
         Parameters
         ----------
@@ -558,25 +565,21 @@ class ShuffledMux(BaseMux):
             If None, the random number generator is the RandomState instance
             used by np.random.
         """
-        super(ShuffledMux, self).__init__(
-            streamers,
-            random_state=random_state)
+        super(ShuffledMux, self).__init__(streamers, random_state=random_state)
 
         if not self.n_streams:
-            raise PescadorError('Cannot mux an empty collection')
+            raise PescadorError("Cannot mux an empty collection")
 
         self.weights = weights
         if self.weights is None:
-            self.weights = 1. / self.n_streams * np.ones(self.n_streams)
-        self.weights = np.atleast_1d(self.weights).astype('float')
+            self.weights = 1.0 / self.n_streams * np.ones(self.n_streams)
+        self.weights = np.atleast_1d(self.weights).astype("float")
 
         if len(self.weights) != len(self.streamers):
-            raise PescadorError('`weights` must be the same '
-                                'length as `streamers`')
+            raise PescadorError("`weights` must be the same " "length as `streamers`")
 
         if not (self.weights > 0.0).any():
-            raise PescadorError('`weights` must contain at least '
-                                'one positive value')
+            raise PescadorError("`weights` must contain at least " "one positive value")
 
         self.weights /= np.sum(self.weights)
 
@@ -613,9 +616,9 @@ class ShuffledMux(BaseMux):
         """ShuffledMux chooses its next sample stream randomly,
         conditioned on the stream weights.
         """
-        return self.rng.choice(self.n_streams,
-                               p=(self.stream_weights_ /
-                                  self.weight_norm_))
+        return self.rng.choice(
+            self.n_streams, p=(self.stream_weights_ / self.weight_norm_)
+        )
 
     def _on_stream_exhausted(self, idx):
         # See if this stream produced any data; if it didn't, turn it off
@@ -625,13 +628,13 @@ class ShuffledMux(BaseMux):
             self.stream_weights_[idx] = 0
 
     def _new_stream(self, idx):
-        '''Randomly select and create a new stream.
+        """Randomly select and create a new stream.
 
         Parameters
         ----------
         idx : int, [0:n_streams - 1]
             The stream index to replace
-        '''
+        """
         # Don't activate the stream if the weight is 0 or None
         if self.stream_weights_[idx]:
             self.streams_[idx] = self.streamers[idx].iterate()
@@ -679,6 +682,7 @@ class RoundRobinMux(BaseMux):
     >>> print("".join(mux(max_iter=20)))
     "abcacbacbacbbcabacac"
     """
+
     def __init__(self, streamers, mode="exhaustive", random_state=None):
         """
         Parameters
@@ -707,12 +711,10 @@ class RoundRobinMux(BaseMux):
             used by `np.random.`
         """
         self.mode = mode
-        super(RoundRobinMux, self).__init__(
-            streamers,
-            random_state=random_state)
+        super(RoundRobinMux, self).__init__(streamers, random_state=random_state)
 
         if not self.n_streams:
-            raise PescadorError('Cannot mux an empty collection')
+            raise PescadorError("Cannot mux an empty collection")
 
     def _activate(self):
         self._setup_streams(False)
@@ -812,7 +814,7 @@ class RoundRobinMux(BaseMux):
 
         # Check if we've now exhausted all the streams.
         if not self._streamers_available():
-            if self.mode == 'exhaustive':
+            if self.mode == "exhaustive":
                 pass
 
             elif self.mode == "cycle":
@@ -855,8 +857,8 @@ class ChainMux(BaseMux):
     "aaaaabbbbbccccc"
 
     """
-    def __init__(self, streamers, mode="exhaustive",
-                 random_state=None):
+
+    def __init__(self, streamers, mode="exhaustive", random_state=None):
         """
         Parameters
         ----------
@@ -884,8 +886,7 @@ class ChainMux(BaseMux):
         # if inspect.isgeneratorfunction(streamers):
         #     streamers = core.Streamer(streamers)
 
-        super(ChainMux, self).__init__(
-            streamers, random_state=random_state)
+        super(ChainMux, self).__init__(streamers, random_state=random_state)
 
         if mode not in ["exhaustive", "cycle"]:
             raise PescadorError("Invalid ChainMux mode '{}'".format(mode))
@@ -939,7 +940,7 @@ class ChainMux(BaseMux):
         self._new_stream()
 
     def _new_stream(self):
-        '''Grab the next stream from the input streamers, and start it.
+        """Grab the next stream from the input streamers, and start it.
 
         Raises
         ------
@@ -947,7 +948,7 @@ class ChainMux(BaseMux):
             When the input list or generator of streamers is complete,
             will raise a StopIteration. If `mode == cycle`, it
             will instead restart iterating from the beginning of the sequence.
-        '''
+        """
         try:
             # Advance the stream_generator_ to get the next available stream.
             # If successful, this will make self.chain_streamer_.active True

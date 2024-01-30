@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-'''
+"""
 Parallel streaming
 ------------------
 
@@ -11,7 +11,7 @@ The `ZMQStreamer` object wraps ordinary streamers (or muxes) for background exec
 
     ZMQStreamer
 
-'''
+"""
 
 import multiprocessing as mp
 import zmq
@@ -26,7 +26,7 @@ from .core import Streamer
 from .exceptions import DataError
 
 
-__all__ = ['ZMQStreamer']
+__all__ = ["ZMQStreamer"]
 
 
 def zmq_send_data(socket, data, flags=0, copy=True, track=False):
@@ -38,17 +38,21 @@ def zmq_send_data(socket, data, flags=0, copy=True, track=False):
         arr = data[key]
 
         if not isinstance(arr, np.ndarray):
-            raise DataError('Only ndarray types can be serialized')
+            raise DataError("Only ndarray types can be serialized")
 
-        header.append(dict(dtype=str(arr.dtype),
-                           shape=arr.shape,
-                           key=key,
-                           aligned=arr.flags['ALIGNED']))
+        header.append(
+            dict(
+                dtype=str(arr.dtype),
+                shape=arr.shape,
+                key=key,
+                aligned=arr.flags["ALIGNED"],
+            )
+        )
         # Force contiguity
         payload.append(arr)
 
     # Send the header
-    msg = [json.dumps(header).encode('ascii')]
+    msg = [json.dumps(header).encode("ascii")]
     msg.extend(payload)
 
     return socket.send_multipart(msg, flags, copy=copy, track=track)
@@ -61,26 +65,24 @@ def zmq_recv_data(socket, flags=0, copy=True, track=False):
 
     msg = socket.recv_multipart(flags=flags, copy=copy, track=track)
 
-    headers = json.loads(msg[0].decode('ascii'))
+    headers = json.loads(msg[0].decode("ascii"))
 
     if len(headers) == 0:
         raise StopIteration
 
     for header, payload in zip(headers, msg[1:]):
-        data[header['key']] = np.frombuffer(memoryview(payload),
-                                            dtype=header['dtype'])
-        data[header['key']].shape = header['shape']
-        data[header['key']].flags['ALIGNED'] = header['aligned']
+        data[header["key"]] = np.frombuffer(memoryview(payload), dtype=header["dtype"])
+        data[header["key"]].shape = header["shape"]
+        data[header["key"]].flags["ALIGNED"] = header["aligned"]
 
     return data
 
 
 def zmq_worker(port, streamer, terminate, copy=False, max_iter=None):
-
     context = zmq.Context()
     socket = context.socket(zmq.PAIR)
     # TODO: Open this up to support different hosts.
-    socket.connect('tcp://localhost:{:d}'.format(port))
+    socket.connect("tcp://localhost:{:d}".format(port))
 
     try:
         # Build the stream
@@ -117,10 +119,16 @@ class ZMQStreamer(Streamer):
     ...     MY_FUNCTION(data)
     """
 
-    def __init__(self, streamer,
-                 min_port=49152, max_port=65535, max_tries=100,
-                 copy=False, timeout=5):
-        '''
+    def __init__(
+        self,
+        streamer,
+        min_port=49152,
+        max_port=65535,
+        max_tries=100,
+        copy=False,
+        timeout=5,
+    ):
+        """
         Parameters
         ----------
         streamer : `pescador.Streamer`
@@ -140,7 +148,7 @@ class ZMQStreamer(Streamer):
             Maximum time (in seconds) to wait before killing subprocesses.
             If `None`, then the streamer will wait indefinitely for
             subprocesses to terminate.
-        '''
+        """
         self.streamer = streamer
         self.min_port = min_port
         self.max_port = max_port
@@ -163,16 +171,19 @@ class ZMQStreamer(Streamer):
         try:
             socket = context.socket(zmq.PAIR)
 
-            port = socket.bind_to_random_port('tcp://*',
-                                              min_port=self.min_port,
-                                              max_port=self.max_port,
-                                              max_tries=self.max_tries)
+            port = socket.bind_to_random_port(
+                "tcp://*",
+                min_port=self.min_port,
+                max_port=self.max_port,
+                max_tries=self.max_tries,
+            )
             terminate = mp.Event()
 
-            worker = mp.Process(target=zmq_worker,
-                                args=[port, self.streamer, terminate],
-                                kwargs=dict(copy=self.copy,
-                                            max_iter=max_iter))
+            worker = mp.Process(
+                target=zmq_worker,
+                args=[port, self.streamer, terminate],
+                kwargs=dict(copy=self.copy, max_iter=max_iter),
+            )
 
             worker.daemon = True
             worker.start()

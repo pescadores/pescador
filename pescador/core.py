@@ -10,7 +10,7 @@ from .exceptions import PescadorError
 
 
 class Streamer(object):
-    '''A wrapper class for recycling iterables and generator functions, i.e.
+    """A wrapper class for recycling iterables and generator functions, i.e.
     streamers.
 
     Wrapping streamers within an object provides
@@ -67,10 +67,10 @@ class Streamer(object):
     >>> for i in stream(cycle=True):
     ...     print(i)  # Displays 0, 1, 2, 3, 4, 0, 1, 2, ...
 
-    '''
+    """
 
     def __init__(self, streamer, *args, **kwargs):
-        '''Initializer
+        """Initializer
 
         Parameters
         ----------
@@ -87,12 +87,16 @@ class Streamer(object):
         PescadorError
             If ``streamer`` is not a generator or an Iterable object.
 
-        '''
+        """
 
-        if not (inspect.isgeneratorfunction(streamer) or
-                isinstance(streamer, (collections_abc.Iterable, Streamer))):
-            raise PescadorError('`streamer` must be an iterable or callable '
-                                'function that returns an iterable object.')
+        if not (
+            inspect.isgeneratorfunction(streamer)
+            or isinstance(streamer, (collections_abc.Iterable, Streamer))
+        ):
+            raise PescadorError(
+                "`streamer` must be an iterable or callable "
+                "function that returns an iterable object."
+            )
 
         # The iterable or callable to stream from
         self.streamer = streamer
@@ -143,13 +147,13 @@ class Streamer(object):
 
     def __exit__(self, *exc):
         if not self.is_activated_copy:
-
             # Decrement the count of active streams.
             self.active_count_ -= 1
 
             if self.active_count_ < 0:
-                raise PescadorError("Active stream count passed below 0 for {}"
-                                    .format(self))
+                raise PescadorError(
+                    "Active stream count passed below 0 for {}".format(self)
+                )
 
         return False
 
@@ -178,7 +182,7 @@ class Streamer(object):
             self.stream_ = iter(self.streamer)
 
     def iterate(self, max_iter=None):
-        '''Instantiate an iterator.
+        """Instantiate an iterator.
 
         Parameters
         ----------
@@ -194,7 +198,7 @@ class Streamer(object):
         --------
         cycle : force an infinite stream.
 
-        '''
+        """
         # Use self as context manager / calls __enter__() => _activate()
         with self as active_streamer:
             for n, obj in enumerate(active_streamer.stream_):
@@ -203,7 +207,7 @@ class Streamer(object):
                 yield obj
 
     def cycle(self, max_iter=None):
-        '''Iterate from the streamer infinitely.
+        """Iterate from the streamer infinitely.
 
         This function will force an infinite stream, restarting
         the streamer even if a StopIteration is raised.
@@ -217,7 +221,7 @@ class Streamer(object):
         Yields
         ------
         obj : Objects yielded by the streamer provided on init.
-        '''
+        """
 
         count = 0
         while True:
@@ -228,7 +232,7 @@ class Streamer(object):
                 yield obj
 
     def __call__(self, max_iter=None, cycle=False):
-        '''Convenience interface for interacting with the Streamer.
+        """Convenience interface for interacting with the Streamer.
 
         Parameters
         ----------
@@ -249,7 +253,7 @@ class Streamer(object):
         --------
         iterate
         cycle
-        '''
+        """
         if cycle:
             gen = self.cycle(max_iter=max_iter)
         else:
@@ -264,7 +268,7 @@ class Streamer(object):
 
 @decorator
 def streamable(function, *args, **kwargs):
-    '''Create a Streamer object by decoration.
+    """Create a Streamer object by decoration.
 
     This is a convenient shortcut for declaring generator
     functions as Streamable, rather than having to construct
@@ -288,6 +292,6 @@ def streamable(function, *args, **kwargs):
     ...     for i in range(n):
     ...         yield i
     >>> s2 = myfunc2(5)
-    '''
+    """
 
     return Streamer(function, *args, **kwargs)
