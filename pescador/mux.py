@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# -*- encoding: utf-8 -*-
 """\
 Defines the interface and several varieties of *mux*. A *mux* is
 a `Streamer` which wraps N other `Streamer` objects, and at every step yields a
@@ -346,7 +345,7 @@ class StochasticMux(BaseMux):
         self.rate = rate
         self.prune_empty_streams = prune_empty_streams
 
-        super(StochasticMux, self).__init__(streamers, random_state=random_state)
+        super().__init__(streamers, random_state=random_state)
 
         if not self.n_streams:
             raise PescadorError("Cannot mux an empty collection")
@@ -565,7 +564,7 @@ class ShuffledMux(BaseMux):
             If None, the random number generator is the RandomState instance
             used by np.random.
         """
-        super(ShuffledMux, self).__init__(streamers, random_state=random_state)
+        super().__init__(streamers, random_state=random_state)
 
         if not self.n_streams:
             raise PescadorError("Cannot mux an empty collection")
@@ -711,7 +710,7 @@ class RoundRobinMux(BaseMux):
             used by `np.random.`
         """
         self.mode = mode
-        super(RoundRobinMux, self).__init__(streamers, random_state=random_state)
+        super().__init__(streamers, random_state=random_state)
 
         if not self.n_streams:
             raise PescadorError("Cannot mux an empty collection")
@@ -886,7 +885,7 @@ class ChainMux(BaseMux):
         # if inspect.isgeneratorfunction(streamers):
         #     streamers = core.Streamer(streamers)
 
-        super(ChainMux, self).__init__(streamers, random_state=random_state)
+        super().__init__(streamers, random_state=random_state)
 
         if mode not in ["exhaustive", "cycle"]:
             raise PescadorError(f"Invalid ChainMux mode '{mode}'")

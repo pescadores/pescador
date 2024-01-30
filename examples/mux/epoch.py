@@ -1,4 +1,3 @@
-#! -*- coding: utf-8 -*-
 """
 Using cycle mode to create data epochs
 ======================================

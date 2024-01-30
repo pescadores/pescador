@@ -9,7 +9,7 @@ from decorator import decorator
 from .exceptions import PescadorError
 
 
-class Streamer(object):
+class Streamer:
     """A wrapper class for recycling iterables and generator functions, i.e.
     streamers.
 
@@ -259,8 +259,7 @@ class Streamer(object):
         else:
             gen = self.iterate(max_iter=max_iter)
 
-        for obj in gen:
-            yield obj
+        yield from gen
 
     def __iter__(self):
         """Wrap the iterator interface"""

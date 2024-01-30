@@ -1,4 +1,3 @@
-#! -*- coding: utf-8 -*-
 """
 =====================================
 Using ChainMux for repeatable streams

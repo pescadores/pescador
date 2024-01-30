@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 ===============
 A Keras Example
@@ -14,7 +13,6 @@ https://github.com/fchollet/keras/blob/master/examples/mnist_cnn.py
 # Setup and Definitions
 ##############################################
 
-from __future__ import print_function
 import datetime
 import keras
 from keras.datasets import mnist
@@ -204,7 +202,7 @@ batches = pescador.buffer_stream(mux, batch_size)
 
 model = build_model(input_shape)
 try:
-    print("Start time: {}".format(datetime.datetime.now()))
+    print(f"Start time: {datetime.datetime.now()}")
     model.fit_generator(
         pescador.tuples(batches, 'X', 'y'),
         steps_per_epoch=steps_per_epoch,
@@ -214,7 +212,7 @@ try:
 except KeyboardInterrupt:
     print("Stopping early")
 finally:
-    print("Finished: {}".format(datetime.datetime.now()))
+    print(f"Finished: {datetime.datetime.now()}")
     scores = model.evaluate(X_test, Y_test, verbose=0)
     for val, name in zip(scores, model.metrics_names):
-        print('Test {}: {:0.4f}'.format(name, val))
+        print(f'Test {name}: {val:0.4f}')
