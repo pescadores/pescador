@@ -154,7 +154,7 @@ class Streamer(object):
 
             if self.active_count_ < 0:
                 raise PescadorError(
-                    "Active stream count passed below 0 for {}".format(self)
+                    f"Active stream count passed below 0 for {self}"
                 )
 
         return False

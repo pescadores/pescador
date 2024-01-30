@@ -353,7 +353,7 @@ class StochasticMux(BaseMux):
 
         if self.mode not in ["with_replacement", "single_active", "exhaustive"]:
             raise PescadorError(
-                "{} is not a valid mode for StochasticMux".format(self.mode)
+                f"{self.mode} is not a valid mode for StochasticMux"
             )
 
         self.weights = weights
@@ -889,7 +889,7 @@ class ChainMux(BaseMux):
         super(ChainMux, self).__init__(streamers, random_state=random_state)
 
         if mode not in ["exhaustive", "cycle"]:
-            raise PescadorError("Invalid ChainMux mode '{}'".format(mode))
+            raise PescadorError(f"Invalid ChainMux mode '{mode}'")
 
         self.mode = mode
 

@@ -80,7 +80,7 @@ def zmq_worker(port, streamer, terminate, copy=False, max_iter=None):
     context = zmq.Context()
     socket = context.socket(zmq.PAIR)
     # TODO: Open this up to support different hosts.
-    socket.connect("tcp://localhost:{:d}".format(port))
+    socket.connect(f"tcp://localhost:{port:d}")
 
     try:
         # Build the stream

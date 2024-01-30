@@ -176,6 +176,6 @@ def get_rng(random_state):
     elif isinstance(random_state, np.random.RandomState):
         rng = random_state
     else:
-        raise PescadorError("Invalid random_state={}".format(random_state))
+        raise PescadorError(f"Invalid random_state={random_state}")
 
     return rng
