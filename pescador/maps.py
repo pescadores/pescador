@@ -87,7 +87,6 @@ def buffer_stream(stream, buffer_size, partial=False, axis=None):
     >>> next(buf)
     {'x': array([0, 1, 2, 3, 4]), 'y': array([0, 1, 0, 1, 0])}
 
-
     If the iterates already have a batch index dimension, we can use it
     directly.  This can be useful when the streamers already generate
     partial batches that you want to combine, rather than singletons.
@@ -151,7 +150,6 @@ def tuples(stream, *keys):
     ----------
     stream : iterable
         Stream of data objects.
-
     *keys : strings
         Keys to use for ordering data.
 
@@ -185,11 +183,9 @@ def keras_tuples(stream, inputs=None, outputs=None):
     ----------
     stream : iterable
         Stream of data objects.
-
     inputs : string or iterable of strings, None
         Keys to use for ordered input data.
         If not specified, returns `None` in its place.
-
     outputs : string or iterable of strings, default=None
         Keys to use for ordered output data.
         If not specified, returns `None` in its place.

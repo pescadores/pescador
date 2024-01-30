@@ -133,17 +133,13 @@ class ZMQStreamer(Streamer):
         ----------
         streamer : `pescador.Streamer`
             The streamer object
-
         min_port : int > 0
         max_port : int > min_port
             The range of TCP ports to use
-
         max_tries : int > 0
             The maximum number of connection attempts to make
-
         copy : bool
             Set `True` to enable data copying
-
         timeout : [optional] number > 0
             Maximum time (in seconds) to wait before killing subprocesses.
             If `None`, then the streamer will wait indefinitely for

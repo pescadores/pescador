@@ -77,7 +77,6 @@ class Streamer(object):
         streamer : iterable or generator function
             Any generator function or object that is iterable when
             instantiated.
-
         args, kwargs
             Additional positional arguments or keyword arguments passed to
             ``streamer()`` if it is callable.
@@ -241,8 +240,7 @@ class Streamer(object):
             If `None`, attempt to exhaust the stream.
             For finite streams, call iterate again, or use `cycle=True` to
             force an infinite stream.
-
-        cycle: bool
+        cycle : bool
             If `True`, cycle indefinitely.
 
         Yields
