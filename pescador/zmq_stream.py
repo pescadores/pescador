@@ -31,7 +31,6 @@ __all__ = ["ZMQStreamer"]
 
 def zmq_send_data(socket, data, flags=0, copy=True, track=False):
     """Send data, e.g. {key: np.ndarray}, with metadata"""
-
     header, payload = [], []
 
     for key in sorted(data.keys()):
@@ -60,7 +59,6 @@ def zmq_send_data(socket, data, flags=0, copy=True, track=False):
 
 def zmq_recv_data(socket, flags=0, copy=True, track=False):
     """Receive data over a socket."""
-
     data = dict()
 
     msg = socket.recv_multipart(flags=flags, copy=copy, track=track)

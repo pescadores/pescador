@@ -121,7 +121,6 @@ def buffer_stream(stream, buffer_size, partial=False, axis=None):
     >>> next(buf_right)
     {'x': array([0, 1, 2, 3, 4]), 'y': array([0, 1, 0, 1, 0])}
     """
-
     data = []
     count = 0
 
@@ -281,7 +280,6 @@ def cache(stream, n_cache, prob=0.5, random_state=None):
     data
         elements of `stream`
     """
-
     if n_cache <= 0:
         raise PescadorError("n_cache={} must be a positive integer".format(n_cache))
 

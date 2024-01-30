@@ -115,7 +115,7 @@ class BaseMux(core.Streamer):
         self.active_count_ = 0
 
     def __deepcopy__(self, memo):
-        """This override is required to handle copying the random_state:
+        """Handle copying the random_state:
         when using `random_state=None`, the global state is used;
         modules are not 'deepcopy-able', so we have to make a special case for
         it.
@@ -175,7 +175,7 @@ class BaseMux(core.Streamer):
         pass
 
     def iterate(self, max_iter=None):
-        """Yields items from the mux, and handles stream exhaustion and
+        """Yield items from the mux, and handle stream exhaustion and
         replacement.
         """
         if max_iter is None:
@@ -209,7 +209,7 @@ class BaseMux(core.Streamer):
                     active_mux._replace_stream(idx)
 
     def _streamers_available(self):
-        "Override this to modify the behavior of the main iter loop condition."
+        """Override this to modify the behavior of the main iter loop condition."""
         return True
 
     def _on_stream_exhausted(self, idx):
@@ -226,7 +226,7 @@ class BaseMux(core.Streamer):
         pass
 
     def _replace_stream(self, idx):
-        """Called after a stream has been exhausted, replace the stream
+        """Call this after a stream has been exhausted to replace the stream
         with another from the pool.
 
         Any implementation of `_replace_stream()` should call
@@ -253,7 +253,7 @@ class BaseMux(core.Streamer):
         )
 
     def _next_sample_index(self):
-        """Returns the index in self.streams_ for the streamer from which
+        """Return the index in self.streams_ for the streamer from which
         to draw the next sample.
 
         Implementation required in any child class.
@@ -415,7 +415,7 @@ class StochasticMux(BaseMux):
         return self.weight_norm_ > 0.0 and self.valid_streams_.any()
 
     def _next_sample_index(self):
-        """StochasticMux chooses its next sample stream randomly"""
+        """Choose the next sample stream randomly"""
         return self.rng.choice(
             self.n_active, p=(self.stream_weights_ / self.weight_norm_)
         )
@@ -584,7 +584,7 @@ class ShuffledMux(BaseMux):
         self.weights /= np.sum(self.weights)
 
     def _activate(self):
-        """ShuffledMux's activate is similar to StochasticMux,
+        """Activate similarly to StochasticMux,
         but there is no 'n_active', since all the streams are always available.
         """
         self.streams_ = [None] * self.n_streams
@@ -613,7 +613,7 @@ class ShuffledMux(BaseMux):
         return self.weight_norm_ > 0.0
 
     def _next_sample_index(self):
-        """ShuffledMux chooses its next sample stream randomly,
+        """Choose the next sample stream randomly,
         conditioned on the stream weights.
         """
         return self.rng.choice(
@@ -798,7 +798,7 @@ class RoundRobinMux(BaseMux):
         self.stream_counts_[idx] = 0
 
     def _replace_stream(self, idx=None):
-        """Called by `BaseMux`'s iterate() when a stream is exhausted.
+        """Call from `BaseMux`'s iterate() when a stream is exhausted.
         Set the stream to None so it is ignored once exhausted.
 
         Parameters
@@ -928,7 +928,7 @@ class ChainMux(BaseMux):
         return 0
 
     def _replace_stream(self, idx=None):
-        """Called by `BaseMux`'s iterate() when a stream is exhausted.
+        """Call from `BaseMux`'s iterate() when a stream is exhausted.
 
         Parameters
         ----------

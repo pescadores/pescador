@@ -70,7 +70,7 @@ class Streamer(object):
     """
 
     def __init__(self, streamer, *args, **kwargs):
-        """Initializer
+        """Initialize the streamer object
 
         Parameters
         ----------
@@ -87,7 +87,6 @@ class Streamer(object):
             If ``streamer`` is not a generator or an Iterable object.
 
         """
-
         if not (
             inspect.isgeneratorfunction(streamer)
             or isinstance(streamer, (collections_abc.Iterable, Streamer))
@@ -113,12 +112,14 @@ class Streamer(object):
         self.stream_ = None
 
     def __copy__(self):
+        """Copy"""
         cls = self.__class__
         copy_result = cls.__new__(cls)
         copy_result.__dict__.update(self.__dict__)
         return copy_result
 
     def __deepcopy__(self, memo):
+        """Deep copy"""
         cls = self.__class__
         copy_result = cls.__new__(cls)
         memo[id(self)] = copy_result
@@ -128,6 +129,7 @@ class Streamer(object):
         return copy_result
 
     def __enter__(self, *args, **kwargs):
+        """Enter the streamer context"""
         # If this is the base / original streamer,
         #  create a copy and return it
         if not self.is_activated_copy:
@@ -145,6 +147,7 @@ class Streamer(object):
         return streamer_copy
 
     def __exit__(self, *exc):
+        """Exit the streamer context"""
         if not self.is_activated_copy:
             # Decrement the count of active streams.
             self.active_count_ -= 1
@@ -221,7 +224,6 @@ class Streamer(object):
         ------
         obj : Objects yielded by the streamer provided on init.
         """
-
         count = 0
         while True:
             for obj in self.iterate():
@@ -231,7 +233,7 @@ class Streamer(object):
                 yield obj
 
     def __call__(self, max_iter=None, cycle=False):
-        """Convenience interface for interacting with the Streamer.
+        """Allow streamers to act like callables
 
         Parameters
         ----------
@@ -261,6 +263,7 @@ class Streamer(object):
             yield obj
 
     def __iter__(self):
+        """Wrap the iterator interface"""
         return self.iterate()
 
 
@@ -291,5 +294,4 @@ def streamable(function, *args, **kwargs):
     ...         yield i
     >>> s2 = myfunc2(5)
     """
-
     return Streamer(function, *args, **kwargs)
