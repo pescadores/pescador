@@ -22,9 +22,9 @@ import pescador
 ##############################################
 # Prepare Datasets
 ##############################################
-dataset1_path = "/tmp/dataset1_train.npz"
-dataset2_path = "/tmp/dataset2_train.npz"
-dataset3_path = "/tmp/dataset3_train.npz"
+dataset1_path = "dataset1_train.npz"
+dataset2_path = "dataset2_train.npz"
+dataset3_path = "dataset3_train.npz"
 datasets = [dataset1_path, dataset2_path, dataset3_path]
 
 
