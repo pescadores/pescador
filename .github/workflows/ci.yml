@@ -47,23 +47,28 @@ jobs:
                       channel-priority: "strict"
                       envfile: ".github/environment-ci.yml"
 
+                    - os: ubuntu-latest
+                      python-version: "3.12"
+                      channel-priority: "strict"
+                      envfile: ".github/environment-ci.yml"
+
                     - os: macos-latest
-                      python-version: "3.11"
+                      python-version: "3.12"
                       channel-priority: "strict"
                       envfile: ".github/environment-ci.yml"
 
                     - os: windows-latest
-                      python-version: "3.11"
+                      python-version: "3.12"
                       channel-priority: "strict"
                       envfile: ".github/environment-ci.yml"
 
         steps:
-        - uses: actions/checkout@v3
+        - uses: actions/checkout@v4
           with:
             submodules: true
 
         - name: Cache conda
-          uses: actions/cache@v3
+          uses: actions/cache@v4
           env:
             # Increase this value to reset cache if etc/example-environment.yml has not changed
             CACHE_NUMBER: 0
@@ -72,7 +77,7 @@ jobs:
             key: ${{ runner.os }}-${{ matrix.python-version }}-conda-${{ env.CACHE_NUMBER }}-${{ hashFiles( matrix.envfile ) }}
 
         - name: Install Conda environment
-          uses: conda-incubator/setup-miniconda@v2
+          uses: conda-incubator/setup-miniconda@v3
           with:
             auto-update-conda: true
             python-version: ${{ matrix.python-version }}

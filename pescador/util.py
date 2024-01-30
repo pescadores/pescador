@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# -*- encoding: utf-8 -*-
 """Deprecation utilities"""
 
 import inspect
@@ -11,7 +10,7 @@ import numpy as np
 from .exceptions import PescadorError
 
 
-class Deprecated(object):
+class Deprecated:
     """A dummy class to catch usage of deprecated variable names"""
 
     def __repr__(self):

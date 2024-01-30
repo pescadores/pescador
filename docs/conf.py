@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 # pescador documentation build configuration file, created by
 # sphinx-quickstart on Fri Apr  3 10:03:34 2015.
@@ -83,19 +82,14 @@ source_suffix = '.rst'
 master_doc = 'index'
 
 # General information about the project.
-project = u'pescador'
-authors = u'Pescador development team'
-copyright = u'2016, {}'.format(authors)
+project = 'pescador'
+authors = 'Pescador development team'
+copyright = f'2016, {authors}'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
 # built documents.
-import six
-
-if six.PY3:
-    from unittest.mock import MagicMock as Mock
-else:
-    from mock import Mock
+from unittest.mock import MagicMock as Mock
 
 MOCK_MODULES = ['numpy', 'scipy',
                 'joblib.parallel', 'joblib._parallel_backends', 'joblib',
@@ -261,7 +255,7 @@ latex_elements = {
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
-  ('index', 'pescador.tex', u'pescador Documentation',
+  ('index', 'pescador.tex', 'pescador Documentation',
    authors),
 ]
 
@@ -291,7 +285,7 @@ latex_documents = [
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    ('index', 'pescador', u'pescador Documentation',
+    ('index', 'pescador', 'pescador Documentation',
      [authors], 1)
 ]
 
@@ -305,7 +299,7 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-    ('index', 'pescador', u'pescador Documentation',
+    ('index', 'pescador', 'pescador Documentation',
      authors, 'pescador', 'One line description of project.',
      'Miscellaneous'),
 ]
