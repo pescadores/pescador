@@ -13,4 +13,5 @@ dependencies:
   - pytest
   - pytest-cov
   - pytest-timeout>=1.2
+  - coverage
   - scipy
