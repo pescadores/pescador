@@ -4,7 +4,6 @@
 
 import inspect
 import warnings
-import six
 from decorator import decorator
 
 import numpy as np
@@ -80,7 +79,7 @@ def moved(moved_from, version, version_removed):
 
     def __wrapper(func, *args, **kwargs):
         '''Warn the user, and then proceed.'''
-        code = six.get_function_code(func)
+        code = func.__code__
         warnings.warn_explicit(
             "{:s}\n\tThis function was moved to '{:s}.{:s}' in "
             "version {:s}."
@@ -105,7 +104,7 @@ def deprecated(version, version_removed):
 
     def __wrapper(func, *args, **kwargs):
         '''Warn the user, and then proceed.'''
-        code = six.get_function_code(func)
+        code = func.__code__
         warnings.warn_explicit(
             "{:s}.{:s}\n\tDeprecated as of version {:s}."
             "\n\tIt will be removed in version {:s}."
@@ -142,7 +141,7 @@ def batch_length(batch):
     '''
     n = None
 
-    for value in six.itervalues(batch):
+    for value in batch.values():
         if n is None:
             n = len(value)
 

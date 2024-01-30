@@ -53,7 +53,6 @@ This module defines the following Mux types:
     ChainMux
 '''
 import copy
-import six
 import numpy as np
 
 from . import core
@@ -121,7 +120,7 @@ class BaseMux(core.Streamer):
         cls = self.__class__
         copy_result = cls.__new__(cls)
         memo[id(self)] = copy_result
-        for k, v in six.iteritems(self.__dict__):
+        for k, v in self.__dict__.items():
             # You can't deepcopy a module! If rng is np.random, just pass
             # it over without trying.
             if k == 'rng' and v == np.random:
@@ -191,7 +190,7 @@ class BaseMux(core.Streamer):
                 # Can we sample from it?
                 try:
                     # Then yield the sample
-                    yield six.advance_iterator(active_mux.streams_[idx])
+                    yield next(active_mux.streams_[idx])
 
                     # Increment the sample counter
                     n += 1
@@ -952,7 +951,7 @@ class ChainMux(BaseMux):
         try:
             # Advance the stream_generator_ to get the next available stream.
             # If successful, this will make self.chain_streamer_.active True
-            next_stream = six.advance_iterator(self.stream_generator_)
+            next_stream = next(self.stream_generator_)
 
         except StopIteration:
             # If running with cycle, restart the chain_streamer_ after
@@ -963,7 +962,7 @@ class ChainMux(BaseMux):
                 # Try again to get the next stream;
                 # if it fails this time, just let it raise the StopIteration;
                 # this means the streams are probably dead or empty.
-                next_stream = six.advance_iterator(self.stream_generator_)
+                next_stream = next(self.stream_generator_)
 
             # If running in exhaustive mode
             else:

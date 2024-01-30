@@ -14,7 +14,6 @@ the function in a Streamer again.
     cache
 '''
 import numpy as np
-import six
 
 from .util import get_rng
 from .exceptions import DataError, PescadorError
@@ -213,10 +212,10 @@ def keras_tuples(stream, inputs=None, outputs=None):
         If the stream contains items that are not data-like.
     """
     flatten_inputs, flatten_outputs = False, False
-    if inputs and isinstance(inputs, six.string_types):
+    if inputs and isinstance(inputs, str):
         inputs = [inputs]
         flatten_inputs = True
-    if outputs and isinstance(outputs, six.string_types):
+    if outputs and isinstance(outputs, str):
         outputs = [outputs]
         flatten_outputs = True
 

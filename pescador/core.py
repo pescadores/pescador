@@ -1,12 +1,8 @@
 #!/usr/bin/env python
 """Core classes"""
-try:
-    import collections.abc as collections_abc  # only works on python 3.3+
-except ImportError:
-    import collections as collections_abc
+import collections.abc as collections_abc
 import copy
 import inspect
-import six
 
 from decorator import decorator
 
@@ -123,7 +119,7 @@ class Streamer(object):
         cls = self.__class__
         copy_result = cls.__new__(cls)
         memo[id(self)] = copy_result
-        for k, v in six.iteritems(self.__dict__):
+        for k, v in self.__dict__.items():
             setattr(copy_result, k, copy.deepcopy(v, memo))
 
         return copy_result
@@ -173,7 +169,7 @@ class Streamer(object):
 
     def _activate(self):
         """Activates the stream."""
-        if six.callable(self.streamer):
+        if callable(self.streamer):
             # If it's a function, create the stream.
             self.stream_ = self.streamer(*(self.args), **(self.kwargs))
 
