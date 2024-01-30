@@ -1,10 +1,10 @@
 .. _example2:
 
-This example demonstrates how to re-use and multiplex streamers.
+This example demonstrates how to reuse and multiplex streamers.
 
 We will assume a working understanding of the simple example in the previous section.
 
-Stream re-use and multiplexing
+Stream reuse and multiplexing
 ==============================
 
 The `StochasticMux` streamer provides a powerful interface for randomly interleaving samples from multiple input streams.

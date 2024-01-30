@@ -40,7 +40,7 @@ These use cases arise in the following common scenarios:
 
 To make this all possible, Pescador provides the following utilities:
 
-    - :ref:`Streamer` objects encapsulate data generators for re-use, infinite sampling, and inter-process
+    - :ref:`Streamer` objects encapsulate data generators for reuse, infinite sampling, and inter-process
       communication.
     - :ref:`Mux` objects allow flexible sampling from multiple streams
     - :ref:`ZMQStreamer` provides parallel processing with low communication overhead

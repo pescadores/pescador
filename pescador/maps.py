@@ -158,7 +158,7 @@ def tuples(stream, *keys):
     Yields
     ------
     items : tuple of np.ndarrays
-        Data object reformated as a tuple.
+        Data object reformatted as a tuple.
 
     Raises
     ------

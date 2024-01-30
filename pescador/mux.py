@@ -492,7 +492,7 @@ class StochasticMux(BaseMux):
         self.stream_counts_[idx] = 0
 
     def _replace_stream(self, idx):
-        # If there are active streams reamining,
+        # If there are active streams remaining,
         # choose a new one to make active.
         if (self.distribution_ > 0).any():
             # Replace it and move on if there are still seeds
@@ -645,7 +645,7 @@ class ShuffledMux(BaseMux):
         self.stream_counts_[idx] = 0
 
     def _replace_stream(self, idx):
-        # If there are active streams reamining,
+        # If there are active streams remaining,
         # choose a new one to make active.
         if (self.stream_weights_ > 0).any():
             # Setup a new streamer at this index.

@@ -223,7 +223,7 @@ class TestCopyMux:
             assert np.allclose(s1[1], s2[1])
 
             # Using global state (random_state=None), we can't necessarily
-            # guarantee that these will be the same withour resetting the seed,
+            # guarantee that these will be the same without resetting the seed,
             # but here with the local random state, we can.
             sample1 = list(mux.iterate(30))
             sample2 = list(copy_mux.iterate(30))
@@ -547,7 +547,7 @@ class TestStochasticMux_SingleActive:
         assert len(list(mux(max_iter=100))) == 0
 
     def test_mux_stacked_uniform_convergence(self, mux_class):
-        """This test is designed to check that boostrapped streams of data
+        """This test is designed to check that bootstrapped streams of data
         (Streamer subsampling, rate limiting) cascaded through multiple
         multiplexors converges in expectation to a flat, uniform sample of the
         stream directly.
