@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-'''Map functions perform operations on a stream.
+"""Map functions perform operations on a stream.
 
 Important note: map functions return a *generator*, not another
 Streamer, so if you need it to behave like a Streamer, you have to wrap
@@ -12,14 +12,13 @@ the function in a Streamer again.
     tuples
     keras_tuples
     cache
-'''
+"""
 import numpy as np
-import six
 
 from .util import get_rng
 from .exceptions import DataError, PescadorError
 
-__all__ = ['buffer_stream', 'tuples', 'keras_tuples', 'cache']
+__all__ = ["buffer_stream", "tuples", "keras_tuples", "cache"]
 
 
 def __stack_data(data, axis):
@@ -34,7 +33,7 @@ def __stack_data(data, axis):
 
 
 def buffer_stream(stream, buffer_size, partial=False, axis=None):
-    '''Buffer data from an stream into one data object.
+    """Buffer data from an stream into one data object.
 
     This is useful when a stream produces one example at a time, and you want
     to collect `buffer_size` iterates into a single object.
@@ -88,7 +87,6 @@ def buffer_stream(stream, buffer_size, partial=False, axis=None):
     >>> next(buf)
     {'x': array([0, 1, 2, 3, 4]), 'y': array([0, 1, 0, 1, 0])}
 
-
     If the iterates already have a batch index dimension, we can use it
     directly.  This can be useful when the streamers already generate
     partial batches that you want to combine, rather than singletons.
@@ -122,8 +120,7 @@ def buffer_stream(stream, buffer_size, partial=False, axis=None):
     >>> buf_right = pescador.buffer_stream(S, 5, axis=0)
     >>> next(buf_right)
     {'x': array([0, 1, 2, 3, 4]), 'y': array([0, 1, 0, 1, 0])}
-    '''
-
+    """
     data = []
     count = 0
 
@@ -136,7 +133,7 @@ def buffer_stream(stream, buffer_size, partial=False, axis=None):
         try:
             yield __stack_data(data, axis=axis)
         except (TypeError, AttributeError):
-            raise DataError("Malformed data stream: {}".format(data))
+            raise DataError(f"Malformed data stream: {data}")
         finally:
             data = []
             count = 0
@@ -152,14 +149,13 @@ def tuples(stream, *keys):
     ----------
     stream : iterable
         Stream of data objects.
-
     *keys : strings
         Keys to use for ordering data.
 
     Yields
     ------
     items : tuple of np.ndarrays
-        Data object reformated as a tuple.
+        Data object reformatted as a tuple.
 
     Raises
     ------
@@ -169,13 +165,12 @@ def tuples(stream, *keys):
         If a data object does not contain the requested key.
     """
     if not keys:
-        raise PescadorError('Unable to generate tuples from '
-                            'an empty item set')
+        raise PescadorError("Unable to generate tuples from " "an empty item set")
     for data in stream:
         try:
             yield tuple(data[key] for key in keys)
         except TypeError:
-            raise DataError("Malformed data stream: {}".format(data))
+            raise DataError(f"Malformed data stream: {data}")
 
 
 def keras_tuples(stream, inputs=None, outputs=None):
@@ -187,11 +182,9 @@ def keras_tuples(stream, inputs=None, outputs=None):
     ----------
     stream : iterable
         Stream of data objects.
-
     inputs : string or iterable of strings, None
         Keys to use for ordered input data.
         If not specified, returns `None` in its place.
-
     outputs : string or iterable of strings, default=None
         Keys to use for ordered output data.
         If not specified, returns `None` in its place.
@@ -213,17 +206,18 @@ def keras_tuples(stream, inputs=None, outputs=None):
         If the stream contains items that are not data-like.
     """
     flatten_inputs, flatten_outputs = False, False
-    if inputs and isinstance(inputs, six.string_types):
+    if inputs and isinstance(inputs, str):
         inputs = [inputs]
         flatten_inputs = True
-    if outputs and isinstance(outputs, six.string_types):
+    if outputs and isinstance(outputs, str):
         outputs = [outputs]
         flatten_outputs = True
 
     inputs, outputs = (inputs or []), (outputs or [])
     if not inputs + outputs:
-        raise PescadorError('At least one key must be given for '
-                            '`inputs` or `outputs`')
+        raise PescadorError(
+            "At least one key must be given for " "`inputs` or `outputs`"
+        )
 
     for data in stream:
         try:
@@ -237,11 +231,11 @@ def keras_tuples(stream, inputs=None, outputs=None):
 
             yield (x, y)
         except TypeError:
-            raise DataError("Malformed data stream: {}".format(data))
+            raise DataError(f"Malformed data stream: {data}")
 
 
 def cache(stream, n_cache, prob=0.5, random_state=None):
-    '''Stochastic stream caching.
+    """Stochastic stream caching.
 
     - With probability `prob`: yield a new item from `stream` and place it in the cache
     - With probability `1-prob`: yield a previously seen item from the cache
@@ -285,13 +279,14 @@ def cache(stream, n_cache, prob=0.5, random_state=None):
     ------
     data
         elements of `stream`
-    '''
-
+    """
     if n_cache <= 0:
-        raise PescadorError('n_cache={} must be a positive integer'.format(n_cache))
+        raise PescadorError(f"n_cache={n_cache} must be a positive integer")
 
     if not 0 < prob <= 1:
-        raise PescadorError('prob={} must be a number in the range (0, 1].'.format(prob))
+        raise PescadorError(
+            f"prob={prob} must be a number in the range (0, 1]."
+        )
 
     rng = get_rng(random_state)
 

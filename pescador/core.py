@@ -1,12 +1,8 @@
 #!/usr/bin/env python
 """Core classes"""
-try:
-    import collections.abc as collections_abc  # only works on python 3.3+
-except ImportError:
-    import collections as collections_abc
+import collections.abc as collections_abc
 import copy
 import inspect
-import six
 
 from decorator import decorator
 
@@ -14,7 +10,7 @@ from .exceptions import PescadorError
 
 
 class Streamer(object):
-    '''A wrapper class for recycling iterables and generator functions, i.e.
+    """A wrapper class for recycling iterables and generator functions, i.e.
     streamers.
 
     Wrapping streamers within an object provides
@@ -71,17 +67,16 @@ class Streamer(object):
     >>> for i in stream(cycle=True):
     ...     print(i)  # Displays 0, 1, 2, 3, 4, 0, 1, 2, ...
 
-    '''
+    """
 
     def __init__(self, streamer, *args, **kwargs):
-        '''Initializer
+        """Initialize the streamer object
 
         Parameters
         ----------
         streamer : iterable or generator function
             Any generator function or object that is iterable when
             instantiated.
-
         args, kwargs
             Additional positional arguments or keyword arguments passed to
             ``streamer()`` if it is callable.
@@ -91,12 +86,15 @@ class Streamer(object):
         PescadorError
             If ``streamer`` is not a generator or an Iterable object.
 
-        '''
-
-        if not (inspect.isgeneratorfunction(streamer) or
-                isinstance(streamer, (collections_abc.Iterable, Streamer))):
-            raise PescadorError('`streamer` must be an iterable or callable '
-                                'function that returns an iterable object.')
+        """
+        if not (
+            inspect.isgeneratorfunction(streamer)
+            or isinstance(streamer, (collections_abc.Iterable, Streamer))
+        ):
+            raise PescadorError(
+                "`streamer` must be an iterable or callable "
+                "function that returns an iterable object."
+            )
 
         # The iterable or callable to stream from
         self.streamer = streamer
@@ -114,21 +112,24 @@ class Streamer(object):
         self.stream_ = None
 
     def __copy__(self):
+        """Copy"""
         cls = self.__class__
         copy_result = cls.__new__(cls)
         copy_result.__dict__.update(self.__dict__)
         return copy_result
 
     def __deepcopy__(self, memo):
+        """Deep copy"""
         cls = self.__class__
         copy_result = cls.__new__(cls)
         memo[id(self)] = copy_result
-        for k, v in six.iteritems(self.__dict__):
+        for k, v in self.__dict__.items():
             setattr(copy_result, k, copy.deepcopy(v, memo))
 
         return copy_result
 
     def __enter__(self, *args, **kwargs):
+        """Enter the streamer context"""
         # If this is the base / original streamer,
         #  create a copy and return it
         if not self.is_activated_copy:
@@ -146,20 +147,21 @@ class Streamer(object):
         return streamer_copy
 
     def __exit__(self, *exc):
+        """Exit the streamer context"""
         if not self.is_activated_copy:
-
             # Decrement the count of active streams.
             self.active_count_ -= 1
 
             if self.active_count_ < 0:
-                raise PescadorError("Active stream count passed below 0 for {}"
-                                    .format(self))
+                raise PescadorError(
+                    f"Active stream count passed below 0 for {self}"
+                )
 
         return False
 
     @property
     def active(self):
-        """Returns true if the stream is active
+        """Return true if the stream is active
         (ie there are still open / existing streams)
         """
         return self.active_count_
@@ -173,7 +175,7 @@ class Streamer(object):
 
     def _activate(self):
         """Activates the stream."""
-        if six.callable(self.streamer):
+        if callable(self.streamer):
             # If it's a function, create the stream.
             self.stream_ = self.streamer(*(self.args), **(self.kwargs))
 
@@ -182,7 +184,7 @@ class Streamer(object):
             self.stream_ = iter(self.streamer)
 
     def iterate(self, max_iter=None):
-        '''Instantiate an iterator.
+        """Instantiate an iterator.
 
         Parameters
         ----------
@@ -198,7 +200,7 @@ class Streamer(object):
         --------
         cycle : force an infinite stream.
 
-        '''
+        """
         # Use self as context manager / calls __enter__() => _activate()
         with self as active_streamer:
             for n, obj in enumerate(active_streamer.stream_):
@@ -207,7 +209,7 @@ class Streamer(object):
                 yield obj
 
     def cycle(self, max_iter=None):
-        '''Iterate from the streamer infinitely.
+        """Iterate from the streamer infinitely.
 
         This function will force an infinite stream, restarting
         the streamer even if a StopIteration is raised.
@@ -221,8 +223,7 @@ class Streamer(object):
         Yields
         ------
         obj : Objects yielded by the streamer provided on init.
-        '''
-
+        """
         count = 0
         while True:
             for obj in self.iterate():
@@ -232,7 +233,7 @@ class Streamer(object):
                 yield obj
 
     def __call__(self, max_iter=None, cycle=False):
-        '''Convenience interface for interacting with the Streamer.
+        """Allow streamers to act like callables
 
         Parameters
         ----------
@@ -241,8 +242,7 @@ class Streamer(object):
             If `None`, attempt to exhaust the stream.
             For finite streams, call iterate again, or use `cycle=True` to
             force an infinite stream.
-
-        cycle: bool
+        cycle : bool
             If `True`, cycle indefinitely.
 
         Yields
@@ -253,7 +253,7 @@ class Streamer(object):
         --------
         iterate
         cycle
-        '''
+        """
         if cycle:
             gen = self.cycle(max_iter=max_iter)
         else:
@@ -263,12 +263,13 @@ class Streamer(object):
             yield obj
 
     def __iter__(self):
+        """Wrap the iterator interface"""
         return self.iterate()
 
 
 @decorator
 def streamable(function, *args, **kwargs):
-    '''Create a Streamer object by decoration.
+    """Create a Streamer object by decoration.
 
     This is a convenient shortcut for declaring generator
     functions as Streamable, rather than having to construct
@@ -292,6 +293,5 @@ def streamable(function, *args, **kwargs):
     ...     for i in range(n):
     ...         yield i
     >>> s2 = myfunc2(5)
-    '''
-
+    """
     return Streamer(function, *args, **kwargs)

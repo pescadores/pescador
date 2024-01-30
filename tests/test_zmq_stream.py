@@ -1,6 +1,5 @@
 import pytest
 import numpy as np
-import six
 import pescador
 import test_utils as T
 
@@ -28,18 +27,12 @@ def test_zmq_align():
 
     zmq_stream = pescador.ZMQStreamer(stream)
 
-    if six.PY2:
-        with pytest.warns(RuntimeWarning, match='array alignment'):
-            query = list(zmq_stream)
-    else:
-        query = list(zmq_stream)
+    query = list(zmq_stream)
 
     assert len(reference) == len(query)
 
     for b1, b2 in zip(reference, query):
         T._eq_batch(b1, b2)
-        if six.PY2:
-            continue
         for key in b2:
             assert b2[key].flags['ALIGNED']
 

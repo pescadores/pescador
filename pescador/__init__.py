@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-'''Pescador streaming learning'''
+"""Pescador streaming learning"""
 
 from .exceptions import *
 from .core import *
