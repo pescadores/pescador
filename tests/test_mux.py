@@ -815,8 +815,7 @@ class TestChainMux:
         mux = pescador.mux.ChainMux(streamers, mode="exhaustive")
         result = "".join(list(mux.iterate()))
         assert len(result) == 50
-        assert result == "{}{}{}{}{}".format(
-            'a' * 10, 'b' * 10, 'c' * 10, 'd' * 10, 'e' * 10)
+        assert result == f"{'a' * 10}{'b' * 10}{'c' * 10}{'d' * 10}{'e' * 10}"
 
     def test_chain_empty_streamer_of_streams(self):
         def stream_gen():
