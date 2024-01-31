@@ -13,6 +13,7 @@
 
 import sys
 import os
+from pathlib import Path
 
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
@@ -50,7 +51,6 @@ sphinx_gallery_conf = {
         'numpy': 'http://docs.scipy.org/doc/numpy/',
         'np': 'http://docs.scipy.org/doc/numpy/',
         'scipy': 'http://docs.scipy.org/doc/scipy/reference/',
-        'matplotlib': 'http://matplotlib.org/',
         'sklearn': 'http://scikit-learn.org/stable/',
         'keras': None,
         'theano': 'http://deeplearning.net/software/theano/'
@@ -58,10 +58,6 @@ sphinx_gallery_conf = {
     'default_thumb_file': 'noun_199.png',
     'backreferences_dir': False,
 }
-
-import matplotlib as mpl
-mpl.use('Agg')
-import matplotlib.pyplot as plt
 
 from glob import glob
 autosummary_generate = glob('*.rst')
@@ -99,8 +95,11 @@ MOCK_MODULES = ['numpy', 'scipy',
 
 sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)
 
-import imp
-pescador_version = imp.load_source('pescador.version', '../pescador/version.py')
+from importlib.machinery import SourceFileLoader
+
+pescador_version = SourceFileLoader(
+        "pescador.version", os.path.abspath(Path(srcpath) / "pescador" / "version.py")
+).load_module()
 # The short X.Y version.
 version = pescador_version.short_version
 release = pescador_version.version
