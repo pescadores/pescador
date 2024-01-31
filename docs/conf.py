@@ -96,7 +96,7 @@ MOCK_MODULES = ['numpy', 'scipy',
 sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)
 
 from importlib.machinery import SourceFileLoader
-
+srcpath = os.path.abspath(Path(os.path.dirname(__file__)) / "..")
 pescador_version = SourceFileLoader(
         "pescador.version", os.path.abspath(Path(srcpath) / "pescador" / "version.py")
 ).load_module()
