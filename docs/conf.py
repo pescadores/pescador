@@ -47,16 +47,10 @@ sphinx_gallery_conf = {
     # Path to where to save gallery generated examples
     'gallery_dirs': 'auto_examples',
     'reference_url': {
-        'sphinx_gallery': None,
-        'numpy': 'http://docs.scipy.org/doc/numpy/',
-        'np': 'http://docs.scipy.org/doc/numpy/',
-        'scipy': 'http://docs.scipy.org/doc/scipy/reference/',
-        'sklearn': 'http://scikit-learn.org/stable/',
-        'keras': None,
-        'theano': 'http://deeplearning.net/software/theano/'
+        "pescador": None
     },
     'default_thumb_file': 'noun_199.png',
-    'backreferences_dir': False,
+    'backreferences_dir': None,
 }
 
 from glob import glob
@@ -87,11 +81,7 @@ copyright = f'2016, {authors}'
 # built documents.
 from unittest.mock import MagicMock as Mock
 
-MOCK_MODULES = ['numpy', 'scipy',
-                'joblib.parallel', 'joblib._parallel_backends', 'joblib',
-                'zmq',
-                'json', 'ujson',
-                'multiprocessing']
+MOCK_MODULES = ['numpy', 'zmq']
 
 sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)
 
@@ -146,10 +136,10 @@ pygments_style = 'sphinx'
 
 numpydoc_show_class_members = False
 
-intersphinx_mapping = {'python': ('https://docs.python.org/2', None),
-                       'numpy': ('https://docs.scipy.org/doc/numpy/', None),
-                       'np': ('https://docs.scipy.org/doc/numpy/', None),
-                       'scipy': ('https://docs.scipy.org/doc/scipy/reference/', None)}
+intersphinx_mapping = {'python': ('https://docs.python.org/3', None),
+                       'numpy': ('https://numpy.org/doc/stable/', None),
+                       'np': ('https://numpy.org/doc/stable/', None),
+                       'scipy': ('https://docs.scipy.org/doc/scipy/', None)}
 
 
 # -- Options for HTML output ----------------------------------------------
@@ -185,7 +175,7 @@ html_theme = 'default'
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
-html_static_path = ['_static']
+#html_static_path = ['_static']
 
 # Add any extra paths that contain custom files (such as robots.txt or
 # .htaccess) here, relative to this directory. These files are copied
