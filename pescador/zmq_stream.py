@@ -16,11 +16,7 @@ The `ZMQStreamer` object wraps ordinary streamers (or muxes) for background exec
 import multiprocessing as mp
 import zmq
 import numpy as np
-
-try:
-    import ujson as json
-except ImportError:
-    import json
+import msgpack
 
 from .core import Streamer
 from .exceptions import DataError
@@ -51,7 +47,7 @@ def zmq_send_data(socket, data, flags=0, copy=True, track=False):
         payload.append(arr)
 
     # Send the header
-    msg = [json.dumps(header).encode("ascii")]
+    msg = [msgpack.packb(header)]
     msg.extend(payload)
 
     return socket.send_multipart(msg, flags, copy=copy, track=track)
@@ -63,7 +59,7 @@ def zmq_recv_data(socket, flags=0, copy=True, track=False):
 
     msg = socket.recv_multipart(flags=flags, copy=copy, track=track)
 
-    headers = json.loads(msg[0].decode("ascii"))
+    headers = msgpack.unpackb(msg[0], raw=False)
 
     if len(headers) == 0:
         raise StopIteration
