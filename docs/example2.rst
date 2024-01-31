@@ -21,8 +21,6 @@ cleaner syntax.
 .. code-block:: python
     :linenos:
 
-    from __future__ import print_function
-
     import numpy as np
 
     from sklearn.datasets import load_breast_cancer

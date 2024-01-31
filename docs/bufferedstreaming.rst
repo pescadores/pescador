@@ -3,7 +3,7 @@
 Buffered Streaming
 ==================
 
-In a machine learning setting, it is common to train a model with multiple input datapoints simultaneously, in what are commonly referred to as "minibatches". To achieve this, pescador provides the :ref:`pescador.maps.buffer_stream` map transformer, which will "buffer" a data stream into fixed batch sizes.
+In a machine learning setting, it is common to train a model with multiple input datapoints simultaneously, in what are commonly referred to as "minibatches". To achieve this, pescador provides the `pescador.maps.buffer_stream` map transformer, which will "buffer" a data stream into fixed batch sizes.
 
 Following up on the first example, we use the `noisy_samples` generator.
 
@@ -17,7 +17,7 @@ Following up on the first example, we use the `noisy_samples` generator.
 
     minibatch_size = 128
     # Wrap your streamer
-    buffered_sample_gen = pescador.buffer_stream(streamer, minibatch_size)
+    buffered_sample_gen = pescador.maps.buffer_stream(streamer, minibatch_size)
 
     # Generate batches in exactly the same way as you would from the base streamer
     for batch in buffered_sample_gen:
@@ -25,9 +25,9 @@ Following up on the first example, we use the `noisy_samples` generator.
 
 
 
-A few important points to note about using :ref:`pescador.maps.buffer_stream`:
+A few important points to note about using `pescador.maps.buffer_stream`:
 
-    - :ref:`pescador.maps.buffer_stream` will concatenate your arrays, adding a new sample dimension such that the first dimension contains the number of batches (`minibatch_size` in the above example). e.g. if your samples are shaped (4, 5), a batch size of 10 will produce arrays shaped (10, 4, 5)
+    - `pescador.maps.buffer_stream` will concatenate your arrays, adding a new sample dimension such that the first dimension contains the number of batches (`minibatch_size` in the above example). e.g. if your samples are shaped (4, 5), a batch size of 10 will produce arrays shaped (10, 4, 5)
 
     - Each key in the batches generated will be concatenated (across all the samples buffered).
 

@@ -10,7 +10,7 @@ depending on the exact sampling properties you have in mind.
 
 - If presentation order does not matter, and a deterministic
   sequence is acceptable, then this can be achieved with
-  `ChainMux` as demonstrated in :ref:`Using ChainMux for repeatable streams`.
+  `ChainMux` as demonstrated in :ref:`sphx_glr_auto_examples_mux_chain_example.py`.
   This is typically a good approach for validation or evaluation,
   but not training, since the deterministic sequence order could bias
   the model.

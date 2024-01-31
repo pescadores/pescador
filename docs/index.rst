@@ -45,7 +45,7 @@ To make this all possible, Pescador provides the following utilities:
     - :ref:`Mux` objects allow flexible sampling from multiple streams
     - :ref:`ZMQStreamer` provides parallel processing with low communication overhead
     - Transform or modify streams with Maps (see :ref:`processing-data-streams`)
-    - Buffering of sampled data into fixed-size batches (see :ref:`pescador.maps.buffer_stream`)
+    - Buffering of sampled data into fixed-size batches (see `pescador.maps.buffer_stream`)
 
 ************
 Installation
