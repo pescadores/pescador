@@ -308,6 +308,7 @@ class StochasticMux(BaseMux):
         n_active : int > 0
             The number of streams to keep active at any time.
 
+
         rate : float > 0 or None
             Rate parameter for the distribution governing sample counts
             for individual streams.
@@ -366,6 +367,11 @@ class StochasticMux(BaseMux):
                 f"{self.dist} is not a valid distribution"
             )
 
+        if self.mode != "with_replacement" and self.n_active > self.n_streams:
+            raise PescadorError(
+                f"mode={mode} requires that n_active={n_active} be at most the number of streamers={self.n_streams}"
+            )
+
         self.weights = weights
         if self.weights is None:
             self.weights = 1.0 / self.n_streams * np.ones(self.n_streams)
@@ -395,12 +401,17 @@ class StochasticMux(BaseMux):
 
         # Weights of the active streams.
         # Once a stream is exhausted, it is set to 0
-        #self.stream_weights_ = np.zeros(self.n_active)
-        self.stream_weights_ = self.rng.choice(self.weights,
-                                               size=self.n_active,
-                                               p=(self.weights / np.sum(self.weights)),
-                                               replace=(self.mode == "with_replacement"))
-
+        try:
+            self.stream_weights_ = self.rng.choice(self.weights,
+                                                   size=self.n_active,
+                                                   p=(self.weights / np.sum(self.weights)),
+                                                  replace=(self.mode == "with_replacement"))
+        except ValueError:
+            # This situation arises if the only remaining weights are all zero
+            # Initializing the stream weights to all zeros here will inflate
+            # the variance of rate parameters for activated streamers in binomial
+            # mode, but is otherwise harmless.
+            self.stream_weights_ = np.zeros(self.n_active)
 
         # How many samples have been draw from each (active) stream.
         self.stream_counts_ = np.zeros(self.n_active, dtype=int)
@@ -481,10 +492,13 @@ class StochasticMux(BaseMux):
             elif self.dist == "binomial":
                 # Bin((rate-1) / (1-p), 1-p)  where p = prob of selecting the new
                 # streamer from the active set
-                p = weight / (np.sum(self.stream_weights_) - self.stream_weights_[old_idx] + weight)
-                if p > 0.9999:
+                with np.errstate(invalid="ignore"):
+                    # We'll suppress 0/0 here and catch it below as a special case
+                    p = weight / (np.sum(self.stream_weights_) - self.stream_weights_[old_idx] + weight)
+                if p > 0.9999 or np.isnan(p):
                     # If we effectively have only one streamer, use the poisson limit
                     # theorem
+                    # nan case occurs when all stream weights are 0
                     n_samples_to_stream = 1 + self.rng.poisson(lam=self.rate - 1)
                 else:
                     n_samples_to_stream = 1 + self.rng.binomial((self.rate-1) / (1-p), 1-p)

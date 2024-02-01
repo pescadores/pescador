@@ -375,6 +375,18 @@ class TestStochasticMux_Exhaustive:
             T._eq_batch(b1, b2)
 
     @pytest.mark.parametrize('mux_class', [
+        functools.partial(pescador.mux.StochasticMux,
+                          mode="exhaustive")],
+        ids=["StochasticMux-exhaustive"])
+    @pytest.mark.xfail(raises=pescador.PescadorError)
+    def test_mux_too_many_active(self, mux_class):
+        # This fails because in single-active mode, we won't have
+        # enough streamers to create the active set
+        streamers = [pescador.Streamer(T.finite_generator, 10)
+                     for _ in range(3)]
+        mux = mux_class(streamers, 4, rate=1)
+
+    @pytest.mark.parametrize('mux_class', [
         functools.partial(pescador.mux.StochasticMux, mode="exhaustive")],
         ids=["StochasticMux"])
     def test_critical_mux(self, mux_class):
@@ -438,26 +450,34 @@ class TestStochasticMux_Exhaustive:
     functools.partial(pescador.mux.StochasticMux, mode="single_active")],
     ids=["StochasticMux"])
 class TestStochasticMux_SingleActive:
-    @pytest.mark.parametrize('n_streams', [1, 2, 4])
+    @pytest.mark.parametrize('n_streams', [4, 6, 8])
     @pytest.mark.parametrize('n_samples', [512])
-    @pytest.mark.parametrize('k', [1, 2, 4])
+    @pytest.mark.parametrize('n_active', [1, 2, 4])
     @pytest.mark.parametrize('rate', [1.0, 2.0, 4.0])
-    def test_mux_single_active(self, mux_class, n_streams, n_samples, k, rate):
+    def test_mux_single_active(self, mux_class, n_streams, n_samples, n_active, rate):
         streamers = [pescador.Streamer(T.finite_generator, 10)
                      for _ in range(n_streams)]
 
-        mux = mux_class(streamers, k, rate=rate)
+        mux = mux_class(streamers, n_active, rate=rate)
         estimate = list(mux.iterate(n_samples))
 
         # Make sure we get the right number of samples
         # This is highly improbable when revive=False
         assert len(estimate) == n_samples
 
+    @pytest.mark.xfail(raises=pescador.PescadorError)
+    def test_mux_too_many_active(self, mux_class):
+        # This fails because in single-active mode, we won't have
+        # enough streamers to create the active set
+        streamers = [pescador.Streamer(T.finite_generator, 10)
+                     for _ in range(3)]
+        mux = mux_class(streamers, 4, rate=1)
+
     def test_mux_of_muxes_itered(self, mux_class):
         # Check on Issue #79
         abc = pescador.Streamer('abc')
         xyz = pescador.Streamer('xyz')
-        mux1 = mux_class([abc, xyz], 10, rate=None,
+        mux1 = mux_class([abc, xyz], 2, rate=None,
                          prune_empty_streams=False, random_state=135)
         samples1 = mux1.iterate(max_iter=1000)
         count1 = collections.Counter(samples1)
@@ -465,7 +485,7 @@ class TestStochasticMux_SingleActive:
 
         n123 = pescador.Streamer('123')
         n456 = pescador.Streamer('456')
-        mux2 = mux_class([n123, n456], 10, rate=None,
+        mux2 = mux_class([n123, n456], 2, rate=None,
                          prune_empty_streams=False,
                          random_state=246)
         samples2 = mux2.iterate(max_iter=1000)
@@ -473,7 +493,7 @@ class TestStochasticMux_SingleActive:
         assert set('123456') == set(count2.keys())
 
         # Note that (random_state=987, n_active=2) fails.
-        mux3 = mux_class([mux1, mux2], 10, rate=None,
+        mux3 = mux_class([mux1, mux2], 2, rate=None,
                          prune_empty_streams=False,
                          random_state=987)
         samples3 = mux3.iterate(max_iter=1000)
