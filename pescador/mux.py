@@ -459,7 +459,6 @@ class StochasticMux(BaseMux):
         ----------
         idx : int, [0:n_streams - 1]
             The stream index to activate
-
         old_idx : int
             The index of the stream being replaced in the active set.
             This is needed for computing binomial probabilities.
