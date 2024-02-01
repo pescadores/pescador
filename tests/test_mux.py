@@ -568,7 +568,7 @@ class TestStochasticMux_SingleActive:
                                 random_state=12345)
 
         chars = 'abcdefghijkl'
-        max_iter = len(chars) * 500
+        max_iter = len(chars) * 100
         samples = list(stacked_mux.iterate(max_iter=max_iter))
         counter = collections.Counter(samples)
         assert set(chars) == set(counter.keys())

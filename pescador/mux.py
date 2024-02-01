@@ -395,7 +395,13 @@ class StochasticMux(BaseMux):
 
         # Weights of the active streams.
         # Once a stream is exhausted, it is set to 0
-        self.stream_weights_ = np.zeros(self.n_active)
+        #self.stream_weights_ = np.zeros(self.n_active)
+        self.stream_weights_ = self.rng.choice(self.weights,
+                                               size=self.n_active,
+                                               p=(self.weights / np.sum(self.weights)),
+                                               replace=(self.mode == "with_replacement"))
+
+
         # How many samples have been draw from each (active) stream.
         self.stream_counts_ = np.zeros(self.n_active, dtype=int)
         # Array of pointers into `self.streamers`
