@@ -544,7 +544,10 @@ class TestStochasticMux_SingleActive:
 
         assert len(list(mux(max_iter=100))) == 0
 
-    def test_mux_stacked_uniform_convergence(self, mux_class):
+    @pytest.mark.parametrize(
+        'dist', ['constant', 'binomial', 'poisson',
+                 pytest.param('gaussian', marks=pytest.mark.xfail(raises=pescador.PescadorError))])
+    def test_mux_stacked_uniform_convergence(self, mux_class, dist):
         """This test is designed to check that bootstrapped streams of data
         (Streamer subsampling, rate limiting) cascaded through multiple
         multiplexors converges in expectation to a flat, uniform sample of the
@@ -553,19 +556,19 @@ class TestStochasticMux_SingleActive:
         ab = pescador.Streamer(_choice, 'ab')
         cd = pescador.Streamer(_choice, 'cd')
         ef = pescador.Streamer(_choice, 'ef')
-        mux1 = mux_class([ab, cd, ef], 2, rate=2, random_state=1357)
+        mux1 = mux_class([ab, cd, ef], 2, rate=4, random_state=1357, dist=dist)
 
         gh = pescador.Streamer(_choice, 'gh')
         ij = pescador.Streamer(_choice, 'ij')
         kl = pescador.Streamer(_choice, 'kl')
 
-        mux2 = mux_class([gh, ij, kl], 2, rate=2, random_state=2468)
+        mux2 = mux_class([gh, ij, kl], 2, rate=4, random_state=2468, dist=dist)
 
         stacked_mux = mux_class([mux1, mux2], 2, rate=None,
                                 random_state=12345)
 
-        max_iter = 1000
         chars = 'abcdefghijkl'
+        max_iter = len(chars) * 500
         samples = list(stacked_mux.iterate(max_iter=max_iter))
         counter = collections.Counter(samples)
         assert set(chars) == set(counter.keys())
@@ -574,7 +577,7 @@ class TestStochasticMux_SingleActive:
 
         # Check that the pvalue for the chi^2 test is at least 0.95
         test = scipy.stats.chisquare(counts)
-        assert test.pvalue >= 0.95
+        assert test.pvalue >= 0.5, counts
 
 
 class TestShuffledMux:

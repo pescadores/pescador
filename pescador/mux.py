@@ -289,6 +289,7 @@ class StochasticMux(BaseMux):
         weights=None,
         mode="with_replacement",
         prune_empty_streams=True,
+        dist="binomial",
         random_state=None,
     ):
         """Given an array (pool) of streamer types, do the following:
@@ -335,7 +336,12 @@ class StochasticMux(BaseMux):
                 Run every selected stream once to exhaustion.
 
         prune_empty_streams : bool
-            Disable streamers that produce no data. See `BaseMux`
+            Disable streamers that produce no data.
+
+        dist : ["constant", "binomial", "poisson"]
+            Distribution governing the (maximum) number of samples taken
+            from an active streamer.
+            In each case, the expected number of samples will be `rate`.
 
         random_state : None, int, or np.random.RandomState
             See `BaseMux`
@@ -344,6 +350,7 @@ class StochasticMux(BaseMux):
         self.n_active = n_active
         self.rate = rate
         self.prune_empty_streams = prune_empty_streams
+        self.dist = dist
 
         super().__init__(streamers, random_state=random_state)
 
@@ -353,6 +360,10 @@ class StochasticMux(BaseMux):
         if self.mode not in ["with_replacement", "single_active", "exhaustive"]:
             raise PescadorError(
                 f"{self.mode} is not a valid mode for StochasticMux"
+            )
+        if self.dist not in ["constant", "binomial", "poisson"]:
+            raise PescadorError(
+                f"{self.dist} is not a valid distribution"
             )
 
         self.weights = weights
@@ -436,7 +447,7 @@ class StochasticMux(BaseMux):
             else:
                 self.distribution_[self.stream_idxs_[idx]] = 1.0
 
-    def _activate_stream(self, idx):
+    def _activate_stream(self, idx, old_idx):
         """Randomly select and create a stream.
 
         StochasticMux adds mode handling to _activate_stream, making it so that
@@ -447,16 +458,34 @@ class StochasticMux(BaseMux):
         Parameters
         ----------
         idx : int, [0:n_streams - 1]
-            The stream index to replace
+            The stream index to activate
+
+        old_idx : int
+            The index of the stream being replaced in the active set.
+            This is needed for computing binomial probabilities.
         """
+        weight = self.weights[idx]
+
         # Get the number of samples for this streamer.
         n_samples_to_stream = None
         if self.rate is not None:
-            n_samples_to_stream = 1 + self.rng.poisson(lam=self.rate)
+            if self.dist == "constant":
+                n_samples_to_stream = self.rate
+            elif self.dist == "poisson":
+                n_samples_to_stream = 1 + self.rng.poisson(lam=self.rate - 1)
+            elif self.dist == "binomial":
+                # Bin((rate-1) / (1-p), 1-p)  where p = prob of selecting the new
+                # streamer from the active set
+                p = weight / (np.sum(self.stream_weights_) - self.stream_weights_[old_idx] + weight)
+                if p > 0.9999:
+                    # If we effectively have only one streamer, use the poisson limit
+                    # theorem
+                    n_samples_to_stream = 1 + self.rng.poisson(lam=self.rate - 1)
+                else:
+                    n_samples_to_stream = 1 + self.rng.binomial((self.rate-1) / (1-p), 1-p)
 
         # instantiate a new streamer
         streamer = self.streamers[idx].iterate(max_iter=n_samples_to_stream)
-        weight = self.weights[idx]
 
         # If we're sampling without replacement, zero this one out
         # This effectively disables this stream as soon as it is chosen,
@@ -484,7 +513,7 @@ class StochasticMux(BaseMux):
 
         # Activate the Streamer, and get the weights
         self.streams_[idx], self.stream_weights_[idx] = self._activate_stream(
-            self.stream_idxs_[idx]
+            self.stream_idxs_[idx], idx
         )
 
         # Reset the sample count to zero
