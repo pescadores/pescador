@@ -308,7 +308,6 @@ class StochasticMux(BaseMux):
         n_active : int > 0
             The number of streams to keep active at any time.
 
-
         rate : float > 0 or None
             Rate parameter for the distribution governing sample counts
             for individual streams.
