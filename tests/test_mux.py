@@ -595,7 +595,7 @@ class TestStochasticMux_SingleActive:
 
         counts = np.asarray(list(counter.values()))
 
-        # Check that the pvalue for the chi^2 test is at least 0.95
+        # Check that the pvalue for the chi^2 test is at least 0.5
         test = scipy.stats.chisquare(counts)
         assert test.pvalue >= 0.5, counts
 
