@@ -103,11 +103,10 @@ jobs:
           run: pytest
 
         - name: Upload coverage to Codecov
-          uses: codecov/codecov-action@v3
+          uses: codecov/codecov-action@v4
           with:
             token: ${{ secrets.CODECOV_TOKEN }}
             files: ./coverage.xml
-            directory: ./coverage/reports/
             flags: unittests
             env_vars: OS,PYTHON
             name: codecov-umbrella

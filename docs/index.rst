@@ -96,6 +96,14 @@ Advanced examples
 
     auto_examples/index
 
+***********************
+Stochastic mux analysis
+***********************
+.. toctree::
+    :maxdepth: 2
+
+    muxanalysis
+
 *************
 API Reference
 *************
