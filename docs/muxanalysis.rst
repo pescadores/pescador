@@ -72,13 +72,13 @@ It has expected value
 
 .. math::
 
-   \text{E}[K] = r \cdot \frac{1-p}{p},
+   \text{E}[K] = r \times \frac{1-p}{p},
 
 and variance
 
 .. math::
 
-   \text{Var}[K] = r \cdot \frac{1-p}{p^2}.
+   \text{Var}[K] = r \times \frac{1-p}{p^2}.
 
 
 The total number of samples produced by the mux before the streamer is replaced is now a random
@@ -87,7 +87,7 @@ We can use linearity of expectation to compute its expected value as
 
 .. math::
 
-   \text{E}[N] = \text{E}[K] + r = r \cdot\frac{1-p}{p} + r = \frac{r}{p}.
+   \text{E}[N] = \text{E}[K] + r = r \times\frac{1-p}{p} + r = \frac{r}{p}.
 
 
 Since :math:`N` and :math:`K` differ only by a constant (:math:`r`), they have the same
@@ -101,8 +101,8 @@ variance:
 If we apply the simplifying assumption that streamers are selected uniformly at random (:math:`p
 = 1/A`), then we get the following:
 
-    * :math:`\text{E}[N] = r \cdot A`, and 
-    * :math:`\text{Var}[N] = r \cdot A \cdot (A-1)`.
+    * :math:`\text{E}[N] = r \times A`, and 
+    * :math:`\text{Var}[N] = r \times A \times (A-1)`.
 
 In plain language, this says that the streamer replacement rate scales like the product of the size of the active set and the number of samples per streamer.
 Making either of these values large implies that we should expect to wait longer to replace an active streamer.
@@ -115,19 +115,30 @@ Poisson distribution
 
 In pescador version 2 and earlier, the sample limit :math:`r` was not a constant value, but a
 random variable :math:`R` drawn from a Poisson distribution with rate parameter :math:`\lambda`.
-The analysis above can mostly be carried over to handle this case, though it does not lead to a
-closed form expression for :math:`\text{E}[N]` or :math:`\text{Var}[N]` because we must now
-marginalize over the variable :math:`R`:
+In this case, the mean and variance of :math:`R` are simply :math:`\text{E}[R] =
+\text{Var}[R] = \lambda`.
+
+However, this does not lead to a closed form expression for :math:`\text{E}[N]` or :math:`\text{Var}[N]` because we must now marginalize over :math:`R`:
 
 .. math::
 
-   \text{Pr}[K=k]   &= \sum_{r=0}^{\infty} \text{Pr}[K=k, R = r]\\
-                    &= \sum_{r=0}^{\infty} \text{Pr}[K=k ~|~ R = r] \times \text{Pr}[R=r]\\
-                    &= \sum_{r=0}^{\infty} {k + r - 1 \choose k} {(1-p)^k p^r} \times \frac{\lambda^r e^{-\lambda}}{r!}
+   \text{Pr}[N=n]   &= \sum_{r=0}^{\infty} \text{Pr}[K=n-r, R = r]\\
+                    &= \sum_{r=0}^{\infty} \text{Pr}[K=n-r ~|~ R = r] \times \text{Pr}[R=r]\\
+                    &= \sum_{r=0}^{\infty} {n - 1 \choose n-r} {(1-p)^{n-r} p^r} \times \frac{\lambda^r e^{-\lambda}}{r!}
 
 
 While this distribution is still supported, it has been replaced as the default by a binomial
 distribution mode which is more amenable to analysis.
+
+
+.. note::
+    In pescador ≥ 3.0, poisson mode is actually implemented as :math:`R \sim 1 +
+    \text{Poisson}(\lambda - 1)`.  This maintains the expected value of
+    :math:`\lambda`, with slightly reduced variance (:math:`\lambda - 1`), 
+    but it ensures that at least one sample is produced from active streamers before deactivation.
+
+    This logic is also applied to the binomial mode described below, but omitted
+    from the analysis here for simplicity.
 
 Binomial distribution
 ---------------------
@@ -147,13 +158,13 @@ straightforward computation of :math:`\text{Pr}[N]`.
 .. math::
 
    \text{Pr}[N=n] &= \sum_{r=0}^{\infty} \text{Pr}[K=n-r ~|~ R= r] \times \text{Pr}[R=r]\\
-   &= \sum_{r=0}^{\infty} {n-1 \choose n-r} {\left(1-p\right)}^{n-r} p^r \cdot {m \choose r} q^r {(1-q)}^{m-r}.
+   &= \sum_{r=0}^{\infty} {n-1 \choose n-r} {\left(1-p\right)}^{n-r} p^r \times {m \choose r} q^r {(1-q)}^{m-r}.
 
 If we set :math:`q = 1-p`, this simplifies as follows:
 
 .. math::
 
-   \text{Pr}[N=n] &= \sum_{r=0}^{\infty} {n-1 \choose n-r} {\left(1-p\right)}^{n-r} p^r \cdot {m \choose r} {(1-p)}^r p^{m-r}\\
+   \text{Pr}[N=n] &= \sum_{r=0}^{\infty} {n-1 \choose n-r} {\left(1-p\right)}^{n-r} p^r \times {m \choose r} {(1-p)}^r p^{m-r}\\
    &= \sum_{r=0}^{\infty} {n-1 \choose n-r} {\left(1-p\right)}^n p^m {m \choose r}\\
    &= {\left(1-p\right)}^n p^m {n + m - 1\choose n}.
 
@@ -174,7 +185,9 @@ distribution :math:`\text{Pr}[N=n]` is
 where NB denotes the probability mass function of the negative binomial distribution.
 This yields:
 
-    - :math:`\text{E}[R] = \lambda`,
+    - :math:`\text{E}[R] = \lambda`: each streamer generates :math:`\lambda` samples
+      on average,
+    - :math:`\text{Var}[R] = \lambda \times p`,
     - :math:`\text{E}[N] = \lambda / p`, and
     - :math:`\text{Var}[N] = \lambda \frac{1-p}{p^2}`.
 
@@ -182,14 +195,68 @@ These match the analysis of the constant-mode case above, except that the number
 streamer is now a random variable with expectation :math:`\lambda`.
 Again, in the special case where :math:`p=1/A`, we recover
 
-    - :math:`\text{E}[N] = \lambda A`, and
-    - :math:`\text{Var}[N] = \lambda A (A-1)`.
+    - :math:`\text{E}[N] = \lambda \times A`, and
+    - :math:`\text{Var}[N] = \lambda \times A \times (A-1)`.
+
+In short, binomial mode ``StochasticMux`` exhibits the same stream replacement
+characteristics as the constant-mode case, but relaxes the need for each streamer to
+generate an identical number of samples.
 
 
 Limiting case :math:`p=1`
 -------------------------
 
+As defined above, the binomial mode is ill-defined when :math:`p=1` due to a
+division-by-zero in the parametrization.
+This situation does occur in practice with some configurations of ``StochasticMux``,
+e.g. when operating in **exhaustive** mode so that streamers are activated without
+replacement and are discarded after deactivation.
+In this case, the size of the active set :math:`A` can eventually decay, and the
+probability of choosing the last active streamer :math:`p \rightarrow 1`.
 
-Discussion and recommendations
-------------------------------
+To circumvent this issue, ``StochasticMux`` detects this situation automatically and
+falls back on a Poisson distribution for :math:`R`.
+This is justified by the `Poisson limit theorem <https://en.wikipedia.org/wiki/Poisson_limit_theorem>`_ if we take the product :math:`\lambda/(1-p) \times (1-p) = \lambda` as the limit value as :math:`p \rightarrow 1`.
+
+
+Discussion
+----------
+
+The above analysis tells us, on average, how long we should expect to wait before a
+given streamer is exhausted and replaced.
+Because this distribution applies equally to all streamers, the variance of this
+distribution tells us how dispersed these replacement events are likely to be.
+
+Qualitatively, there are a few things we can observe from the above analysis.
+
+First, for large active set sizes :math:`A`, binomial mode will behave similarly to constant mode because :math:`\text{Var}[R]` will be inversely proportional to :math:`A`.
+For small active sets, binomial mode will behave more similarly to Poisson mode.
+
+Second, Poisson mode will exhibit the highest variance of sample limit values
+:math:`\text{Var}[R] = \lambda` upper-bounds that of the binomial mode
+:math:`\text{Var}[R] = \lambda \times p`.
+We can therefore expect that the replacement event distribution :math:`\text{Pr}[N]`
+under Poisson mode will also exhibit slightly higher variance in general.
+
+Third, the binomial mode provides a controlled interaction between the stream
+replacement rate and the size of the active set, which is difficult to achieve with
+Poisson mode.
+
+Finally, we should emphasize that the analysis in this section represents a common,
+if simplified application of ``StochasticMux``, and there are many other variables
+at play that may alter the mux's behavior, including:
+
+    - whether streamers are activated with or without replacement,
+    - whether streamers are used exhaustively or replaced after deactivation,
+    - whether streamer weights are uniform or non-uniform,
+    - whether streamers self-limit instead of relying on the mux for deactivation.
+
+The final point is subtle: remember that streamers encapsulate arbitrary generator
+code, and there's nothing stopping a generator from determining its own maximum
+number of samples to produce.
+If this number is smaller than the value assigned by the mux, the streamer will act
+as if it has been exhausted and the mux will replace it immediately.
+This situation would both reduce the replacement time average and variance.
+(If a streamer self-limits at a number larger than the mux's limit, the mux will
+terminate it first and the analysis above still holds.)
 

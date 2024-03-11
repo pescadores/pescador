@@ -295,7 +295,7 @@ class StochasticMux(BaseMux):
         """Given an array (pool) of streamer types, do the following:
 
         1. Select ``k`` streams at random to iterate from
-        2. Assign each activated stream a sample count ~ 1 + Poisson(rate)
+        2. Assign each activated stream a sample count with expected value `rate`
         3. Yield samples from the streams by randomly multiplexing
            from the active set.
         4. When a stream is exhausted, select a new one from `streamers`.
@@ -342,6 +342,8 @@ class StochasticMux(BaseMux):
             Distribution governing the (maximum) number of samples taken
             from an active streamer.
             In each case, the expected number of samples will be `rate`.
+
+            See :ref:`muxanalysis` for detailed discussion.
 
         random_state : None, int, or np.random.RandomState
             See `BaseMux`
