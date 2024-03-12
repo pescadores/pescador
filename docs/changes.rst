@@ -12,6 +12,17 @@ v3.0.0 (2024-03-12)
   support for python 2.
 - `#162`_ Corrected documentation for streamer
 
+
+
+.. _#171: https://github.com/pescadores/pescador/pull/171
+.. _#170: https://github.com/pescadores/pescador/pull/170
+.. _#168: https://github.com/pescadores/pescador/pull/168
+.. _#167: https://github.com/pescadores/pescador/pull/167
+.. _#166: https://github.com/pescadores/pescador/pull/166
+.. _#164: https://github.com/pescadores/pescador/pull/164
+.. _#162: https://github.com/pescadores/pescador/pull/162
+.. _#159: https://github.com/pescadores/pescador/pull/159
+
 v2.1.0 (2019-08-29)
 -------------------
 - `#156`_ Added support for python 3.7
