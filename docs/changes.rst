@@ -1,6 +1,17 @@
 Changes
 =======
 
+v3.0.0 (2024-03-12)
+-------------------
+
+- `#171`_ New distribution modes for `StochasticMux`: `constant` and `binomial` (new default).  The `rate`
+  parameter in `poisson` mode (old default) now has slightly reduced variance compared to pescador 2.x.
+- `#170`_ Replaced JSON encoding for data headers with msgpack in `ZMQStreamer`.
+- `#168`_ Improved exception tracing for maps.
+- `#159`_, `#164`_, `#166`_, `#167`_ Modernized packaging and updated to support Python up to 3.12.  Removed
+  support for python 2.
+- `#162`_ Corrected documentation for streamer
+
 v2.1.0 (2019-08-29)
 -------------------
 - `#156`_ Added support for python 3.7
