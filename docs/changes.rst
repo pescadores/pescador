@@ -1,6 +1,28 @@
 Changes
 =======
 
+v3.0.0 (2024-03-12)
+-------------------
+
+- `#171`_ New distribution modes for `StochasticMux`: `constant` and `binomial` (new default).  The `rate`
+  parameter in `poisson` mode (old default) now has slightly reduced variance compared to pescador 2.x.
+- `#170`_ Replaced JSON encoding for data headers with msgpack in `ZMQStreamer`.
+- `#168`_ Improved exception tracing for maps.
+- `#159`_, `#164`_, `#166`_, `#167`_ Modernized packaging and updated to support Python up to 3.12.  Removed
+  support for python 2.
+- `#162`_ Corrected documentation for streamer
+
+
+
+.. _#171: https://github.com/pescadores/pescador/pull/171
+.. _#170: https://github.com/pescadores/pescador/pull/170
+.. _#168: https://github.com/pescadores/pescador/pull/168
+.. _#167: https://github.com/pescadores/pescador/pull/167
+.. _#166: https://github.com/pescadores/pescador/pull/166
+.. _#164: https://github.com/pescadores/pescador/pull/164
+.. _#162: https://github.com/pescadores/pescador/pull/162
+.. _#159: https://github.com/pescadores/pescador/pull/159
+
 v2.1.0 (2019-08-29)
 -------------------
 - `#156`_ Added support for python 3.7
