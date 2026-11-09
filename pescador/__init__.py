@@ -6,5 +6,6 @@ from .core import *
 from .maps import *
 from .mux import *
 from .zmq_stream import *
+from .prefetch import *
 
 from .version import version as __version__

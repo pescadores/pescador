@@ -5,7 +5,8 @@ channels:
 dependencies:
   # required
   - pip
-  - pyzmq~=18.0
+  - numpy~=1.25.0
+  - pyzmq~=20.0
   - decorator~=4.0
   - msgpack-python~=1.0
 

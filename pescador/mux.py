@@ -52,6 +52,7 @@ This module defines the following Mux types:
     ChainMux
 """
 import copy
+import threading
 import numpy as np
 
 from . import core
@@ -73,7 +74,7 @@ class BaseMux(core.Streamer):
      * Handles exhaustion of streams (restarting, replacing, ...)
     """
 
-    def __init__(self, streamers, random_state=None):
+    def __init__(self, streamers, random_state=None, buffer_size=None):
         """
         Parameters
         ----------
@@ -91,6 +92,10 @@ class BaseMux(core.Streamer):
 
             If None, the random number generator is the RandomState instance
             used by np.random.
+
+        buffer_size : int > 0 or None
+            If specified, enable concurrent prefetching using an asyncio TaskGroup
+            with a hybrid thread-safe buffer of size `buffer_size` per active stream.
         """
         try:
             self.streamers = [
@@ -104,6 +109,9 @@ class BaseMux(core.Streamer):
 
         # If random_state is none, use the 'global' random_state.
         self.rng = get_rng(random_state)
+        self.buffer_size = buffer_size
+        self._state_lock = threading.Lock()
+        self.bridge_ = None
 
         # Clear state and reset activate params.
         self._reset()
@@ -127,6 +135,10 @@ class BaseMux(core.Streamer):
             # it over without trying.
             if k == "rng" and v == np.random:
                 setattr(copy_result, k, v)
+            elif k == "_state_lock":
+                setattr(copy_result, k, threading.Lock())
+            elif k == "bridge_":
+                setattr(copy_result, k, None)
             # In all other cases, assume a deepcopy is the right choice.
             else:
                 setattr(copy_result, k, copy.deepcopy(v, memo))
@@ -173,6 +185,45 @@ class BaseMux(core.Streamer):
         """Reset the Mux state."""
         pass
 
+    def __enter__(self, *args, **kwargs):
+        """Enter the streamer context, initializing prefetch bridge if enabled."""
+        streamer_copy = super().__enter__(*args, **kwargs)
+        if (
+            streamer_copy.is_activated_copy
+            and streamer_copy.buffer_size is not None
+            and streamer_copy.buffer_size > 0
+            and streamer_copy.bridge_ is None
+        ):
+            from .prefetch import TaskGroupPrefetchBridge
+
+            streamer_copy.bridge_ = TaskGroupPrefetchBridge(
+                streamer_copy, buffer_size=streamer_copy.buffer_size
+            )
+            streamer_copy.bridge_.start()
+        return streamer_copy
+
+    def __exit__(self, *exc):
+        """Exit the streamer context, closing prefetch bridge if running."""
+        if hasattr(self, "bridge_") and self.bridge_ is not None:
+            self.bridge_.close()
+            self.bridge_ = None
+        return super().__exit__(*exc)
+
+    def _mark_slot_exhausted(self, idx):
+        """Mark an active stream slot as permanently exhausted once its prefetch buffer has drained."""
+        with self._state_lock:
+            if hasattr(self, "stream_weights_"):
+                self.stream_weights_[idx] = 0.0
+                self.weight_norm_ = np.sum(self.stream_weights_)
+            if hasattr(self, "streams_") and idx < len(self.streams_):
+                self.streams_[idx] = None
+
+    def _buffers_available(self):
+        """Check if any buffer has items remaining or is still open."""
+        if self.bridge_ is None:
+            return self._streamers_available()
+        return any(not buf.closed or not buf.is_empty() for buf in self.bridge_.buffers)
+
     def iterate(self, max_iter=None):
         """Yield items from the mux, and handle stream exhaustion and
         replacement.
@@ -182,30 +233,40 @@ class BaseMux(core.Streamer):
 
         # Calls Streamer's __enter__, which calls activate()
         with self as active_mux:
-            # Main sampling loop
             n = 0
 
-            while n < max_iter and active_mux._streamers_available():
-                # Pick a stream from the active set
-                idx = active_mux._next_sample_index()
+            if active_mux.bridge_ is not None:
+                # Concurrent prefetch loop
+                while n < max_iter and active_mux._buffers_available():
+                    idx = active_mux._next_sample_index()
+                    try:
+                        yield active_mux.bridge_.pull(idx)
+                        n += 1
+                    except StopIteration:
+                        active_mux._mark_slot_exhausted(idx)
+            else:
+                # Synchronous sampling loop
+                while n < max_iter and active_mux._streamers_available():
+                    # Pick a stream from the active set
+                    idx = active_mux._next_sample_index()
 
-                # Can we sample from it?
-                try:
-                    # Then yield the sample
-                    yield next(active_mux.streams_[idx])
+                    # Can we sample from it?
+                    try:
+                        # Then yield the sample
+                        yield next(active_mux.streams_[idx])
 
-                    # Increment the sample counter
-                    n += 1
-                    active_mux.stream_counts_[idx] += 1
+                        # Increment the sample counter
+                        n += 1
+                        active_mux.stream_counts_[idx] += 1
 
-                except StopIteration:
-                    # Oops, this stream is exhausted.
+                    except StopIteration:
+                        # Oops, this stream is exhausted.
 
-                    # Call child-class exhausted-stream behavior
-                    active_mux._on_stream_exhausted(idx)
+                        # Call child-class exhausted-stream behavior
+                        active_mux._on_stream_exhausted(idx)
 
-                    # Setup a new stream for this index
-                    active_mux._replace_stream(idx)
+                        # Setup a new stream for this index
+                        active_mux._replace_stream(idx)
 
     def _streamers_available(self):
         """Override this to modify the behavior of the main iter loop condition."""
@@ -291,6 +352,7 @@ class StochasticMux(BaseMux):
         prune_empty_streams=True,
         dist="binomial",
         random_state=None,
+        buffer_size=None,
     ):
         """Given an array (pool) of streamer types, do the following:
 
@@ -354,7 +416,9 @@ class StochasticMux(BaseMux):
         self.prune_empty_streams = prune_empty_streams
         self.dist = dist
 
-        super().__init__(streamers, random_state=random_state)
+        super().__init__(
+            streamers, random_state=random_state, buffer_size=buffer_size
+        )
 
         if not self.n_streams:
             raise PescadorError("Cannot mux an empty collection")
@@ -444,9 +508,10 @@ class StochasticMux(BaseMux):
 
     def _next_sample_index(self):
         """Choose the next sample stream randomly"""
-        return self.rng.choice(
-            self.n_active, p=(self.stream_weights_ / self.weight_norm_)
-        )
+        with self._state_lock:
+            return self.rng.choice(
+                self.n_active, p=(self.stream_weights_ / self.weight_norm_)
+            )
 
     def _on_stream_exhausted(self, idx):
         # If we're disabling empty seeds, see if this stream
@@ -553,6 +618,7 @@ class StochasticMux(BaseMux):
             # Otherwise, this one's exhausted.
             # Set its probability to 0
             self.stream_weights_[idx] = 0.0
+            self.streams_[idx] = None
 
         self.weight_norm_ = np.sum(self.stream_weights_)
 
@@ -588,7 +654,7 @@ class ShuffledMux(BaseMux):
     'acacababcaabcaaacaaccabcbaaaaa'
     """
 
-    def __init__(self, streamers, weights=None, random_state=None):
+    def __init__(self, streamers, weights=None, random_state=None, buffer_size=None):
         """
         Parameters
         ----------
@@ -613,7 +679,9 @@ class ShuffledMux(BaseMux):
             If None, the random number generator is the RandomState instance
             used by np.random.
         """
-        super().__init__(streamers, random_state=random_state)
+        super().__init__(
+            streamers, random_state=random_state, buffer_size=buffer_size
+        )
 
         if not self.n_streams:
             raise PescadorError("Cannot mux an empty collection")
@@ -664,9 +732,10 @@ class ShuffledMux(BaseMux):
         """Choose the next sample stream randomly,
         conditioned on the stream weights.
         """
-        return self.rng.choice(
-            self.n_streams, p=(self.stream_weights_ / self.weight_norm_)
-        )
+        with self._state_lock:
+            return self.rng.choice(
+                self.n_streams, p=(self.stream_weights_ / self.weight_norm_)
+            )
 
     def _on_stream_exhausted(self, idx):
         # See if this stream produced any data; if it didn't, turn it off
@@ -703,6 +772,7 @@ class ShuffledMux(BaseMux):
             # Set its probability to 0
             # In practice, this is probably unnecessary.
             self.stream_weights_[idx] = 0.0
+            self.streams_[idx] = None
 
         self.weight_norm_ = np.sum(self.stream_weights_)
 
@@ -731,7 +801,7 @@ class RoundRobinMux(BaseMux):
     "abcacbacbacbbcabacac"
     """
 
-    def __init__(self, streamers, mode="exhaustive", random_state=None):
+    def __init__(self, streamers, mode="exhaustive", random_state=None, buffer_size=None):
         """
         Parameters
         ----------
@@ -759,7 +829,9 @@ class RoundRobinMux(BaseMux):
             used by `np.random.`
         """
         self.mode = mode
-        super().__init__(streamers, random_state=random_state)
+        super().__init__(
+            streamers, random_state=random_state, buffer_size=buffer_size
+        )
 
         if not self.n_streams:
             raise PescadorError("Cannot mux an empty collection")
@@ -802,27 +874,21 @@ class RoundRobinMux(BaseMux):
 
     def _next_sample_index(self):
         """Rotates through each active sampler by incrementing the index"""
-        # Return the next streamer index where the streamer is not None,
-        # wrapping around.
-        idx = self.active_index_
-        self.active_index_ += 1
-
-        if self.active_index_ >= len(self.streams_):
-            self.active_index_ = 0
-
-        # Continue to increment if this streamer is exhausted (None)
-        # This should never be infinite looping;
-        # the `_streamers_available` check happens immediately
-        # before this, so there should always be at least one not-None
-        # streamer.
-        while self.streams_[idx] is None:
+        with self._state_lock:
             idx = self.active_index_
             self.active_index_ += 1
 
             if self.active_index_ >= len(self.streams_):
                 self.active_index_ = 0
 
-        return idx
+            while self.streams_[idx] is None:
+                idx = self.active_index_
+                self.active_index_ += 1
+
+                if self.active_index_ >= len(self.streams_):
+                    self.active_index_ = 0
+
+            return idx
 
     def _new_stream(self, idx):
         """Activate a new stream, given the index into the stream pool.
@@ -906,7 +972,7 @@ class ChainMux(BaseMux):
 
     """
 
-    def __init__(self, streamers, mode="exhaustive", random_state=None):
+    def __init__(self, streamers, mode="exhaustive", random_state=None, buffer_size=None):
         """
         Parameters
         ----------
@@ -934,7 +1000,9 @@ class ChainMux(BaseMux):
         # if inspect.isgeneratorfunction(streamers):
         #     streamers = core.Streamer(streamers)
 
-        super().__init__(streamers, random_state=random_state)
+        super().__init__(
+            streamers, random_state=random_state, buffer_size=buffer_size
+        )
 
         if mode not in ["exhaustive", "cycle"]:
             raise PescadorError(f"Invalid ChainMux mode '{mode}'")
