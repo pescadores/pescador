@@ -104,6 +104,14 @@ Stochastic mux analysis
 
     muxanalysis
 
+**********************************
+Concurrent prefetching & async mux
+**********************************
+.. toctree::
+    :maxdepth: 2
+
+    prefetching
+
 *************
 API Reference
 *************

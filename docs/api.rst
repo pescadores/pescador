@@ -15,6 +15,15 @@ Streamer
     :special-members: __call__
 
 
+.. _PrefetchStreamer:
+
+PrefetchStreamer
+----------------
+.. autoclass:: pescador.PrefetchStreamer
+    :inherited-members:
+    :special-members: __call__
+
+
 .. _ZMQStreamer:
 
 Parallel streaming
