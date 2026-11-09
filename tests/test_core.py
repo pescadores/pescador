@@ -1,13 +1,13 @@
 #!/usr/bin/env python
 '''Test the streamer object for reusable iterators'''
 import copy
-import pytest
-
 import warnings
-warnings.simplefilter('always')
+import pytest
 
 import pescador.core
 import test_utils as T
+
+warnings.simplefilter('always')
 
 
 def test_streamer_iterable():

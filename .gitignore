@@ -38,3 +38,7 @@ coverage.xml
 
 docs/_build
 docs/_build/*
+docs/generated/
+docs/auto_examples/
+.venv/
+uv.lock

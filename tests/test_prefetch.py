@@ -3,7 +3,7 @@ import pytest
 import numpy as np
 
 import pescador
-from pescador.prefetch import HybridBuffer, PrefetchStreamer, _SENTINEL
+from pescador.prefetch import HybridBuffer, PrefetchStreamer
 
 
 def test_hybrid_buffer_basic():

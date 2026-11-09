@@ -86,7 +86,13 @@ def test_mux_single_infinite(mux_class):
     functools.partial(pescador.mux.StochasticMux, n_active=1, rate=256),
     pescador.mux.ShuffledMux,
     pescador.mux.RoundRobinMux,
-    pytest.param(pescador.mux.ChainMux, marks=pytest.mark.xfail(reason="ChainMux can accept an empty iterable or generator, and will simply return empty.", strict=True)),
+    pytest.param(
+        pescador.mux.ChainMux,
+        marks=pytest.mark.xfail(
+            reason="ChainMux can accept an empty iterable or generator, and will simply return empty.",
+            strict=True,
+        ),
+    ),
 ], ids=["StochasticMux-exhaustive", "ShuffledMux", "RoundRobinMux", "ChainMux"])
 
 def test_mux_empty(mux_class):
@@ -384,7 +390,7 @@ class TestStochasticMux_Exhaustive:
         # enough streamers to create the active set
         streamers = [pescador.Streamer(T.finite_generator, 10)
                      for _ in range(3)]
-        mux = mux_class(streamers, 4, rate=1)
+        mux_class(streamers, 4, rate=1)
 
     @pytest.mark.parametrize('mux_class', [
         functools.partial(pescador.mux.StochasticMux, mode="exhaustive")],
@@ -471,7 +477,7 @@ class TestStochasticMux_SingleActive:
         # enough streamers to create the active set
         streamers = [pescador.Streamer(T.finite_generator, 10)
                      for _ in range(3)]
-        mux = mux_class(streamers, 4, rate=1)
+        mux_class(streamers, 4, rate=1)
 
     def test_mux_of_muxes_itered(self, mux_class):
         # Check on Issue #79
@@ -664,7 +670,7 @@ class TestShuffledMux:
     def test_shuffled_mux_weights(self):
         "When sampling with weights, do the statistics line up?"
         a = pescador.Streamer(_cycle, 'a')
-        b = pescador.Streamer(_cycle, 'b') 
+        b = pescador.Streamer(_cycle, 'b')
         c = pescador.Streamer(_cycle, 'c')
 
         weights = [.6, .3, .1]
@@ -682,26 +688,26 @@ class TestShuffledMux:
             np.testing.assert_approx_equal(counter[key] / len(samples),
                                            weights[i],
                                            significant=1)
-            
+
     def test_shuffled_mux_integer_weights(self):
         "Tests that integer-valued weights are supported (issue #143)."
         a = pescador.Streamer(_cycle, 'a')
-        b = pescador.Streamer(_cycle, 'b') 
+        b = pescador.Streamer(_cycle, 'b')
         c = pescador.Streamer(_cycle, 'c')
 
         int_weights = [6, 3, 1]
         int_mux = pescador.ShuffledMux(
             [a, b, c], weights=int_weights, random_state=10)
         int_seq = "".join(list(int_mux.iterate(max_iter=20)))
-     
+
         float_weights = [6.0, 3.0, 1.0]
         float_mux = pescador.ShuffledMux(
             [a, b, c], weights=float_weights, random_state=10)
         float_seq = "".join(list(float_mux.iterate(max_iter=20)))
-        
+
         assert int_seq == float_seq
-        
-    
+
+
 class TestRoundRobinMux:
     """The RoundRobinMux is guaranteed to reproduce samples in the
     same order as original streams.
