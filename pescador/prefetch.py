@@ -6,6 +6,8 @@ import collections
 import threading
 from typing import Any, Optional
 
+from decorator import decorator
+
 from . import core
 from .exceptions import PescadorError
 
@@ -14,6 +16,7 @@ __all__ = [
     "TaskGroupPrefetchBridge",
     "SingleStreamPrefetchBridge",
     "PrefetchStreamer",
+    "prefetchable",
 ]
 
 _SENTINEL = object()
@@ -465,3 +468,42 @@ class PrefetchStreamer(core.Streamer):
                     n += 1
                 except StopIteration:
                     break
+
+
+@decorator
+def prefetchable(function, buffer_size=2, timeout=None, *args, **kwargs):
+    """Create a PrefetchStreamer object by decoration.
+
+    This decorator marks a generator function as prefetchable, wrapping it
+    in a `Streamer` and `PrefetchStreamer` automatically upon invocation.
+
+    Parameters
+    ----------
+    function : callable
+        The generator function to decorate.
+    buffer_size : int > 0, default=2
+        Number of items to prefetch asynchronously.
+    timeout : float > 0 or None, default=None
+        Maximum time (seconds) to wait before raising TimeoutError in consumer.
+
+    Examples
+    --------
+    >>> @pescador.prefetchable
+    ... def myfunc(n):
+    ...     for i in range(n):
+    ...         yield i
+    >>> s = myfunc(5)
+
+    With customized buffer depth and timeout:
+
+    >>> @pescador.prefetchable(buffer_size=4, timeout=5.0)
+    ... def myfunc_buffered(n):
+    ...     for i in range(n):
+    ...         yield i
+    >>> s = myfunc_buffered(5)
+    """
+    return PrefetchStreamer(
+        core.Streamer(function, *args, **kwargs),
+        buffer_size=buffer_size,
+        timeout=timeout,
+    )

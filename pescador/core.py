@@ -272,12 +272,25 @@ class Streamer:
 
 
 @decorator
-def streamable(function, *args, **kwargs):
-    """Create a Streamer object by decoration.
+def streamable(function, buffer_size=None, timeout=None, *args, **kwargs):
+    """Create a Streamer or PrefetchStreamer object by decoration.
 
     This is a convenient shortcut for declaring generator
     functions as Streamable, rather than having to construct
     object wrappers explicitly every time.
+
+    If ``buffer_size`` is provided, the stream will additionally be
+    wrapped in a `PrefetchStreamer`.
+
+    Parameters
+    ----------
+    function : callable
+        The generator function to decorate.
+    buffer_size : int > 0 or None, default=None
+        If specified, wraps the resulting stream in a `PrefetchStreamer`
+        with the given buffer size.
+    timeout : float > 0 or None, default=None
+        Timeout in seconds when prefetching (only applicable if ``buffer_size`` is set).
 
     Examples
     --------
@@ -297,5 +310,18 @@ def streamable(function, *args, **kwargs):
     ...     for i in range(n):
     ...         yield i
     >>> s2 = myfunc2(5)
+
+    You can also enable prefetching directly via ``streamable``:
+
+    >>> @pescador.streamable(buffer_size=4)
+    ... def myfunc3(n):
+    ...     for i in range(n):
+    ...         yield i
+    >>> s3 = myfunc3(5)
     """
-    return Streamer(function, *args, **kwargs)
+    stream = Streamer(function, *args, **kwargs)
+    if buffer_size is not None:
+        from .prefetch import PrefetchStreamer
+
+        return PrefetchStreamer(stream, buffer_size=buffer_size, timeout=timeout)
+    return stream

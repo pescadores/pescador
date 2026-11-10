@@ -47,6 +47,7 @@ To make this all possible, Pescador provides the following utilities:
     - `ZMQStreamer` provides parallel processing with low communication overhead
     - Transform or modify streams with Maps (see :ref:`processing-data-streams`)
     - Buffering of sampled data into fixed-size batches (see `buffer_stream`)
+    - `streamable` and `prefetchable` decorators for declaring generator functions as reusable or concurrently prefetched streams directly
 
 ************
 Installation

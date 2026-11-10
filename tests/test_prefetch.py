@@ -463,3 +463,50 @@ def test_direct_iteration_lifecycle():
             if i == 3:
                 raise RuntimeError("consumer fail")
     assert _wait_for_threads(base_threads) == base_threads
+
+
+def test_prefetchable_decorator():
+    @pescador.prefetchable
+    def gen_default(n, offset=0):
+        for i in range(n):
+            yield i + offset
+
+    stream1 = gen_default(5, offset=10)
+    assert isinstance(stream1, pescador.PrefetchStreamer)
+    assert stream1.buffer_size == 2
+    assert stream1.timeout is None
+    assert list(stream1) == [10, 11, 12, 13, 14]
+
+    @pescador.prefetchable(buffer_size=4, timeout=2.5)
+    def gen_custom(n):
+        for i in range(n):
+            yield i * 2
+
+    stream2 = gen_custom(4)
+    assert isinstance(stream2, pescador.PrefetchStreamer)
+    assert stream2.buffer_size == 4
+    assert stream2.timeout == 2.5
+    assert list(stream2) == [0, 2, 4, 6]
+
+
+def test_streamable_decorator_prefetch():
+    @pescador.streamable
+    def gen_plain(n):
+        for i in range(n):
+            yield i
+
+    s_plain = gen_plain(3)
+    assert isinstance(s_plain, pescador.Streamer)
+    assert not isinstance(s_plain, pescador.PrefetchStreamer)
+    assert list(s_plain) == [0, 1, 2]
+
+    @pescador.streamable(buffer_size=3, timeout=1.0)
+    def gen_buffered(n):
+        for i in range(n):
+            yield i
+
+    s_buf = gen_buffered(3)
+    assert isinstance(s_buf, pescador.PrefetchStreamer)
+    assert s_buf.buffer_size == 3
+    assert s_buf.timeout == 1.0
+    assert list(s_buf) == [0, 1, 2]

@@ -23,7 +23,20 @@ Streaming
     PrefetchStreamer
     HybridBuffer
     ZMQStreamer
+
+
+.. _Decorators:
+
+Decorators
+----------
+
+.. currentmodule:: pescador
+
+.. autosummary::
+    :toctree: generated/
+
     streamable
+    prefetchable
 
 
 .. _Mux:

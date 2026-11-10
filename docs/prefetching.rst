@@ -468,6 +468,44 @@ directly with :class:`~pescador.PrefetchStreamer`:
        model.train_on_batch(sample)
 
 
+Stream Decoration with `prefetchable` and `streamable`
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Rather than manually constructing object wrappers around generator functions, Pescador provides
+convenient decorators to declare prefetching directly at function definition time:
+
+* **`prefetchable`**: Marks a generator function as prefetchable. Invoking the decorated function
+  automatically returns an instantiated `PrefetchStreamer` (defaulting to ``buffer_size=2``):
+
+  .. code-block:: python
+
+     @pescador.prefetchable
+     def load_dataset(filepath):
+         for record in read_records(filepath):
+             yield {"data": record}
+
+     # Calling load_dataset returns an active PrefetchStreamer directly:
+     for batch in load_dataset("/data/train.bin"):
+         train(batch)
+
+  You can also customize the buffer capacity and wait timeout directly in the decorator:
+
+  .. code-block:: python
+
+     @pescador.prefetchable(buffer_size=4, timeout=5.0)
+     def load_large_samples(dataset_dir):
+         ...
+
+* **`streamable`**: The core `streamable` decorator also supports prefetching by supplying
+  the ``buffer_size`` keyword argument:
+
+  .. code-block:: python
+
+     @pescador.streamable(buffer_size=4)
+     def load_features(filepath):
+         ...
+
+
 Choosing the Optimal Buffer Depth
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -480,8 +518,60 @@ The optimal value of ``buffer_size`` depends on sample size and memory constrain
   Use ``buffer_size = 1`` or ``2``. As established in the sensitivity analysis above,
   ``buffer_size = 2`` provides over 95% of the maximum latency reduction while strictly
   bounding RAM usage.
-* **CPU-Bound vs. I/O-Bound**:
-  Prefetching uses Python threads within an asynchronous event loop, which excels at I/O-bound tasks
-  (disk reads, network calls, C-extension processing releasing the GIL such as NumPy/SoundFile).
-  For heavily CPU-bound Python generator logic that holds the GIL, consider using
-  `ZMQStreamer` to distribute generation across separate operating system processes.
+
+
+Hybrid Concurrency: Multi-Processing (`ZMQStreamer`) with In-Process Prefetching
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Prefetching uses Python background threads managed within an asynchronous event loop. This architecture
+excels at **I/O-bound** workloads—such as reading files from storage, network streaming, or executing
+C-extensions that release the Global Interpreter Lock (GIL, such as NumPy matrix operations or SoundFile reads).
+
+However, if your generator logic involves heavy **CPU-bound Python code** that holds the GIL (e.g. extensive
+pure-Python feature parsing, custom mathematical loops, or string manipulations), running worker threads
+in the consumer process can lead to GIL contention with the main training loop.
+
+To achieve maximum throughput in CPU-heavy pipelines, combine `ZMQStreamer` with in-process prefetching:
+
+1. **Process Isolation (`ZMQStreamer`)**:
+   Moving data generation into an independent operating system process via `ZMQStreamer` completely
+   bypasses the GIL, freeing the main application process (e.g. a GPU training loop) to execute at full speed.
+2. **In-Process Prefetching inside Worker Subprocesses**:
+   Within that isolated worker process, wrap your stream or multiplexer with concurrent prefetching
+   (``buffer_size > 0``). Background worker threads inside the child process asynchronously prefetch and
+   buffer raw data items, overlapping disk and network I/O so the child process's CPU transform and ZeroMQ
+   publisher socket are never starved.
+3. **Non-Blocking ZeroMQ IPC / TCP Delivery**:
+   The main application process pulls fully assembled, serialized batches from the ZeroMQ socket without
+   incurring either CPU execution stalls or storage latency.
+
+.. code-block:: python
+
+   import pescador
+
+   @pescador.streamable
+   def heavy_cpu_generator(filepath):
+       # 1. High-latency I/O (released GIL during disk read)
+       raw_bytes = read_raw_audio(filepath)
+
+       # 2. Heavy pure-Python CPU transforms (holding GIL)
+       features = extract_custom_features(raw_bytes)
+       yield {"features": features}
+
+   # Construct stream instances across datasets
+   streams = [heavy_cpu_generator(path) for path in file_paths]
+
+   # Multiplex with concurrent background prefetching INSIDE the worker
+   mux = pescador.StochasticMux(
+       streams,
+       n_active=8,
+       rate=32,
+       buffer_size=4,  # Overlaps storage I/O across 8 active streams in child threads
+   )
+
+   # Isolate the entire pipeline into a separate operating system process
+   parallel_stream = pescador.ZMQStreamer(mux)
+
+   # Main training process (GPU loop) iterates with ZERO GIL contention and ZERO I/O delay:
+   for batch in parallel_stream(max_iter=1000):
+       model.train_on_batch(batch)
