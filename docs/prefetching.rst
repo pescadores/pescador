@@ -157,33 +157,36 @@ consumer threads to concurrent background producers:
 
 .. mermaid::
 
-   flowchart TD
-       subgraph Consumer["Consumer Thread (Main / Training Loop)"]
-           CLoop["for sample in mux.iterate()"]
-           CGet["sync_get(): pop item (&lt; 1 μs)"]
-       end
-
-       subgraph Buffer["HybridBuffer (Bounded Mutex-Protected Deque)"]
-           BDeque["collections.deque (maxlen = buffer_size)"]
-           BLock["threading.Lock (mutex protection)"]
-           BEvent["asyncio.Event (space available signal)"]
-       end
-
-       subgraph Background["Background Daemon Thread (Dedicated asyncio Event Loop)"]
+   flowchart LR
+       subgraph Background["Background Daemon Thread (asyncio loop)"]
            direction TB
-           subgraph TG["asyncio.TaskGroup (Active Stream Workers)"]
-               W0["Worker 0: Stream 0 (asyncio.to_thread)"]
-               W1["Worker 1: Stream 1 (asyncio.to_thread)"]
+           subgraph TG["asyncio.TaskGroup"]
+               direction TB
+               W0["Worker 0 (Stream 0)"]
+               W1["Worker 1 (Stream 1)"]
                Wdots["..."]
-               Wk["Worker A-1: Stream A-1 (asyncio.to_thread)"]
+               WA["Worker A-1 (Stream A-1)"]
            end
        end
 
-       CLoop -->|"1. acquire lock"| BLock
-       BDeque -->|"2. return sample"| CGet
-       CGet -->|"3. notify space"| BEvent
-       BEvent -.->|"unblocks space"| TG
-       TG -->|"await async_put(item)"| BDeque
+       subgraph Buffer["HybridBuffer (Thread-Safe Reservoir)"]
+           direction TB
+           Lock["threading.Lock (mutex protection)"]
+           Deque[("Bounded deque (capacity B)")]
+           Event["asyncio.Event (space available signal)"]
+       end
+
+       subgraph Consumer["Consumer Thread (Main / Training)"]
+           direction TB
+           Pop["sync_get(): pop sample in under 1 μs"]
+           Loop["for sample in mux: train_step(sample)"]
+       end
+
+       TG ==>|"await async_put(sample)"| Deque
+       Deque ==>|"fast mutex read"| Pop
+       Pop --> Loop
+       Pop -.->|"notify space (threadsafe)"| Event
+       Event -.->|"unblock worker"| TG
 
 Hybrid Thread-Safe Buffer (``HybridBuffer``)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
