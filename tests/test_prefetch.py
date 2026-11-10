@@ -406,3 +406,60 @@ def test_stochastic_mux_distribution_mismatch(monkeypatch):
     monkeypatch.setattr(type(mux), "n_streams", property(lambda self: 2))
     with pytest.raises(pescador.PescadorError, match="same length as `distribution`"):
         mux._activate()
+
+
+def test_direct_iteration_lifecycle():
+    import threading
+    import time
+
+    def gen():
+        for x in range(20):
+            yield x
+
+    s1 = pescador.Streamer(gen)
+    s2 = pescador.Streamer(gen)
+    mux = pescador.RoundRobinMux([s1, s2], buffer_size=2)
+    ps = pescador.PrefetchStreamer(gen, buffer_size=2)
+
+    base_threads = threading.active_count()
+
+    def _wait_for_threads(expected_count, timeout=1.0):
+        start = time.perf_counter()
+        while threading.active_count() > expected_count:
+            if time.perf_counter() - start > timeout:
+                break
+            time.sleep(0.01)
+        return threading.active_count()
+
+    # 1. Clean exhaustion
+    items_mux = list(mux)
+    assert len(items_mux) == 40
+    assert _wait_for_threads(base_threads) == base_threads
+
+    items_ps = list(ps)
+    assert len(items_ps) == 20
+    assert _wait_for_threads(base_threads) == base_threads
+
+    # 2. Early break without context manager
+    for i, _ in enumerate(mux):
+        if i == 3:
+            break
+    assert _wait_for_threads(base_threads) == base_threads
+
+    for i, _ in enumerate(ps):
+        if i == 3:
+            break
+    assert _wait_for_threads(base_threads) == base_threads
+
+    # 3. Exception in consumer loop without context manager
+    with pytest.raises(RuntimeError, match="consumer fail"):
+        for i, _ in enumerate(mux):
+            if i == 3:
+                raise RuntimeError("consumer fail")
+    assert _wait_for_threads(base_threads) == base_threads
+
+    with pytest.raises(RuntimeError, match="consumer fail"):
+        for i, _ in enumerate(ps):
+            if i == 3:
+                raise RuntimeError("consumer fail")
+    assert _wait_for_threads(base_threads) == base_threads

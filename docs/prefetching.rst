@@ -423,33 +423,48 @@ background prefetching.
        buffer_size=4,       # Enable prefetching: 4 items per active stream
    )
 
-   # Always consume within a context manager for deterministic resource cleanup
-   with mux:
-       for batch in mux.iterate(max_iter=10000):
-           train_step(batch)
+   # Iterate directly as with any Pescador streamer:
+   for batch in mux(max_iter=10000):
+       train_step(batch)
 
 
-The Importance of the Context Manager
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Resource Lifecycle and Automatic Teardown
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-When ``buffer_size > 0``, the multiplexer manages background threads and async event loops.
-Always use the ``with mux:`` context manager pattern.
-The context manager ensures that:
+When ``buffer_size > 0``, the streamer or multiplexer manages background worker threads and
+an isolated ``asyncio`` event loop. You do **not** need to wrap iteration in an explicit
+``with`` statement—standard Python generator semantics handle this automatically.
 
-1. Background worker tasks are initiated when entering the block.
-2. If an exception occurs in the consumer loop (e.g. keyboard interrupt, out-of-memory error),
-   all background tasks and threads are promptly terminated without hanging or resource leaks.
+Both :meth:`~pescador.PrefetchStreamer.iterate` and :meth:`~pescador.mux.BaseMux.iterate`
+encapsulate the resource lifecycle directly:
+
+1. **Automatic Initialization**: Background prefetching begins as soon as iteration starts.
+2. **Deterministic Cleanup on Completion**: When the stream finishes or reaches ``max_iter``,
+   the generator shuts down all background tasks and cleanly terminates the worker thread.
+3. **Safe Teardown on Early Exit**: If the loop breaks early (``break``) or an exception occurs
+   in the consumer (e.g. keyboard interrupt, out-of-memory error), Python's generator protocol
+   (:pep:`342`) raises ``GeneratorExit`` inside the generator, triggering immediate background
+   task cancellation and thread joining without orphan processes or memory leaks.
 
 .. code-block:: python
 
-   # Recommended pattern:
-   with mux:
-       for item in mux:
-           process(item)
-
-   # Alternatively, mux.iterate() can manage the context automatically:
-   for item in mux.iterate(max_iter=500):
+   # Standard idiomatic pattern:
+   for item in mux(max_iter=500):
        process(item)
+
+   # Early break is 100% safe and deterministic:
+   for item in mux:
+       if stopping_condition():
+           break  # Background workers and threads are promptly terminated
+
+If you need to manually bind an active streamer to a lexical scope across multiple ``next()``
+calls without holding a generator instance, the context manager interface is also available:
+
+.. code-block:: python
+
+   with mux as active:
+       first_item = next(active.iterate())
+       second_item = next(active.iterate())
 
 
 Standalone Stream Prefetching: ``PrefetchStreamer``
@@ -469,9 +484,8 @@ directly with :class:`~pescador.PrefetchStreamer`:
        buffer_size=4,
    )
 
-   with prefetched_streamer:
-       for sample in prefetched_streamer:
-           model.train_on_batch(sample)
+   for sample in prefetched_streamer:
+       model.train_on_batch(sample)
 
 
 Choosing the Optimal Buffer Depth

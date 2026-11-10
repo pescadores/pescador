@@ -90,13 +90,12 @@ def run_io_bound_benchmark(n_items=250, n_active=8, buffer_size=4):
 
     wait_sync = []
     t0_all = time.perf_counter()
-    with mux_sync:
-        it = iter(mux_sync)
-        for _ in range(n_items):
-            t0 = time.perf_counter()
-            next(it)
-            wait_sync.append((time.perf_counter() - t0) * 1000.0)
-            time.sleep(0.001)
+    it = iter(mux_sync)
+    for _ in range(n_items):
+        t0 = time.perf_counter()
+        next(it)
+        wait_sync.append((time.perf_counter() - t0) * 1000.0)
+        time.sleep(0.001)
     total_sync = time.perf_counter() - t0_all
 
     # Prefetched async
@@ -105,13 +104,12 @@ def run_io_bound_benchmark(n_items=250, n_active=8, buffer_size=4):
 
     wait_async = []
     t0_all = time.perf_counter()
-    with mux_async:
-        it = iter(mux_async)
-        for _ in range(n_items):
-            t0 = time.perf_counter()
-            next(it)
-            wait_async.append((time.perf_counter() - t0) * 1000.0)
-            time.sleep(0.001)
+    it = iter(mux_async)
+    for _ in range(n_items):
+        t0 = time.perf_counter()
+        next(it)
+        wait_async.append((time.perf_counter() - t0) * 1000.0)
+        time.sleep(0.001)
     total_async = time.perf_counter() - t0_all
 
     stats_s = format_stats(wait_sync)
@@ -130,13 +128,12 @@ def run_jitter_benchmark(n_items=250, n_active=4, buffer_size=4):
 
     wait_sync = []
     t0_all = time.perf_counter()
-    with mux_sync:
-        it = iter(mux_sync)
-        for _ in range(n_items):
-            t0 = time.perf_counter()
-            next(it)
-            wait_sync.append((time.perf_counter() - t0) * 1000.0)
-            time.sleep(0.008)
+    it = iter(mux_sync)
+    for _ in range(n_items):
+        t0 = time.perf_counter()
+        next(it)
+        wait_sync.append((time.perf_counter() - t0) * 1000.0)
+        time.sleep(0.008)
     total_sync = time.perf_counter() - t0_all
 
     # Prefetched
@@ -145,13 +142,12 @@ def run_jitter_benchmark(n_items=250, n_active=4, buffer_size=4):
 
     wait_async = []
     t0_all = time.perf_counter()
-    with mux_async:
-        it = iter(mux_async)
-        for _ in range(n_items):
-            t0 = time.perf_counter()
-            next(it)
-            wait_async.append((time.perf_counter() - t0) * 1000.0)
-            time.sleep(0.008)
+    it = iter(mux_async)
+    for _ in range(n_items):
+        t0 = time.perf_counter()
+        next(it)
+        wait_async.append((time.perf_counter() - t0) * 1000.0)
+        time.sleep(0.008)
     total_async = time.perf_counter() - t0_all
 
     stats_s = format_stats(wait_sync)
@@ -175,21 +171,19 @@ def run_scaling_benchmark(n_items=200, active_counts=None):
         s_sync = [pescador.Streamer(make_io_stream, i, n_samples=100, io_delay_s=0.015) for i in range(n_pool)]
         mux_sync = pescador.StochasticMux(s_sync, n_active=n_act, rate=32, buffer_size=None, random_state=42)
         t_start = time.perf_counter()
-        with mux_sync:
-            it = iter(mux_sync)
-            for _ in range(n_items):
-                next(it)
-                time.sleep(0.001)
+        it = iter(mux_sync)
+        for _ in range(n_items):
+            next(it)
+            time.sleep(0.001)
         t_sync = time.perf_counter() - t_start
 
         s_async = [pescador.Streamer(make_io_stream, i, n_samples=100, io_delay_s=0.015) for i in range(n_pool)]
         mux_async = pescador.StochasticMux(s_async, n_active=n_act, rate=32, buffer_size=4, random_state=42)
         t_start = time.perf_counter()
-        with mux_async:
-            it = iter(mux_async)
-            for _ in range(n_items):
-                next(it)
-                time.sleep(0.001)
+        it = iter(mux_async)
+        for _ in range(n_items):
+            next(it)
+            time.sleep(0.001)
         t_async = time.perf_counter() - t_start
 
         print(f"  {n_act:<10} | {t_sync:11.3f} s    | {t_async:11.3f} s    | {t_sync/t_async:5.2f}x")
@@ -210,13 +204,12 @@ def run_buffer_sensitivity_benchmark(n_items=200):
 
         wait_times = []
         t_start = time.perf_counter()
-        with mux:
-            it = iter(mux)
-            for _ in range(n_items):
-                t0 = time.perf_counter()
-                next(it)
-                wait_times.append((time.perf_counter() - t0) * 1000.0)
-                time.sleep(0.006)
+        it = iter(mux)
+        for _ in range(n_items):
+            t0 = time.perf_counter()
+            next(it)
+            wait_times.append((time.perf_counter() - t0) * 1000.0)
+            time.sleep(0.006)
         total_time = time.perf_counter() - t_start
 
         arr = np.array(wait_times)
