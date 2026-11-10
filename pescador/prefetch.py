@@ -223,6 +223,8 @@ class TaskGroupPrefetchBridge:
                         item = await stream.__anext__()
                     else:
                         item = await asyncio.to_thread(next, stream, _SENTINEL)
+                except StopAsyncIteration:
+                    item = _SENTINEL
                 except Exception as exc:
                     buffer.set_exception(exc)
                     raise
@@ -341,6 +343,8 @@ class SingleStreamPrefetchBridge:
                         item = await self.stream.__anext__()
                     else:
                         item = await asyncio.to_thread(next, self.stream, _SENTINEL)
+                except StopAsyncIteration:
+                    item = _SENTINEL
                 except Exception as exc:
                     self.buffer.set_exception(exc)
                     raise
@@ -409,7 +413,7 @@ class PrefetchStreamer(core.Streamer):
         copy_result = cls.__new__(cls)
         memo[id(self)] = copy_result
         for k, v in self.__dict__.items():
-            if k == "bridge_":
+            if k in ("bridge_", "_active_copy"):
                 setattr(copy_result, k, None)
             else:
                 setattr(copy_result, k, copy.deepcopy(v, memo))
@@ -419,12 +423,14 @@ class PrefetchStreamer(core.Streamer):
         """Prepare PrefetchStreamer for pickling / multiprocessing serialization."""
         state = self.__dict__.copy()
         state["bridge_"] = None
+        state["_active_copy"] = None
         return state
 
     def __setstate__(self, state):
         """Restore PrefetchStreamer from pickled state."""
         self.__dict__.update(state)
         self.bridge_ = None
+        self._active_copy = None
 
     def __enter__(self, *args, **kwargs):
         streamer_copy = super().__enter__(*args, **kwargs)
@@ -433,9 +439,15 @@ class PrefetchStreamer(core.Streamer):
                 streamer_copy.stream_, buffer_size=self.buffer_size, timeout=self.timeout
             )
             streamer_copy.bridge_.start()
+            self._active_copy = streamer_copy
         return streamer_copy
 
     def __exit__(self, *exc):
+        if hasattr(self, "_active_copy") and self._active_copy is not None:
+            if hasattr(self._active_copy, "bridge_") and self._active_copy.bridge_ is not None:
+                self._active_copy.bridge_.close()
+                self._active_copy.bridge_ = None
+            self._active_copy = None
         if hasattr(self, "bridge_") and self.bridge_ is not None:
             self.bridge_.close()
             self.bridge_ = None

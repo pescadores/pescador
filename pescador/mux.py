@@ -137,7 +137,7 @@ class BaseMux(core.Streamer):
                 setattr(copy_result, k, v)
             elif k == "_state_lock":
                 setattr(copy_result, k, threading.Lock())
-            elif k == "bridge_":
+            elif k in ("bridge_", "_active_copy"):
                 setattr(copy_result, k, None)
             # In all other cases, assume a deepcopy is the right choice.
             else:
@@ -152,6 +152,7 @@ class BaseMux(core.Streamer):
             state["rng"] = None
         state["_state_lock"] = None
         state["bridge_"] = None
+        state["_active_copy"] = None
         return state
 
     def __setstate__(self, state):
@@ -161,6 +162,7 @@ class BaseMux(core.Streamer):
         self.__dict__.update(state)
         self._state_lock = threading.Lock()
         self.bridge_ = None
+        self._active_copy = None
 
     @property
     def is_activated_copy(self):
@@ -217,10 +219,16 @@ class BaseMux(core.Streamer):
                 streamer_copy, buffer_size=streamer_copy.buffer_size
             )
             streamer_copy.bridge_.start()
+            self._active_copy = streamer_copy
         return streamer_copy
 
     def __exit__(self, *exc):
         """Exit the streamer context, closing prefetch bridge if running."""
+        if hasattr(self, "_active_copy") and self._active_copy is not None:
+            if hasattr(self._active_copy, "bridge_") and self._active_copy.bridge_ is not None:
+                self._active_copy.bridge_.close()
+                self._active_copy.bridge_ = None
+            self._active_copy = None
         if hasattr(self, "bridge_") and self.bridge_ is not None:
             self.bridge_.close()
             self.bridge_ = None

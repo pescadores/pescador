@@ -89,7 +89,8 @@ class Streamer:
         """
         if not (
             inspect.isgeneratorfunction(streamer)
-            or isinstance(streamer, (collections_abc.Iterable, Streamer))
+            or inspect.isasyncgenfunction(streamer)
+            or isinstance(streamer, (collections_abc.Iterable, collections_abc.AsyncIterable, Streamer))
         ):
             raise PescadorError(
                 "`streamer` must be an iterable or callable "
@@ -178,7 +179,8 @@ class Streamer:
         if callable(self.streamer):
             # If it's a function, create the stream.
             self.stream_ = self.streamer(*(self.args), **(self.kwargs))
-
+        elif isinstance(self.streamer, collections_abc.AsyncIterable):
+            self.stream_ = aiter(self.streamer)
         else:
             # If it's iterable, use it directly.
             self.stream_ = iter(self.streamer)

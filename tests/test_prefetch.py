@@ -254,3 +254,149 @@ def test_prefetched_pickle_serialization():
     assert unpickled_ps.buffer_size == 3
     items_ps = list(unpickled_ps)
     assert len(items_ps) == 10
+
+
+def test_hybrid_buffer_timeout():
+    buf = HybridBuffer(maxsize=2)
+    with pytest.raises(TimeoutError, match="sync_get timed out"):
+        buf.sync_get(timeout=0.01)
+
+
+def test_hybrid_buffer_set_loop():
+    import asyncio
+
+    buf = HybridBuffer(maxsize=2)
+    loop = asyncio.new_event_loop()
+    try:
+        buf.set_loop(loop)
+        assert buf.loop is loop
+    finally:
+        loop.close()
+
+
+def test_hybrid_buffer_async_put_closed():
+    import asyncio
+
+    async def _runner():
+        buf = HybridBuffer(maxsize=2)
+        buf.set_loop(asyncio.get_running_loop())
+        buf.close()
+        with pytest.raises(asyncio.CancelledError, match="Buffer is closed"):
+            await buf.async_put(123)
+
+    asyncio.run(_runner())
+
+
+def test_prefetch_streamer_async_generator():
+    async def async_gen():
+        for i in range(5):
+            yield i
+
+    ps = PrefetchStreamer(async_gen, buffer_size=2)
+    items = list(ps)
+    assert items == list(range(5))
+
+
+def test_taskgroup_bridge_async_generator():
+    class AsyncStreamer(pescador.Streamer):
+        def __init__(self, count):
+            self.count = count
+            self.stream_ = None
+            self.active_count_ = 0
+
+        def _activate(self):
+            async def _agen():
+                for i in range(self.count):
+                    yield i
+
+            self.stream_ = _agen()
+
+        def iterate(self, max_iter=None):
+            self._activate()
+            return self.stream_
+
+    s1 = AsyncStreamer(3)
+    s2 = AsyncStreamer(3)
+    mux = pescador.RoundRobinMux([s1, s2], mode="exhaustive", buffer_size=2)
+    items = list(mux)
+    assert items == [0, 0, 1, 1, 2, 2]
+
+
+def test_taskgroup_bridge_worker_exception():
+    def failing_stream():
+        yield 1
+        raise RuntimeError("worker exception test")
+
+    mux = pescador.RoundRobinMux([pescador.Streamer(failing_stream)], mode="exhaustive", buffer_size=2)
+    with pytest.raises(RuntimeError, match="worker exception test"):
+        list(mux)
+
+
+def test_context_manager_bridge_cleanup():
+    def count_stream():
+        i = 0
+        while True:
+            yield i
+            i += 1
+
+    s1 = pescador.Streamer(count_stream)
+    s2 = pescador.Streamer(count_stream)
+    mux = pescador.RoundRobinMux([s1, s2], buffer_size=2)
+
+    with mux as active:
+        assert active.bridge_ is not None
+        items = [next(active.iterate()) for _ in range(3)]
+        assert len(items) == 3
+
+    assert active.bridge_ is None
+
+    ps = pescador.PrefetchStreamer(s1, buffer_size=2)
+    with ps as active_ps:
+        assert active_ps.bridge_ is not None
+        items_ps = [next(active_ps.iterate()) for _ in range(3)]
+        assert len(items_ps) == 3
+
+    assert active_ps.bridge_ is None
+
+
+def test_buffers_available_fallback():
+    s1 = pescador.Streamer("abc")
+    mux = pescador.StochasticMux([s1], n_active=1, rate=None, mode="exhaustive", buffer_size=None)
+    with mux as active:
+        assert active.bridge_ is None
+        assert active._buffers_available()
+
+
+def _make_numbered_pair(val):
+    yield val
+    yield val * 10
+
+
+def test_stochastic_mux_prefetched_stream_replacement():
+    streamers = [pescador.Streamer(_make_numbered_pair, i) for i in range(4)]
+    mux = pescador.StochasticMux(
+        streamers, n_active=2, rate=None, mode="exhaustive", buffer_size=2, random_state=42
+    )
+    items = list(mux)
+    assert len(items) == 8
+
+
+def test_shuffled_mux_prefetched_empty():
+    a = pescador.Streamer([])
+    b = pescador.Streamer([])
+    mux = pescador.ShuffledMux([a, b], random_state=42, buffer_size=2)
+    items = list(mux)
+    assert items == []
+
+
+def test_chain_mux_invalid_mode():
+    with pytest.raises(pescador.PescadorError, match="Invalid ChainMux mode"):
+        pescador.ChainMux([pescador.Streamer("a")], mode="invalid_mode")
+
+
+def test_stochastic_mux_distribution_mismatch(monkeypatch):
+    s = [pescador.Streamer("a")]
+    mux = pescador.StochasticMux(s, n_active=1, rate=10)
+    monkeypatch.setattr(type(mux), "n_streams", property(lambda self: 2))
+    with pytest.raises(pescador.PescadorError, match="same length as `distribution`"):
+        mux._activate()
