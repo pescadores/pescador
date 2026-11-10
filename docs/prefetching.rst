@@ -158,18 +158,18 @@ consumer threads to concurrent background producers:
 * **Background Daemon Thread**: An isolated thread running a dedicated :class:`asyncio` event
   loop. An :class:`asyncio.TaskGroup` manages concurrent worker coroutines—one for each active
   stream slot—that asynchronously fetch samples ahead of the consumer.
-* **Thread-Safe Elastic Reservoir** (``HybridBuffer``): Connects the background event loop
+* **Thread-Safe Elastic Reservoir** (`HybridBuffer`): Connects the background event loop
   to the synchronous consumer via a bounded :class:`collections.deque` protected by a fast
   :class:`threading.Lock`. Producers asynchronously wait for space (:class:`asyncio.Event`),
   while the consumer pops samples in under :math:`1\,\mu\text{s}`.
 * **Consumer Thread**: The main application or training thread iterating normally
   (e.g., ``for sample in mux:``), completely isolated from producer I/O latency and jitter.
 
-Hybrid Thread-Safe Buffer (``HybridBuffer``)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Hybrid Thread-Safe Buffer (HybridBuffer)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 Standard ``asyncio.Queue`` requires an asynchronous consumer (``await queue.get()``), while
 standard ``queue.Queue`` incurs heavy thread-switching overhead.
-Pescador addresses this with ``HybridBuffer``:
+Pescador addresses this with `HybridBuffer`:
 
 * **Synchronous Consumer**: Calls ``sync_get()``, acquiring a lightweight ``threading.Lock``,
   popping from a ``collections.deque`` in < 1 μs, and notifying the background
@@ -447,8 +447,8 @@ calls without holding a generator instance, the context manager interface is als
        second_item = next(active.iterate())
 
 
-Standalone Stream Prefetching: ``PrefetchStreamer``
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Standalone Stream Prefetching: `PrefetchStreamer`
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 If you have a single generator or pipeline that does not require multiplexing, you can wrap it
 directly with :class:`~pescador.PrefetchStreamer`:
@@ -484,4 +484,4 @@ The optimal value of ``buffer_size`` depends on sample size and memory constrain
   Prefetching uses Python threads within an asynchronous event loop, which excels at I/O-bound tasks
   (disk reads, network calls, C-extension processing releasing the GIL such as NumPy/SoundFile).
   For heavily CPU-bound Python generator logic that holds the GIL, consider using
-  :ref:`ZMQStreamer` to distribute generation across separate operating system processes.
+  `ZMQStreamer` to distribute generation across separate operating system processes.

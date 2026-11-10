@@ -40,13 +40,13 @@ These use cases arise in the following common scenarios:
 
 To make this all possible, Pescador provides the following utilities:
 
-    - :ref:`Streamer` objects encapsulate data generators for reuse, infinite sampling, and inter-process
+    - `Streamer` objects encapsulate data generators for reuse, infinite sampling, and inter-process
       communication.
-    - :ref:`PrefetchStreamer` provides concurrent background prefetching to minimize pipeline latency.
+    - `PrefetchStreamer` provides concurrent background prefetching to minimize pipeline latency.
     - :ref:`Mux` objects allow flexible sampling from multiple streams
-    - :ref:`ZMQStreamer` provides parallel processing with low communication overhead
+    - `ZMQStreamer` provides parallel processing with low communication overhead
     - Transform or modify streams with Maps (see :ref:`processing-data-streams`)
-    - Buffering of sampled data into fixed-size batches (see `pescador.maps.buffer_stream`)
+    - Buffering of sampled data into fixed-size batches (see `buffer_stream`)
 
 ************
 Installation

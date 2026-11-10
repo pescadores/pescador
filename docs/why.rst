@@ -25,7 +25,7 @@ For example, when modeling a large collection of audio files, each file may gene
 Hierarchical sampling can be useful in neutralizing this bias during the training process.
 
 Pescador implements hierarchical sampling through a family of :ref:`Mux` classes.
-In its simplest form, the `ShuffledMux` takes as input a set of :ref:`Streamer` objects from which samples are drawn randomly.
+In its simplest form, the `ShuffledMux` takes as input a set of `Streamer` objects from which samples are drawn randomly.
 This effectively generates data by a process similar to the following pseudo-code:
 
 .. code-block:: python
@@ -38,7 +38,7 @@ This effectively generates data by a process similar to the following pseudo-cod
 The `ShuffledMux` object also lets you specify an arbitrary distribution over the set of streamers, giving you fine-grained control over the resulting distribution of samples.
 
 
-Muxes are also `Streamers`, so sampling hierarchies can be nested arbitrarily deep.
+Muxes are also `Streamer` objects, so sampling hierarchies can be nested arbitrarily deep.
 
 Out-of-core sampling
 --------------------
@@ -85,7 +85,7 @@ In the above example, all of the data I/O was handled within the `generator` fun
 If the generator requires high-latency operations such as disk-access, this can become a computational bottleneck.
 
 Pescador makes it easy to migrate data generation into a background process, so that high-latency operations do not stall the main thread.
-This is facilitated by the :ref:`ZMQStreamer` object, which acts as a simple wrapper around any streamer that produces samples in the form of dictionaries of numpy arrays.
+This is facilitated by the `ZMQStreamer` object, which acts as a simple wrapper around any streamer that produces samples in the form of dictionaries of numpy arrays.
 Continuing the above example:
 
 .. code-block:: python

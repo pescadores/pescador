@@ -13,12 +13,15 @@
 
 import sys
 import os
+from glob import glob
+from importlib.machinery import SourceFileLoader
 from pathlib import Path
 
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
-sys.path.insert(0, os.path.abspath('../pescador'))
+srcpath = os.path.abspath(Path(os.path.dirname(__file__)) / "..")
+sys.path.insert(0, srcpath)
 
 # -- General configuration ------------------------------------------------
 
@@ -54,7 +57,6 @@ sphinx_gallery_conf = {
     'backreferences_dir': None,
 }
 
-from glob import glob
 autosummary_generate = glob('*.rst')
 
 # Include the __init__ doc as well as the class
@@ -80,14 +82,6 @@ copyright = f'2016, {authors}'
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
 # built documents.
-from unittest.mock import MagicMock as Mock
-
-MOCK_MODULES = ['numpy', 'zmq']
-
-sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)
-
-from importlib.machinery import SourceFileLoader
-srcpath = os.path.abspath(Path(os.path.dirname(__file__)) / "..")
 pescador_version = SourceFileLoader(
         "pescador.version", os.path.abspath(Path(srcpath) / "pescador" / "version.py")
 ).load_module()
@@ -112,6 +106,10 @@ exclude_patterns = ['_build', '.DS_Store']
 # The reST default role (used for this markup: `text`) to use for all
 # documents.
 default_role = "autolink"
+
+rst_prolog = """
+.. currentmodule:: pescador
+"""
 
 # If true, '()' will be appended to :func: etc. cross-reference text.
 #add_function_parentheses = True
@@ -327,3 +325,7 @@ texinfo_documents = [
 # If true, do not generate a @detailmenu in the "Top" node's menu.
 #texinfo_no_detailmenu = False
 
+
+rst_prolog = """
+.. currentmodule:: pescador
+"""

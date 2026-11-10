@@ -8,13 +8,13 @@ Stream reuse and multiplexing
 ==============================
 
 The `StochasticMux` streamer provides a powerful interface for randomly interleaving samples from multiple input streams.
-`StochasticMux` can also dynamically activate and deactivate individual `Streamers`, which allows it to operate on a bounded subset of streams at any given time.
+`StochasticMux` can also dynamically activate and deactivate individual `Streamer` objects, which allows it to operate on a bounded subset of streams at any given time.
 
 As a concrete example, we can simulate a mixture of noisy streams with differing variances.
 
 In this example, we use a slightly different notation for defining streamers, introduced in pescador 2.1.
 Instead of defining an iterator function `noisy_samples` and then wrapping it with a `Streamer` object,
-we can instead decorate the generator function with `@pescador.streamable`.
+we can instead decorate the generator function with `streamable`.
 The result is qualitatively the same in both cases, but the decorator interface produces a slightly
 cleaner syntax.
 

@@ -8,6 +8,7 @@ API Reference
 
 .. _Streamer:
 .. _PrefetchStreamer:
+.. _HybridBuffer:
 .. _ZMQStreamer:
 
 Streaming
@@ -20,7 +21,9 @@ Streaming
 
     Streamer
     PrefetchStreamer
+    HybridBuffer
     ZMQStreamer
+    streamable
 
 
 .. _Mux:
@@ -28,7 +31,16 @@ Streaming
 Multiplexing
 ------------
 
-.. automodule:: pescador.mux
+.. currentmodule:: pescador
+
+.. autosummary::
+    :toctree: generated/
+
+    StochasticMux
+    ShuffledMux
+    RoundRobinMux
+    ChainMux
+    BaseMux
 
 
 .. _Maps:
@@ -36,4 +48,26 @@ Multiplexing
 Maps (Transformers)
 -------------------
 
-.. automodule:: pescador.maps
+.. currentmodule:: pescador
+
+.. autosummary::
+    :toctree: generated/
+
+    buffer_stream
+    tuples
+    keras_tuples
+    cache
+
+
+.. _Exceptions:
+
+Exceptions
+----------
+
+.. currentmodule:: pescador
+
+.. autosummary::
+    :toctree: generated/
+
+    PescadorError
+    DataError
