@@ -570,6 +570,23 @@ class TestStochasticMux_SingleActive:
 
         assert len(list(mux(max_iter=100))) == 0
 
+    def test_mux_single_active_prune_empty(self, mux_class):
+        s1 = pescador.Streamer([])
+        s2 = pescador.Streamer("abc")
+        mux = mux_class([s1, s2], 2, rate=None, prune_empty_streams=True, random_state=1234)
+
+        items = list(mux.iterate(max_iter=10))
+        assert items == ["a", "b", "c", "a", "b", "c", "a", "b", "c", "a"]
+
+    def test_mux_single_active_all_empty(self, mux_class):
+        s1 = pescador.Streamer([])
+        s2 = pescador.Streamer([])
+        s3 = pescador.Streamer([])
+        mux = mux_class([s1, s2, s3], 2, rate=1.0, prune_empty_streams=True, random_state=42)
+
+        items = list(mux.iterate(max_iter=10))
+        assert items == []
+
     @pytest.mark.parametrize(
         'dist', ['constant', 'binomial', 'poisson',
                  pytest.param('gaussian', marks=pytest.mark.xfail(raises=pescador.PescadorError))])
@@ -728,6 +745,18 @@ class TestRoundRobinMux:
         mux = pescador.mux.RoundRobinMux(streamers, 'exhaustive')
         result = "".join(list(mux.iterate()))
         assert result == "abcabccc"
+
+    def test_rr_all_empty(self):
+        empty1 = pescador.Streamer([])
+        empty2 = pescador.Streamer([])
+        mux = pescador.mux.RoundRobinMux([empty1, empty2], "exhaustive")
+        assert list(mux.iterate()) == []
+
+    def test_rr_cycle_all_empty(self):
+        empty1 = pescador.Streamer([])
+        empty2 = pescador.Streamer([])
+        mux = pescador.mux.RoundRobinMux([empty1, empty2], "cycle")
+        assert list(mux.iterate(max_iter=10)) == []
 
     def test_rr_basic_cycle(self):
         a = pescador.Streamer('a')

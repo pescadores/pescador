@@ -71,6 +71,8 @@ include = ["pescador*"]
 [tool.pytest.ini_options]
 addopts = "--cov-report term-missing --cov pescador --cov-report=xml"
 pythonpath = ["."]
+timeout = 60
+timeout_method = "thread"
 markers = [
     "timeout: mark test timeout",
 ]

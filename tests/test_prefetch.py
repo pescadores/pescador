@@ -137,6 +137,28 @@ def test_stochastic_mux_prefetched_single_active():
     assert set(items) == {"a", "b"}
 
 
+def test_stochastic_mux_prefetched_empty_stream():
+    s1 = pescador.Streamer([])
+    s2 = pescador.Streamer("abc")
+
+    mux = pescador.StochasticMux(
+        [s1, s2], n_active=2, rate=None, mode="single_active", buffer_size=2
+    )
+    items = list(mux(max_iter=5))
+    assert items == ["a", "b", "c", "a", "b"]
+
+
+def test_stochastic_mux_prefetched_all_empty():
+    s1 = pescador.Streamer([])
+    s2 = pescador.Streamer([])
+
+    mux = pescador.StochasticMux(
+        [s1, s2], n_active=2, rate=None, mode="single_active", buffer_size=2
+    )
+    items = list(mux(max_iter=5))
+    assert items == []
+
+
 def test_shuffled_mux_prefetched():
     a = pescador.Streamer("a")
     b = pescador.Streamer("b")

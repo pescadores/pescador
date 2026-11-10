@@ -213,6 +213,11 @@ class TaskGroupPrefetchBridge:
     async def _slot_worker(self, slot_idx: int, buffer: HybridBuffer) -> None:
         """Worker task prefetching samples for a single active stream slot."""
         try:
+            consecutive_exhaustions = 0
+            n_streams_total = getattr(self.mux, "n_streams", None) or (
+                len(self.mux.streams_) if self.mux.streams_ else 10
+            )
+            max_consecutive = max(100, 10 * n_streams_total)
             while not self.stop_event.is_set():
                 with self.mux._state_lock:
                     stream = self.mux.streams_[slot_idx] if slot_idx < len(self.mux.streams_) else None
@@ -233,6 +238,7 @@ class TaskGroupPrefetchBridge:
                     raise
 
                 if item is _SENTINEL:
+                    consecutive_exhaustions += 1
                     with self.mux._state_lock:
                         old_stream = self.mux.streams_[slot_idx] if slot_idx < len(self.mux.streams_) else None
                         saved_weight = (
@@ -247,7 +253,9 @@ class TaskGroupPrefetchBridge:
                         if (
                             new_stream is None
                             or new_stream is old_stream
+                            or not self.mux._streamers_available()
                             or (hasattr(self.mux, "stream_weights_") and self.mux.stream_weights_[slot_idx] == 0.0)
+                            or consecutive_exhaustions >= max_consecutive
                         ):
                             # Restore stream pointer and weight so consumer can drain buffered items
                             if slot_idx < len(self.mux.streams_):
@@ -258,6 +266,8 @@ class TaskGroupPrefetchBridge:
                                 self.mux.weight_norm_ = np.sum(self.mux.stream_weights_)
                             break
                     continue
+
+                consecutive_exhaustions = 0
 
                 await buffer.async_put(item)
 

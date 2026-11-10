@@ -20,6 +20,7 @@ jobs:
       Python ${{ matrix.python-version }} on ${{ matrix.os }}
       ${{ matrix.variant && format(' - {0}', matrix.variant) || '' }}
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
     defaults:
       run:
         shell: bash -el {0}

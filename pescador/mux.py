@@ -178,7 +178,10 @@ class BaseMux(core.Streamer):
         Note: Some `Mux` sub-classes (i.e. `ChainMux`) may allow generators
         of streamers, in which case this will fail.
         """
-        return len(self.streamers)
+        try:
+            return len(self.streamers)
+        except TypeError:
+            return None
 
     def _activate(self):
         """Activates the mux as a streamer, choosing which substreams to
@@ -263,7 +266,10 @@ class BaseMux(core.Streamer):
             if active_mux.bridge_ is not None:
                 # Concurrent prefetch loop
                 while n < max_iter and active_mux._buffers_available():
-                    idx = active_mux._next_sample_index()
+                    try:
+                        idx = active_mux._next_sample_index()
+                    except StopIteration:
+                        break
                     try:
                         yield active_mux.bridge_.pull(idx)
                         n += 1
@@ -271,9 +277,17 @@ class BaseMux(core.Streamer):
                         active_mux._mark_slot_exhausted(idx)
             else:
                 # Synchronous sampling loop
+                consecutive_exhaustions = 0
+                n_total = getattr(active_mux, "n_streams", None) or (
+                    len(active_mux.streams_) if active_mux.streams_ else 10
+                )
+                max_consecutive = max(100, 10 * n_total)
                 while n < max_iter and active_mux._streamers_available():
                     # Pick a stream from the active set
-                    idx = active_mux._next_sample_index()
+                    try:
+                        idx = active_mux._next_sample_index()
+                    except StopIteration:
+                        break
 
                     # Can we sample from it?
                     try:
@@ -283,9 +297,13 @@ class BaseMux(core.Streamer):
                         # Increment the sample counter
                         n += 1
                         active_mux.stream_counts_[idx] += 1
+                        consecutive_exhaustions = 0
 
                     except StopIteration:
                         # Oops, this stream is exhausted.
+                        consecutive_exhaustions += 1
+                        if consecutive_exhaustions >= max_consecutive:
+                            break
 
                         # Call child-class exhausted-stream behavior
                         active_mux._on_stream_exhausted(idx)
@@ -541,19 +559,20 @@ class StochasticMux(BaseMux):
     def _on_stream_exhausted(self, idx):
         # If we're disabling empty seeds, see if this stream
         # produced any data; if it didn't, turn it off.
+        stream_idx = self.stream_idxs_[idx]
         if self.prune_empty_streams is True and self.stream_counts_[idx] == 0:
-            self.distribution_[self.stream_idxs_[idx]] = 0.0
-            self.valid_streams_[self.stream_idxs_[idx]] = False
+            self.distribution_[stream_idx] = 0.0
+            self.valid_streams_[stream_idx] = False
 
         # This is the same as
         #  if self.revive and not self.with_replacement in the original Mux
-        if self.mode == "single_active":
+        if self.mode == "single_active" and self.valid_streams_[stream_idx]:
             # If we need to revive a seed, give it the max
             # current probability
             if self.distribution_.any():
-                self.distribution_[self.stream_idxs_[idx]] = np.max(self.distribution_)
+                self.distribution_[stream_idx] = np.max(self.distribution_)
             else:
-                self.distribution_[self.stream_idxs_[idx]] = 1.0
+                self.distribution_[stream_idx] = 1.0
 
     def _activate_stream(self, idx, old_idx):
         """Randomly select and create a stream.
@@ -900,18 +919,20 @@ class RoundRobinMux(BaseMux):
     def _next_sample_index(self):
         """Rotates through each active sampler by incrementing the index"""
         with self._state_lock:
+            if not self.streams_:
+                raise StopIteration
+
+            n_slots = len(self.streams_)
             idx = self.active_index_
-            self.active_index_ += 1
+            self.active_index_ = (self.active_index_ + 1) % n_slots
 
-            if self.active_index_ >= len(self.streams_):
-                self.active_index_ = 0
-
+            checked = 0
             while self.streams_[idx] is None:
+                checked += 1
+                if checked >= n_slots:
+                    raise StopIteration
                 idx = self.active_index_
-                self.active_index_ += 1
-
-                if self.active_index_ >= len(self.streams_):
-                    self.active_index_ = 0
+                self.active_index_ = (self.active_index_ + 1) % n_slots
 
             return idx
 
