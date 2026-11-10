@@ -89,7 +89,8 @@ class Streamer:
         """
         if not (
             inspect.isgeneratorfunction(streamer)
-            or isinstance(streamer, (collections_abc.Iterable, Streamer))
+            or inspect.isasyncgenfunction(streamer)
+            or isinstance(streamer, (collections_abc.Iterable, collections_abc.AsyncIterable, Streamer))
         ):
             raise PescadorError(
                 "`streamer` must be an iterable or callable "
@@ -124,7 +125,10 @@ class Streamer:
         copy_result = cls.__new__(cls)
         memo[id(self)] = copy_result
         for k, v in self.__dict__.items():
-            setattr(copy_result, k, copy.deepcopy(v, memo))
+            try:
+                setattr(copy_result, k, copy.deepcopy(v, memo))
+            except TypeError:
+                setattr(copy_result, k, v)
 
         return copy_result
 
@@ -178,7 +182,8 @@ class Streamer:
         if callable(self.streamer):
             # If it's a function, create the stream.
             self.stream_ = self.streamer(*(self.args), **(self.kwargs))
-
+        elif isinstance(self.streamer, collections_abc.AsyncIterable):
+            self.stream_ = aiter(self.streamer)
         else:
             # If it's iterable, use it directly.
             self.stream_ = iter(self.streamer)
@@ -267,12 +272,25 @@ class Streamer:
 
 
 @decorator
-def streamable(function, *args, **kwargs):
-    """Create a Streamer object by decoration.
+def streamable(function, buffer_size=None, timeout=None, *args, **kwargs):
+    """Create a Streamer or PrefetchStreamer object by decoration.
 
     This is a convenient shortcut for declaring generator
     functions as Streamable, rather than having to construct
     object wrappers explicitly every time.
+
+    If ``buffer_size`` is provided, the stream will additionally be
+    wrapped in a `PrefetchStreamer`.
+
+    Parameters
+    ----------
+    function : callable
+        The generator function to decorate.
+    buffer_size : int > 0 or None, default=None
+        If specified, wraps the resulting stream in a `PrefetchStreamer`
+        with the given buffer size.
+    timeout : float > 0 or None, default=None
+        Timeout in seconds when prefetching (only applicable if ``buffer_size`` is set).
 
     Examples
     --------
@@ -292,5 +310,18 @@ def streamable(function, *args, **kwargs):
     ...     for i in range(n):
     ...         yield i
     >>> s2 = myfunc2(5)
+
+    You can also enable prefetching directly via ``streamable``:
+
+    >>> @pescador.streamable(buffer_size=4)
+    ... def myfunc3(n):
+    ...     for i in range(n):
+    ...         yield i
+    >>> s3 = myfunc3(5)
     """
-    return Streamer(function, *args, **kwargs)
+    stream = Streamer(function, *args, **kwargs)
+    if buffer_size is not None:
+        from .prefetch import PrefetchStreamer
+
+        return PrefetchStreamer(stream, buffer_size=buffer_size, timeout=timeout)
+    return stream

@@ -2,4 +2,4 @@ numpydoc>=0.6
 sphinx
 sphinx-gallery
 matplotlib
-sphinx_rtd_theme
+pydata-sphinx-theme

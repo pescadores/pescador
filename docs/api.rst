@@ -7,32 +7,80 @@ API Reference
 
 
 .. _Streamer:
-
-Streamer
---------
-.. autoclass:: pescador.Streamer
-    :inherited-members:
-    :special-members: __call__
-
-
+.. _PrefetchStreamer:
+.. _HybridBuffer:
 .. _ZMQStreamer:
 
-Parallel streaming
-------------------
-.. autoclass:: pescador.ZMQStreamer
-    :inherited-members:
-    :special-members: __call__
+Streaming
+---------
+
+.. currentmodule:: pescador
+
+.. autosummary::
+    :toctree: generated/
+
+    Streamer
+    PrefetchStreamer
+    HybridBuffer
+    ZMQStreamer
+
+
+.. _Decorators:
+
+Decorators
+----------
+
+.. currentmodule:: pescador
+
+.. autosummary::
+    :toctree: generated/
+
+    streamable
+    prefetchable
 
 
 .. _Mux:
 
 Multiplexing
 ------------
-.. automodule:: pescador.mux
+
+.. currentmodule:: pescador
+
+.. autosummary::
+    :toctree: generated/
+
+    StochasticMux
+    ShuffledMux
+    RoundRobinMux
+    ChainMux
+    BaseMux
+
 
 .. _Maps:
 
 Maps (Transformers)
 -------------------
-.. automodule:: pescador.maps
 
+.. currentmodule:: pescador
+
+.. autosummary::
+    :toctree: generated/
+
+    buffer_stream
+    tuples
+    keras_tuples
+    cache
+
+
+.. _Exceptions:
+
+Exceptions
+----------
+
+.. currentmodule:: pescador
+
+.. autosummary::
+    :toctree: generated/
+
+    PescadorError
+    DataError

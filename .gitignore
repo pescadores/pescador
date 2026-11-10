@@ -38,3 +38,8 @@ coverage.xml
 
 docs/_build
 docs/_build/*
+docs/generated/
+docs/auto_examples/
+docs/sg_execution_times.rst
+.venv/
+uv.lock

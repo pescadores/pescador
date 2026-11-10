@@ -1,13 +1,13 @@
 #!/usr/bin/env python
 '''Test the streamer object for reusable iterators'''
 import copy
-import pytest
-
 import warnings
-warnings.simplefilter('always')
+import pytest
 
 import pescador.core
 import test_utils as T
+
+warnings.simplefilter('always')
 
 
 def test_streamer_iterable():
@@ -282,4 +282,36 @@ def test_decorator():
     s = my_generator(5)
     assert isinstance(s, pescador.Streamer)
     assert list(s) == [0, 1, 2, 3, 4]
+
+
+def test_streamer_active_count_below_zero():
+    s = pescador.Streamer([1, 2, 3])
+    with pytest.raises(pescador.PescadorError, match="passed below 0"):
+        s.__exit__()
+
+
+def test_streamer_async_iterable_activate():
+    async def async_gen():
+        yield 1
+        yield 2
+
+    agen = async_gen()
+    s = pescador.Streamer(agen)
+    s._activate()
+    assert hasattr(s.stream_, "__anext__")
+
+    class CustomAsyncIterable:
+        def __aiter__(self):
+            return async_gen()
+
+    s_custom = pescador.Streamer(CustomAsyncIterable())
+    s_custom._activate()
+    assert hasattr(s_custom.stream_, "__anext__")
+
+
+def test_streamer_deepcopy_unpickleable():
+    gen = (x for x in range(3))
+    s = pescador.Streamer(gen)
+    s_copy = copy.deepcopy(s)
+    assert s_copy.streamer is gen
 

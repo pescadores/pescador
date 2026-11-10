@@ -13,12 +13,15 @@
 
 import sys
 import os
+from glob import glob
+from importlib.machinery import SourceFileLoader
 from pathlib import Path
 
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
-sys.path.insert(0, os.path.abspath('../pescador'))
+srcpath = os.path.abspath(Path(os.path.dirname(__file__)) / "..")
+sys.path.insert(0, srcpath)
 
 # -- General configuration ------------------------------------------------
 
@@ -38,6 +41,7 @@ extensions = [
     # 'sphinx.ext.doctest',
     'numpydoc',
     'sphinx_gallery.gen_gallery',
+    'pydata_sphinx_theme',
 ]
 
 # Configuration for sphinx-gallery
@@ -53,7 +57,6 @@ sphinx_gallery_conf = {
     'backreferences_dir': None,
 }
 
-from glob import glob
 autosummary_generate = glob('*.rst')
 
 # Include the __init__ doc as well as the class
@@ -79,14 +82,6 @@ copyright = f'2016, {authors}'
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
 # built documents.
-from unittest.mock import MagicMock as Mock
-
-MOCK_MODULES = ['numpy', 'zmq']
-
-sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)
-
-from importlib.machinery import SourceFileLoader
-srcpath = os.path.abspath(Path(os.path.dirname(__file__)) / "..")
 pescador_version = SourceFileLoader(
         "pescador.version", os.path.abspath(Path(srcpath) / "pescador" / "version.py")
 ).load_module()
@@ -111,6 +106,10 @@ exclude_patterns = ['_build', '.DS_Store']
 # The reST default role (used for this markup: `text`) to use for all
 # documents.
 default_role = "autolink"
+
+rst_prolog = """
+.. currentmodule:: pescador
+"""
 
 # If true, '()' will be appended to :func: etc. cross-reference text.
 #add_function_parentheses = True
@@ -138,7 +137,6 @@ numpydoc_show_class_members = False
 
 intersphinx_mapping = {'python': ('https://docs.python.org/3', None),
                        'numpy': ('https://numpy.org/doc/stable/', None),
-                       'np': ('https://numpy.org/doc/stable/', None),
                        'scipy': ('https://docs.scipy.org/doc/scipy/', None)}
 
 
@@ -146,14 +144,34 @@ intersphinx_mapping = {'python': ('https://docs.python.org/3', None),
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
-import sphinx_rtd_theme
-html_theme = 'sphinx_rtd_theme'
-html_theme_path = [sphinx_rtd_theme.get_html_theme_path()]
+html_theme = 'pydata_sphinx_theme'
 
-# Theme options are theme-specific and customize the look and feel of a theme
-# further.  For a list of options available for each theme, see the
-# documentation.
-#html_theme_options = {}
+html_theme_options = {
+    "header_links_before_dropdown": 6,
+    "icon_links": [
+        {
+            "name": "GitHub",
+            "url": "https://github.com/pescadores/pescador",
+            "icon": "fa-brands fa-square-github",
+            "type": "fontawesome",
+        },
+        {
+            "name": "GitHub Issues",
+            "url": "https://github.com/pescadores/pescador/issues",
+            "icon": "fa-classic fa-bug",
+            "type": "fontawesome",
+        },
+    ],
+    "navbar_end": ["theme-switcher", "navbar-icon-links"],
+    "navbar_align": "left",
+    "show_nav_level": 1,
+    "show_version_warning_banner": True,
+    "sticky_banners": True,
+}
+
+html_context = {
+    "default_mode": "light",
+}
 
 # Add any paths that contain custom themes here, relative to this directory.
 #html_theme_path = []
@@ -307,3 +325,7 @@ texinfo_documents = [
 # If true, do not generate a @detailmenu in the "Top" node's menu.
 #texinfo_no_detailmenu = False
 
+
+rst_prolog = """
+.. currentmodule:: pescador
+"""

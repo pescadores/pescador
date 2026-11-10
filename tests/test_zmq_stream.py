@@ -1,5 +1,4 @@
 import pytest
-import numpy as np
 import pescador
 import test_utils as T
 

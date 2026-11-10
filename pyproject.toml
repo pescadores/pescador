@@ -1,0 +1,93 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pescador"
+dynamic = ["version"]
+description = "Multiplex generators for incremental learning"
+readme = "README.md"
+license = {text = "ISC"}
+authors = [
+    {name = "Pescador developers", email = "brian.mcfee@nyu.edu"}
+]
+requires-python = ">=3.13"
+classifiers = [
+    "License :: OSI Approved :: ISC License (ISCL)",
+    "Programming Language :: Python",
+    "Development Status :: 3 - Alpha",
+    "Topic :: Multimedia :: Sound/Audio :: Analysis",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Programming Language :: Python :: 3.15",
+]
+dependencies = [
+    "pyzmq>=26.1.0",
+    "numpy>=2.1.0",
+    "decorator>=5.2.1",
+    "msgpack>=1.1.0",
+]
+
+[project.optional-dependencies]
+docs = [
+    "sphinx>=8.0.0",
+    "numpydoc>=0.6",
+    "pydata-sphinx-theme>=0.16.0",
+    "sphinx-gallery>=0.1.10",
+    "matplotlib",
+]
+tests = [
+    "pytest>=9.0.0",
+    "pytest-timeout>=2.3.0",
+    "pytest-cov>=6.0.0",
+    "scipy>=1.15.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/pescadores/pescador"
+Download = "https://github.com/pescadores/pescador/releases"
+Source = "https://github.com/pescadores/pescador"
+
+[dependency-groups]
+test = [
+    "pytest>=9.0.0",
+    "pytest-timeout>=2.3.0",
+    "pytest-cov>=6.0.0",
+    "scipy>=1.15.0",
+]
+lint = [
+    "codespell",
+    "ruff",
+    "pytest>=9.0.0",
+]
+
+[tool.setuptools.dynamic]
+version = {attr = "pescador.version.version"}
+
+[tool.setuptools.packages.find]
+include = ["pescador*"]
+
+[tool.pytest.ini_options]
+addopts = "--cov-report term-missing --cov pescador --cov-report=xml"
+pythonpath = ["."]
+markers = [
+    "timeout: mark test timeout",
+]
+
+[tool.ruff]
+line-length = 119
+extend-exclude = [
+    "docs/_build",
+    "docs/auto_*",
+]
+
+[tool.ruff.lint]
+select = ["E", "F", "W"]
+ignore = ["EXE001"]
+
+[tool.ruff.lint.per-file-ignores]
+"**/__init__.py" = ["F401", "F403"]
+
+[tool.codespell]
+skip = "./AUTHORS.md,./docs/changes.rst,./docs/_build,./.git"

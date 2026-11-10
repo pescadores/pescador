@@ -40,12 +40,14 @@ These use cases arise in the following common scenarios:
 
 To make this all possible, Pescador provides the following utilities:
 
-    - :ref:`Streamer` objects encapsulate data generators for reuse, infinite sampling, and inter-process
+    - `Streamer` objects encapsulate data generators for reuse, infinite sampling, and inter-process
       communication.
+    - `PrefetchStreamer` provides concurrent background prefetching to minimize pipeline latency.
     - :ref:`Mux` objects allow flexible sampling from multiple streams
-    - :ref:`ZMQStreamer` provides parallel processing with low communication overhead
+    - `ZMQStreamer` provides parallel processing with low communication overhead
     - Transform or modify streams with Maps (see :ref:`processing-data-streams`)
-    - Buffering of sampled data into fixed-size batches (see `pescador.maps.buffer_stream`)
+    - Buffering of sampled data into fixed-size batches (see `buffer_stream`)
+    - `streamable` and `prefetchable` decorators for declaring generator functions as reusable or concurrently prefetched streams directly
 
 ************
 Installation
@@ -64,61 +66,26 @@ or via `conda` using the `conda-forge` channel:
     conda install -c conda-forge pescador
 
 
-************
-Introduction
-************
-.. toctree::
-    :maxdepth: 2
-
-    intro
-
 *************
-Why Pescador?
+Documentation
 *************
+
 .. toctree::
     :maxdepth: 2
+    :hidden:
 
-    why
-
-**************
-Basic examples
-**************
-.. toctree::
-    :maxdepth: 2
-
+    guide
     examples
-
-*****************
-Advanced examples
-*****************
-.. toctree::
-    :maxdepth: 2
-
-    auto_examples/index
-
-***********************
-Stochastic mux analysis
-***********************
-.. toctree::
-    :maxdepth: 2
-
-    muxanalysis
-
-*************
-API Reference
-*************
-.. toctree::
-    :maxdepth: 2
-
+    analysis
     api
-
-*************
-Release notes
-*************
-.. toctree::
-    :maxdepth: 2
-
     changes
+
+- :ref:`guide`: Core concepts, streaming terminology, and design philosophy.
+- :ref:`examples`: Basic iteration, multiplexing, and advanced framework examples.
+- :ref:`analysis`: Mathematical modeling and empirical performance benchmarks of stochastic multiplexing and concurrent prefetching.
+- :ref:`api`: Comprehensive API reference for streamers, multiplexers, and map transformations.
+- :ref:`changes`: Release notes and version history.
+
 
 **********
 Contribute

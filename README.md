@@ -6,6 +6,7 @@ pescador
 [![codecov](https://codecov.io/gh/pescadores/pescador/graph/badge.svg?token=aCgfizw6O5)](https://codecov.io/gh/pescadores/pescador)
 [![Documentation Status](https://readthedocs.org/projects/pescador/badge/?version=latest)](https://readthedocs.org/projects/pescador/?badge=latest)
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.400700.svg)](https://doi.org/10.5281/zenodo.400700)
+[![SPEC 0 — Minimum Supported Dependencies](https://img.shields.io/badge/SPEC-0-green?labelColor=%23004811&color=%235CA038)](https://scientific-python.org/specs/spec-0000/)
 
 Pescador is a library for streaming (numerical) data, primarily for use in machine learning applications.
 

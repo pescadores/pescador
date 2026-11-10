@@ -65,9 +65,11 @@ def zmq_recv_data(socket, flags=0, copy=True, track=False):
         raise StopIteration
 
     for header, payload in zip(headers, msg[1:]):
-        data[header["key"]] = np.frombuffer(memoryview(payload), dtype=header["dtype"])
-        data[header["key"]].shape = header["shape"]
-        data[header["key"]].flags["ALIGNED"] = header["aligned"]
+        arr = np.frombuffer(memoryview(payload), dtype=header["dtype"]).reshape(
+            header["shape"], copy=False
+        )
+        arr.flags["ALIGNED"] = header["aligned"]
+        data[header["key"]] = arr
 
     return data
 
