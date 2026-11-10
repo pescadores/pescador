@@ -3,3 +3,4 @@ sphinx
 sphinx-gallery
 matplotlib
 pydata-sphinx-theme
+sphinxcontrib-mermaid

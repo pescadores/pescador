@@ -36,6 +36,7 @@ docs = [
     "pydata-sphinx-theme>=0.16.0",
     "sphinx-gallery>=0.1.10",
     "matplotlib",
+    "sphinxcontrib-mermaid>=1.0.0",
 ]
 tests = [
     "pytest>=9.0.0",

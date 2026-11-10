@@ -39,6 +39,7 @@ extensions = [
     'numpydoc',
     'sphinx_gallery.gen_gallery',
     'pydata_sphinx_theme',
+    'sphinxcontrib.mermaid',
 ]
 
 # Configuration for sphinx-gallery

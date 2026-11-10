@@ -155,34 +155,35 @@ Architecture and Design
 Pescador implements prefetching through an asynchronous bridge that connects synchronous
 consumer threads to concurrent background producers:
 
-.. code-block:: text
+.. mermaid::
 
-   +-----------------------------------------------------------------+
-   | Consumer Thread (Main / Training Loop)                          |
-   |                                                                 |
-   |   for sample in mux.iterate():   <-- sync_get() (< 1 us)        |
-   +-----------------------------------------------------------------+
-                         |                          ^
-                    acquire lock                notify item
-                         v                          |
-   +-----------------------------------------------------------------+
-   | HybridBuffer (Bounded Mutex-Protected Deque)                    |
-   |                                                                 |
-   |   deque: [ item_0, item_1, ... ] (maxlen = buffer_size)         |
-   |   threading.Lock  +  asyncio.Event (space available)            |
-   +-----------------------------------------------------------------+
-                         ^                          |
-                    notify space               await space
-                         |                          v
-   +-----------------------------------------------------------------+
-   | Background Daemon Thread (Dedicated asyncio Event Loop)         |
-   |                                                                 |
-   |   asyncio.TaskGroup:                                            |
-   |     Worker 0 -> Stream 0 (asyncio.to_thread(next))              |
-   |     Worker 1 -> Stream 1 (asyncio.to_thread(next))              |
-   |     ...                                                         |
-   |     Worker A-1 -> Stream A-1                                    |
-   +-----------------------------------------------------------------+
+   flowchart TD
+       subgraph Consumer["Consumer Thread (Main / Training Loop)"]
+           CLoop["for sample in mux.iterate()"]
+           CGet["sync_get(): pop item (&lt; 1 μs)"]
+       end
+
+       subgraph Buffer["HybridBuffer (Bounded Mutex-Protected Deque)"]
+           BDeque["collections.deque (maxlen = buffer_size)"]
+           BLock["threading.Lock (mutex protection)"]
+           BEvent["asyncio.Event (space available signal)"]
+       end
+
+       subgraph Background["Background Daemon Thread (Dedicated asyncio Event Loop)"]
+           direction TB
+           subgraph TG["asyncio.TaskGroup (Active Stream Workers)"]
+               W0["Worker 0: Stream 0 (asyncio.to_thread)"]
+               W1["Worker 1: Stream 1 (asyncio.to_thread)"]
+               Wdots["..."]
+               Wk["Worker A-1: Stream A-1 (asyncio.to_thread)"]
+           end
+       end
+
+       CLoop -->|"1. acquire lock"| BLock
+       BDeque -->|"2. return sample"| CGet
+       CGet -->|"3. notify space"| BEvent
+       BEvent -.->|"unblocks space"| TG
+       TG -->|"await async_put(item)"| BDeque
 
 Hybrid Thread-Safe Buffer (``HybridBuffer``)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -216,72 +217,170 @@ Empirical Benchmarks
 The following benchmarks were conducted on Linux using Python 3.13, comparing synchronous
 baseline Pescador (``buffer_size=None``) against async prefetching (``buffer_size > 0``).
 
+.. note::
+
+   All empirical results presented below can be reproduced using the standalone benchmark script:
+   :download:`benchmark_prefetching.py <scripts/benchmark_prefetching.py>`.
+
 Workload 1: I/O-Bound Multiplexing
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 Multiplexing 16 streams with 10 ms simulated I/O latency, :math:`A = 8` active
 streams, and a 1 ms consumer:
 
-.. csv-table:: I/O-Bound Multiplexing Results (250 items, :math:`A=8`)
-   :header: "Metric", "Synchronous Baseline", "Prefetched (``buffer_size=4``)", "Reduction / Gain"
-   :widths: 25, 25, 25, 25
+.. list-table:: I/O-Bound Multiplexing Results (250 items, :math:`A = 8`)
+   :header-rows: 1
+   :widths: 28 24 24 24
 
-   "**Total Wall-Clock Time**", "2.891 s", "0.479 s", "**6.04x speedup**"
-   "**Mean Consumer Stall**", "10.46 ms", "0.83 ms", "92.1% drop"
-   "**P50 (Median) Stall**", "10.22 ms", "0.032 ms (32 μs)", "**99.7% drop**"
-   "**P90 Stall**", "10.26 ms", "2.85 ms", "72.2% drop"
-   "**P99 Stall**", "20.55 ms", "9.41 ms", "54.2% drop"
+   * - Metric
+     - Synchronous Baseline
+     - Prefetched (``buffer_size=4``)
+     - Reduction / Gain
+   * - **Total Wall-Clock Time**
+     - 2.891 s
+     - 0.479 s
+     - **6.04x speedup**
+   * - **Mean Consumer Stall**
+     - 10.46 ms
+     - 0.83 ms
+     - 92.1% drop
+   * - **P50 (Median) Stall**
+     - 10.22 ms
+     - 0.032 ms (32 μs)
+     - **99.7% drop**
+   * - **P90 Stall**
+     - 10.26 ms
+     - 2.85 ms
+     - 72.2% drop
+   * - **P99 Stall**
+     - 20.55 ms
+     - 9.41 ms
+     - 54.2% drop
 
 Because the 8 active streams execute their I/O concurrently in the background, the consumer
 receives samples almost instantly (32 μs median wait), saving 83.4% of total wall-clock time.
 
 Workload 2: Latency Jitter and Spikes
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-Simulating erratic disk/network access (90% normal 8 ms, 10% spikes 25 ms) with :math:`A=4`
+Simulating erratic disk/network access (90% normal 8 ms, 10% spikes 25 ms) with :math:`A = 4`
 active streams and 8 ms consumer work:
 
-.. csv-table:: Jitter Absorption Results (250 items, :math:`A=4`)
-   :header: "Metric", "Synchronous Baseline", "Prefetched (``buffer_size=4``)", "Reduction / Gain"
-   :widths: 25, 25, 25, 25
+.. list-table:: Jitter Absorption Results (250 items, :math:`A = 4`)
+   :header-rows: 1
+   :widths: 28 24 24 24
 
-   "**Total Wall-Clock Time**", "4.506 s", "2.073 s", "**2.17x speedup**"
-   "**Mean Consumer Stall**", "9.91 ms", "0.17 ms", "98.3% drop"
-   "**P50 (Median) Stall**", "8.26 ms", "0.060 ms", "99.3% drop"
-   "**P95 Stall**", "24.82 ms", "0.121 ms", "**99.5% drop**"
-   "**P99 Stall**", "27.59 ms", "0.166 ms", "**99.4% drop**"
+   * - Metric
+     - Synchronous Baseline
+     - Prefetched (``buffer_size=4``)
+     - Reduction / Gain
+   * - **Total Wall-Clock Time**
+     - 4.506 s
+     - 2.073 s
+     - **2.17x speedup**
+   * - **Mean Consumer Stall**
+     - 9.91 ms
+     - 0.17 ms
+     - 98.3% drop
+   * - **P50 (Median) Stall**
+     - 8.26 ms
+     - 0.060 ms
+     - 99.3% drop
+   * - **P95 Stall**
+     - 24.82 ms
+     - 0.121 ms
+     - **99.5% drop**
+   * - **P99 Stall**
+     - 27.59 ms
+     - 0.166 ms
+     - **99.4% drop**
 
 The buffer completely shields the consumer from I/O spikes: 99% of samples are ready within
 0.17 ms of request, compared to 27.6 ms under synchronous execution.
 
 Active Stream Scaling
 ^^^^^^^^^^^^^^^^^^^^^
-Evaluating total runtime as the active set size :math:`A` increases (15 ms I/O, 1 ms consumer):
+Evaluating total runtime as the active set size :math:`A` increases across
+:math:`A \in \{2, 4, 8, 16, 32, 64\}` (200 items, 15 ms simulated I/O latency, 1 ms consumer work):
 
-.. csv-table:: Throughput Scaling with Active Set Size :math:`A`
-   :header: ":math:`A`", "Synchronous Duration", "Prefetched Duration", "Speedup"
-   :widths: 15, 30, 30, 25
+.. list-table:: Throughput Scaling with Active Set Size :math:`A`
+   :header-rows: 1
+   :widths: 15 30 30 25
 
-   "**2**", "3.339 s", "1.667 s", "**2.00x**"
-   "**4**", "3.324 s", "0.918 s", "**3.62x**"
-   "**8**", "3.275 s", "0.546 s", "**6.00x**"
-   "**16**", "3.265 s", "0.349 s", "**9.37x**"
+   * - :math:`A`
+     - Synchronous Duration
+     - Prefetched Duration
+     - Speedup
+   * - **2**
+     - 3.335 s
+     - 1.725 s
+     - **1.93x**
+   * - **4**
+     - 3.333 s
+     - 0.918 s
+     - **3.63x**
+   * - **8**
+     - 3.284 s
+     - 0.544 s
+     - **6.03x**
+   * - **16**
+     - 3.278 s
+     - 0.347 s
+     - **9.44x**
+   * - **32**
+     - 3.260 s
+     - 0.311 s
+     - **10.48x**
+   * - **64**
+     - 3.277 s
+     - 0.383 s
+     - **8.56x**
 
-Synchronous runtime is completely invariant to :math:`A` because only one stream runs at a time.
-Prefetched runtime scales near-linearly with active streams, achieving a **9.37x speedup**
-at :math:`A = 16`.
+Under synchronous execution, total runtime remains strictly constant (:math:`\approx 3.3\,\text{s}`)
+regardless of :math:`A` because streams are sampled sequentially one at a time.
+Prefetched runtime exhibits dramatic near-linear scaling up to :math:`A = 16`, reaching a peak speedup
+of **10.48x** at :math:`A = 32`.
+
+At :math:`A = 32`, the aggregate production capacity of the background worker pool
+(:math:`\lambda_{\text{prod}} = 32 / 0.015 \approx 2{,}133\,\text{items/s}`) comfortably outpaces
+the consumer processing rate (:math:`\mu_c^{-1} = 1{,}000\,\text{items/s}`). At this point, the
+pipeline transitions from being **I/O-bound** to **consumer-bound** (where the theoretical minimum
+runtime is bounded by :math:`200 \times 1\,\text{ms} = 0.200\,\text{s}`).
+Scaling further to :math:`A = 64` produces no additional throughput gains; instead, managing 64
+concurrent worker coroutines and thread contexts introduces minor scheduling overhead,
+illustrating Amdahl's Law in practice. For most machine learning pipelines, setting :math:`A`
+between 8 and 32 fully saturates consumption without unnecessary context switching.
 
 Buffer Depth Sensitivity
 ^^^^^^^^^^^^^^^^^^^^^^^^
 Evaluating buffer capacity :math:`B \in \{1, 2, 4, 8\}` with :math:`A = 4`, 10 ms I/O, 6 ms consumer:
 
-.. csv-table:: Buffer Depth Sensitivity
-   :header: "Configuration", "Total Wall Time", "Mean Consumer Wait", "P50 Consumer Wait"
-   :widths: 25, 25, 25, 25
+.. list-table:: Buffer Depth Sensitivity (:math:`A = 4`, 10 ms I/O, 6 ms consumer)
+   :header-rows: 1
+   :widths: 28 24 24 24
 
-   "**Sync (``None``)**", "3.318 s", "10.45 ms", "10.22 ms"
-   "**``buffer_size=1``**", "1.268 s", "0.21 ms", "0.057 ms"
-   "**``buffer_size=2``**", "1.251 s", "0.13 ms", "0.056 ms"
-   "**``buffer_size=4``**", "1.251 s", "0.13 ms", "0.056 ms"
-   "**``buffer_size=8``**", "1.254 s", "0.14 ms", "0.058 ms"
+   * - Configuration
+     - Total Wall Time
+     - Mean Consumer Wait
+     - P50 Consumer Wait
+   * - Sync (``buffer_size=None``)
+     - 3.318 s
+     - 10.45 ms
+     - 10.22 ms
+   * - ``buffer_size=1``
+     - 1.268 s
+     - 0.21 ms
+     - 0.057 ms
+   * - ``buffer_size=2``
+     - 1.251 s
+     - 0.13 ms
+     - 0.056 ms
+   * - ``buffer_size=4``
+     - 1.251 s
+     - 0.13 ms
+     - 0.056 ms
+   * - ``buffer_size=8``
+     - 1.254 s
+     - 0.14 ms
+     - 0.058 ms
 
 Even a modest buffer depth of :math:`B = 2` unlocks >98% of potential gains,
 meaning memory footprint can remain minimal while completely eliminating pipeline stalls.
