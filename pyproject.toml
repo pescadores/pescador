@@ -11,22 +11,22 @@ license = {text = "ISC"}
 authors = [
     {name = "Pescador developers", email = "brian.mcfee@nyu.edu"}
 ]
-requires-python = ">=3.11"
+requires-python = ">=3.13"
 classifiers = [
     "License :: OSI Approved :: ISC License (ISCL)",
     "Programming Language :: Python",
     "Development Status :: 3 - Alpha",
     "Topic :: Multimedia :: Sound/Audio :: Analysis",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.11",
-    "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Programming Language :: Python :: 3.15",
 ]
 dependencies = [
-    "pyzmq>=20.0",
-    "numpy>=1.25",
-    "decorator>=4.0",
-    "msgpack>=1.0",
+    "pyzmq>=26.1.0",
+    "numpy>=2.1.0",
+    "decorator>=5.2.1",
+    "msgpack>=1.1.0",
 ]
 
 [project.optional-dependencies]
@@ -38,10 +38,10 @@ docs = [
     "matplotlib",
 ]
 tests = [
-    "pytest",
-    "pytest-timeout>=1.2",
-    "pytest-cov",
-    "scipy",
+    "pytest>=9.0.0",
+    "pytest-timeout>=2.3.0",
+    "pytest-cov>=6.0.0",
+    "scipy>=1.15.0",
 ]
 
 [project.urls]
@@ -51,15 +51,15 @@ Source = "https://github.com/pescadores/pescador"
 
 [dependency-groups]
 test = [
-    "pytest",
-    "pytest-timeout>=1.2",
-    "pytest-cov",
-    "scipy",
+    "pytest>=9.0.0",
+    "pytest-timeout>=2.3.0",
+    "pytest-cov>=6.0.0",
+    "scipy>=1.15.0",
 ]
 lint = [
     "codespell",
     "ruff",
-    "pytest",
+    "pytest>=9.0.0",
 ]
 
 [tool.setuptools.dynamic]
