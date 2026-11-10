@@ -23,24 +23,24 @@ classifiers = [
     "Programming Language :: Python :: 3.15",
 ]
 dependencies = [
-    "pyzmq>=26.1.0",
-    "numpy>=2.1.0",
+    "pyzmq>=26.2.1",
+    "numpy>=2.3.0",
     "decorator>=5.2.1",
-    "msgpack>=1.1.0",
+    "msgpack>=1.1.1",
 ]
 
 [project.optional-dependencies]
 docs = [
-    "sphinx>=8.0.0",
-    "numpydoc>=0.6",
-    "pydata-sphinx-theme>=0.16.0",
-    "sphinx-gallery>=0.1.10",
-    "matplotlib",
+    "sphinx>=8.2.0",
+    "numpydoc>=1.9.0",
+    "pydata-sphinx-theme>=0.16.1",
+    "sphinx-gallery>=0.19.0",
+    "matplotlib>=3.11.0",
 ]
 tests = [
     "pytest>=9.0.0",
-    "pytest-timeout>=2.3.0",
-    "pytest-cov>=6.0.0",
+    "pytest-timeout>=2.4.0",
+    "pytest-cov>=6.1.0",
     "scipy>=1.15.0",
 ]
 
@@ -52,13 +52,13 @@ Source = "https://github.com/pescadores/pescador"
 [dependency-groups]
 test = [
     "pytest>=9.0.0",
-    "pytest-timeout>=2.3.0",
-    "pytest-cov>=6.0.0",
+    "pytest-timeout>=2.4.0",
+    "pytest-cov>=6.1.0",
     "scipy>=1.15.0",
 ]
 lint = [
-    "codespell",
-    "ruff",
+    "codespell>=2.4.0",
+    "ruff>=0.7.4",
     "pytest>=9.0.0",
 ]
 
