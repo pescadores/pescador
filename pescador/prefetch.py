@@ -416,7 +416,10 @@ class PrefetchStreamer(core.Streamer):
             if k in ("bridge_", "_active_copy"):
                 setattr(copy_result, k, None)
             else:
-                setattr(copy_result, k, copy.deepcopy(v, memo))
+                try:
+                    setattr(copy_result, k, copy.deepcopy(v, memo))
+                except TypeError:
+                    setattr(copy_result, k, v)
         return copy_result
 
     def __getstate__(self):

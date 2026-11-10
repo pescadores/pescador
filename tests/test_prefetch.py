@@ -292,9 +292,15 @@ def test_prefetch_streamer_async_generator():
         for i in range(5):
             yield i
 
+    # Test passing callable async generator function
     ps = PrefetchStreamer(async_gen, buffer_size=2)
     items = list(ps)
     assert items == list(range(5))
+
+    # Test passing non-callable async generator instance (AsyncIterable)
+    ps_inst = PrefetchStreamer(async_gen(), buffer_size=2)
+    items_inst = list(ps_inst)
+    assert items_inst == list(range(5))
 
 
 def test_taskgroup_bridge_async_generator():

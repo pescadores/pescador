@@ -125,7 +125,10 @@ class Streamer:
         copy_result = cls.__new__(cls)
         memo[id(self)] = copy_result
         for k, v in self.__dict__.items():
-            setattr(copy_result, k, copy.deepcopy(v, memo))
+            try:
+                setattr(copy_result, k, copy.deepcopy(v, memo))
+            except TypeError:
+                setattr(copy_result, k, v)
 
         return copy_result
 
