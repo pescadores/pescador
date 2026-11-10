@@ -31,8 +31,11 @@ dependencies = [
 
 [project.optional-dependencies]
 docs = [
+    "sphinx>=8.0.0",
     "numpydoc>=0.6",
+    "pydata-sphinx-theme>=0.16.0",
     "sphinx-gallery>=0.1.10",
+    "matplotlib",
 ]
 tests = [
     "pytest",

@@ -38,6 +38,7 @@ extensions = [
     # 'sphinx.ext.doctest',
     'numpydoc',
     'sphinx_gallery.gen_gallery',
+    'pydata_sphinx_theme',
 ]
 
 # Configuration for sphinx-gallery
@@ -145,14 +146,33 @@ intersphinx_mapping = {'python': ('https://docs.python.org/3', None),
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
-import sphinx_rtd_theme
-html_theme = 'sphinx_rtd_theme'
-html_theme_path = [sphinx_rtd_theme.get_html_theme_path()]
+html_theme = 'pydata_sphinx_theme'
 
-# Theme options are theme-specific and customize the look and feel of a theme
-# further.  For a list of options available for each theme, see the
-# documentation.
-#html_theme_options = {}
+html_theme_options = {
+    "icon_links": [
+        {
+            "name": "GitHub",
+            "url": "https://github.com/pescadores/pescador",
+            "icon": "fa-brands fa-square-github",
+            "type": "fontawesome",
+        },
+        {
+            "name": "GitHub Issues",
+            "url": "https://github.com/pescadores/pescador/issues",
+            "icon": "fa-classic fa-bug",
+            "type": "fontawesome",
+        },
+    ],
+    "navbar_end": ["theme-switcher", "navbar-icon-links"],
+    "navbar_align": "left",
+    "show_nav_level": 1,
+    "show_version_warning_banner": True,
+    "sticky_banners": True,
+}
+
+html_context = {
+    "default_mode": "light",
+}
 
 # Add any paths that contain custom themes here, relative to this directory.
 #html_theme_path = []
