@@ -7,41 +7,33 @@ API Reference
 
 
 .. _Streamer:
-
-Streamer
---------
-.. autoclass:: pescador.Streamer
-    :inherited-members:
-    :special-members: __call__
-
-
 .. _PrefetchStreamer:
-
-PrefetchStreamer
-----------------
-.. autoclass:: pescador.PrefetchStreamer
-    :inherited-members:
-    :special-members: __call__
-
-
 .. _ZMQStreamer:
 
-Parallel streaming
-------------------
-.. autoclass:: pescador.ZMQStreamer
-    :inherited-members:
-    :special-members: __call__
+Streaming
+---------
+
+.. currentmodule:: pescador
+
+.. autosummary::
+    :toctree: generated/
+
+    Streamer
+    PrefetchStreamer
+    ZMQStreamer
 
 
 .. _Mux:
 
 Multiplexing
 ------------
+
 .. automodule:: pescador.mux
+
 
 .. _Maps:
 
 Maps (Transformers)
 -------------------
-.. automodule:: pescador.maps
 
+.. automodule:: pescador.maps
