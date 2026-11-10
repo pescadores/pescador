@@ -155,35 +155,15 @@ Architecture and Design
 Pescador implements prefetching through an asynchronous bridge that connects synchronous
 consumer threads to concurrent background producers:
 
-.. mermaid::
-
-   flowchart TD
-       subgraph Producers["Background Daemon Thread (asyncio TaskGroup)"]
-           direction LR
-           W0["Stream Worker 0"]
-           W1["Stream Worker 1"]
-           Wdots["..."]
-           WA["Stream Worker A-1"]
-       end
-
-       subgraph Buffer["HybridBuffer (Thread-Safe Elastic Reservoir)"]
-           direction LR
-           Event["asyncio.Event (space signal)"]
-           Deque[("Bounded deque (capacity B)")]
-           Lock["threading.Lock (mutex)"]
-       end
-
-       subgraph Consumer["Consumer Thread (Training Loop)"]
-           direction LR
-           Pop["sync_get(): instant pop (sub-μs)"]
-           Loop["for sample in mux: train_step(sample)"]
-       end
-
-       W0 & W1 & WA ==>|"await async_put(sample)"| Deque
-       Deque ==>|"fast mutex read"| Pop
-       Pop --> Loop
-       Pop -.->|"notify space (threadsafe)"| Event
-       Event -.->|"unblock workers"| W0 & W1 & WA
+* **Background Daemon Thread**: An isolated thread running a dedicated :class:`asyncio` event
+  loop. An :class:`asyncio.TaskGroup` manages concurrent worker coroutines—one for each active
+  stream slot—that asynchronously fetch samples ahead of the consumer.
+* **Thread-Safe Elastic Reservoir** (``HybridBuffer``): Connects the background event loop
+  to the synchronous consumer via a bounded :class:`collections.deque` protected by a fast
+  :class:`threading.Lock`. Producers asynchronously wait for space (:class:`asyncio.Event`),
+  while the consumer pops samples in under :math:`1\,\mu\text{s}`.
+* **Consumer Thread**: The main application or training thread iterating normally
+  (e.g., ``for sample in mux:``), completely isolated from producer I/O latency and jitter.
 
 Hybrid Thread-Safe Buffer (``HybridBuffer``)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

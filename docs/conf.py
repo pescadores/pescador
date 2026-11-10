@@ -39,7 +39,6 @@ extensions = [
     'numpydoc',
     'sphinx_gallery.gen_gallery',
     'pydata_sphinx_theme',
-    'sphinxcontrib.mermaid',
 ]
 
 # Configuration for sphinx-gallery
@@ -53,15 +52,6 @@ sphinx_gallery_conf = {
     },
     'default_thumb_file': 'noun_199.png',
     'backreferences_dir': None,
-}
-
-# Mermaid configuration
-mermaid_height = 'auto'
-mermaid_init_config = {
-    'theme': 'default',
-    'themeVariables': {
-        'fontSize': '15px',
-    },
 }
 
 from glob import glob
