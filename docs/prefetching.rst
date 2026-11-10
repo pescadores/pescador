@@ -16,7 +16,7 @@ streamers are configured as "active", traditional generators execute strictly in
 the multiplexer selects one streamer and invokes ``next()``, pausing until that single
 generator yields.
 
-Beginning in version 3.1, Pescador introduces **concurrent prefetching** via structured
+Beginning in version 4.0, Pescador introduces **concurrent prefetching** via structured
 concurrency (:py:mod:`asyncio.TaskGroup`) and lock-free thread-safe queues.
 This section details the theoretical latency model, architecture, empirical performance,
 and guidelines for proper use of asynchronous multiplexing.
@@ -53,8 +53,8 @@ yielding an effective throughput of:
 
 Because production and consumption are serialized on the consumer thread, the consumer is
 forced to stall for :math:`T_{\text{prod}}` on every sample.
-If loading an audio file takes :math:`15\,\text{ms}` and model execution takes :math:`10\,\text{ms}`,
-each step takes :math:`25\,\text{ms}`, leaving the GPU idle for :math:`60\%` of the total runtime.
+If loading an audio file takes 15 ms and model execution takes 10 ms,
+each step takes 25 ms, leaving the GPU idle for 60% of the total runtime.
 
 
 Theoretical Analysis of Prefetching
@@ -69,7 +69,7 @@ The time required to complete one cycle is bounded by the slower of the two oper
 
 .. math::
 
-   T_{\text{cycle, async}} \approx \max(T_{\text{prod}}, T_{\text{cons}}).
+   T_{\text{async}} \approx \max(T_{\text{prod}}, T_{\text{cons}}).
 
 The expected throughput increases to:
 
@@ -84,9 +84,9 @@ The theoretical speedup :math:`S` over the synchronous baseline is:
    S = \frac{R_{\text{async}}}{R_{\text{sync}}} = \frac{\mu_p + \mu_c}{\max(\mu_p, \mu_c)}.
 
 When the producer and consumer are evenly balanced (:math:`\mu_p \approx \mu_c`),
-the theoretical speedup approaches **:math:`2\times`** (a :math:`50\%` reduction in total wall-clock time).
+the theoretical speedup approaches **2x** (a 50% reduction in total wall-clock time).
 Under this condition, the consumer's perceived stall time per sample drops from :math:`\mu_p`
-down to the microscopic time required to pop an item from memory (:math:`< 1\,\mu\text{s}`).
+down to the microscopic time required to pop an item from memory (< 1 μs).
 
 
 Active Set Concurrency in Multiplexers
@@ -100,14 +100,14 @@ In the synchronous implementation:
 
 * Even though :math:`A` streams are conceptually "active", only **one** stream is polled at a time.
 * The remaining :math:`A - 1` active streams sit completely idle until randomly chosen.
-* Concurrency is strictly :math:`1`, regardless of whether :math:`A = 2` or :math:`A = 64`.
+* Concurrency is strictly 1, regardless of whether :math:`A = 2` or :math:`A = 64`.
 
 When concurrent prefetching is enabled with buffer depth :math:`B`:
 
 * An internal ``asyncio.TaskGroup`` runs :math:`A` concurrent background worker tasks—one for
   each active stream slot.
-* While the consumer processes sample :math:`k`, **all :math:`A` active streams are simultaneously
-  loading their next samples** in the background.
+* While the consumer processes sample :math:`k`, all :math:`A` active streams simultaneously
+  load their next samples in the background.
 * The aggregate production capacity of the active set scales linearly:
 
 .. math::
@@ -137,7 +137,7 @@ Jitter Absorption and Tail Latency
 Real-world storage and network I/O exhibit variance: operating system disk caches, network
 congestion, and garbage collection introduce intermittent latency spikes.
 Let :math:`T_{\text{prod}}` be a random variable with high variance :math:`\sigma_p^2` or occasional
-extreme outliers (e.g., :math:`90\%` normal latency :math:`8\,\text{ms}`, :math:`10\%` spike :math:`25\,\text{ms}`).
+extreme outliers (e.g., 90% normal latency 8 ms, 10% spike 25 ms).
 
 In synchronous mode, every individual spike directly propagates to the consumer thread as a
 pipeline stall: the 99th percentile consumer latency :math:`P_{99}` reflects the full severity
@@ -146,7 +146,7 @@ of the I/O spike.
 With a prefetch buffer of capacity :math:`B \ge 2`, the buffer acts as an elastic reservoir.
 Occasional slow fetches are absorbed by draining previously buffered items, while bursts of
 consumer activity are cushioned by background producers.
-Consequently, tail latency (:math:`P_{95}`, :math:`P_{99}`) drops by more than **:math:`99\%`**.
+Consequently, tail latency (:math:`P_{95}`, :math:`P_{99}`) drops by more than **99%**.
 
 
 Architecture and Design
@@ -191,7 +191,7 @@ standard ``queue.Queue`` incurs heavy thread-switching overhead.
 Pescador addresses this with ``HybridBuffer``:
 
 * **Synchronous Consumer**: Calls ``sync_get()``, acquiring a lightweight ``threading.Lock``,
-  popping from a ``collections.deque`` in :math:`< 1\,\mu\text{s}`, and notifying the background
+  popping from a ``collections.deque`` in < 1 μs, and notifying the background
   event loop via ``loop.call_soon_threadsafe(has_space.set)``.
 * **Asynchronous Producer**: Calls ``await async_put(item)``. If the buffer is full
   (``len >= buffer_size``), it awaits an ``asyncio.Event`` without blocking other background tasks.
@@ -218,73 +218,72 @@ baseline Pescador (``buffer_size=None``) against async prefetching (``buffer_siz
 
 Workload 1: I/O-Bound Multiplexing
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-Multiplexing 16 streams with :math:`10\,\text{ms}` simulated I/O latency, :math:`A = 8` active
-streams, and a :math:`1\,\text{ms}` consumer:
+Multiplexing 16 streams with 10 ms simulated I/O latency, :math:`A = 8` active
+streams, and a 1 ms consumer:
 
 .. csv-table:: I/O-Bound Multiplexing Results (250 items, :math:`A=8`)
    :header: "Metric", "Synchronous Baseline", "Prefetched (``buffer_size=4``)", "Reduction / Gain"
    :widths: 25, 25, 25, 25
 
-   "**Total Wall-Clock Time**", ":math:`2.891\,\text{s}`", ":math:`0.479\,\text{s}`", "**:math:`6.04\times` speedup**"
-   "**Mean Consumer Stall**", ":math:`10.46\,\text{ms}`", ":math:`0.83\,\text{ms}`", ":math:`92.1\%` drop"
-   "**P50 (Median) Stall**", ":math:`10.22\,\text{ms}`", ":math:`0.032\,\text{ms}` (:math:`32\,\mu\text{s}`)", "**:math:`99.7\%` drop**"
-   "**P90 Stall**", ":math:`10.26\,\text{ms}`", ":math:`2.85\,\text{ms}`", ":math:`72.2\%` drop"
-   "**P99 Stall**", ":math:`20.55\,\text{ms}`", ":math:`9.41\,\text{ms}`", ":math:`54.2\%` drop"
+   "**Total Wall-Clock Time**", "2.891 s", "0.479 s", "**6.04x speedup**"
+   "**Mean Consumer Stall**", "10.46 ms", "0.83 ms", "92.1% drop"
+   "**P50 (Median) Stall**", "10.22 ms", "0.032 ms (32 μs)", "**99.7% drop**"
+   "**P90 Stall**", "10.26 ms", "2.85 ms", "72.2% drop"
+   "**P99 Stall**", "20.55 ms", "9.41 ms", "54.2% drop"
 
 Because the 8 active streams execute their I/O concurrently in the background, the consumer
-receives samples almost instantly (:math:`32\,\mu\text{s}` median wait), saving :math:`83.4\%`
-of total wall-clock time.
+receives samples almost instantly (32 μs median wait), saving 83.4% of total wall-clock time.
 
 Workload 2: Latency Jitter and Spikes
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-Simulating erratic disk/network access (:math:`90\%` normal :math:`8\,\text{ms}`, :math:`10\%`
-spikes :math:`25\,\text{ms}`) with :math:`A=4` active streams and :math:`8\,\text{ms}` consumer work:
+Simulating erratic disk/network access (90% normal 8 ms, 10% spikes 25 ms) with :math:`A=4`
+active streams and 8 ms consumer work:
 
 .. csv-table:: Jitter Absorption Results (250 items, :math:`A=4`)
    :header: "Metric", "Synchronous Baseline", "Prefetched (``buffer_size=4``)", "Reduction / Gain"
    :widths: 25, 25, 25, 25
 
-   "**Total Wall-Clock Time**", ":math:`4.506\,\text{s}`", ":math:`2.073\,\text{s}`", "**:math:`2.17\times` speedup**"
-   "**Mean Consumer Stall**", ":math:`9.91\,\text{ms}`", ":math:`0.17\,\text{ms}`", ":math:`98.3\%` drop"
-   "**P50 (Median) Stall**", ":math:`8.26\,\text{ms}`", ":math:`0.060\,\text{ms}`", ":math:`99.3\%` drop"
-   "**P95 Stall**", ":math:`24.82\,\text{ms}`", ":math:`0.121\,\text{ms}`", "**:math:`99.5\%` drop**"
-   "**P99 Stall**", ":math:`27.59\,\text{ms}`", ":math:`0.166\,\text{ms}`", "**:math:`99.4\%` drop**"
+   "**Total Wall-Clock Time**", "4.506 s", "2.073 s", "**2.17x speedup**"
+   "**Mean Consumer Stall**", "9.91 ms", "0.17 ms", "98.3% drop"
+   "**P50 (Median) Stall**", "8.26 ms", "0.060 ms", "99.3% drop"
+   "**P95 Stall**", "24.82 ms", "0.121 ms", "**99.5% drop**"
+   "**P99 Stall**", "27.59 ms", "0.166 ms", "**99.4% drop**"
 
 The buffer completely shields the consumer from I/O spikes: 99% of samples are ready within
-:math:`0.17\,\text{ms}` of request, compared to :math:`27.6\,\text{ms}` under synchronous execution.
+0.17 ms of request, compared to 27.6 ms under synchronous execution.
 
 Active Stream Scaling
 ^^^^^^^^^^^^^^^^^^^^^
-Evaluating total runtime as the active set size :math:`A` increases (:math:`15\,\text{ms}` I/O, :math:`1\,\text{ms}` consumer):
+Evaluating total runtime as the active set size :math:`A` increases (15 ms I/O, 1 ms consumer):
 
 .. csv-table:: Throughput Scaling with Active Set Size :math:`A`
    :header: ":math:`A`", "Synchronous Duration", "Prefetched Duration", "Speedup"
    :widths: 15, 30, 30, 25
 
-   "**2**", ":math:`3.339\,\text{s}`", ":math:`1.667\,\text{s}`", "**:math:`2.00\times`**"
-   "**4**", ":math:`3.324\,\text{s}`", ":math:`0.918\,\text{s}`", "**:math:`3.62\times`**"
-   "**8**", ":math:`3.275\,\text{s}`", ":math:`0.546\,\text{s}`", "**:math:`6.00\times`**"
-   "**16**", ":math:`3.265\,\text{s}`", ":math:`0.349\,\text{s}`", "**:math:`9.37\times`**"
+   "**2**", "3.339 s", "1.667 s", "**2.00x**"
+   "**4**", "3.324 s", "0.918 s", "**3.62x**"
+   "**8**", "3.275 s", "0.546 s", "**6.00x**"
+   "**16**", "3.265 s", "0.349 s", "**9.37x**"
 
 Synchronous runtime is completely invariant to :math:`A` because only one stream runs at a time.
-Prefetched runtime scales near-linearly with active streams, achieving a **:math:`9.37\times` speedup**
+Prefetched runtime scales near-linearly with active streams, achieving a **9.37x speedup**
 at :math:`A = 16`.
 
 Buffer Depth Sensitivity
 ^^^^^^^^^^^^^^^^^^^^^^^^
-Evaluating buffer capacity :math:`B \in \{1, 2, 4, 8\}` with :math:`A = 4`, :math:`10\,\text{ms}` I/O, :math:`6\,\text{ms}` consumer:
+Evaluating buffer capacity :math:`B \in \{1, 2, 4, 8\}` with :math:`A = 4`, 10 ms I/O, 6 ms consumer:
 
 .. csv-table:: Buffer Depth Sensitivity
    :header: "Configuration", "Total Wall Time", "Mean Consumer Wait", "P50 Consumer Wait"
    :widths: 25, 25, 25, 25
 
-   "**Sync (``None``)**", ":math:`3.318\,\text{s}`", ":math:`10.45\,\text{ms}`", ":math:`10.22\,\text{ms}`"
-   "**``buffer_size=1``**", ":math:`1.268\,\text{s}`", ":math:`0.21\,\text{ms}`", ":math:`0.057\,\text{ms}`"
-   "**``buffer_size=2``**", ":math:`1.251\,\text{s}`", ":math:`0.13\,\text{ms}`", ":math:`0.056\,\text{ms}`"
-   "**``buffer_size=4``**", ":math:`1.251\,\text{s}`", ":math:`0.13\,\text{ms}`", ":math:`0.056\,\text{ms}`"
-   "**``buffer_size=8``**", ":math:`1.254\,\text{s}`", ":math:`0.14\,\text{ms}`", ":math:`0.058\,\text{ms}`"
+   "**Sync (``None``)**", "3.318 s", "10.45 ms", "10.22 ms"
+   "**``buffer_size=1``**", "1.268 s", "0.21 ms", "0.057 ms"
+   "**``buffer_size=2``**", "1.251 s", "0.13 ms", "0.056 ms"
+   "**``buffer_size=4``**", "1.251 s", "0.13 ms", "0.056 ms"
+   "**``buffer_size=8``**", "1.254 s", "0.14 ms", "0.058 ms"
 
-Even a modest buffer depth of **:math:`B = 2`** unlocks :math:`> 98\%` of potential gains,
+Even a modest buffer depth of :math:`B = 2` unlocks >98% of potential gains,
 meaning memory footprint can remain minimal while completely eliminating pipeline stalls.
 
 
@@ -299,7 +298,7 @@ Prefetching is controlled via the ``buffer_size`` keyword argument across all Pe
 and :class:`~pescador.ChainMux`.
 
 By default, ``buffer_size=None`` preserves 100% backward-compatible synchronous operation.
-Setting ``buffer_size`` to a positive integer (recommended: :math:`2` to :math:`4`) activates concurrent
+Setting ``buffer_size`` to a positive integer (recommended: 2 to 4) activates concurrent
 background prefetching.
 
 .. code-block:: python
@@ -386,7 +385,7 @@ The optimal value of ``buffer_size`` depends on sample size and memory constrain
   maximum protection against I/O jitter.
 * **Large items (high-resolution images, large multidimensional arrays, raw audio)**:
   Use ``buffer_size = 1`` or ``2``. As established in the sensitivity analysis above,
-  ``buffer_size = 2`` provides over :math:`95\%` of the maximum latency reduction while strictly
+  ``buffer_size = 2`` provides over 95% of the maximum latency reduction while strictly
   bounding RAM usage.
 * **CPU-Bound vs. I/O-Bound**:
   Prefetching uses Python threads within an asynchronous event loop, which excels at I/O-bound tasks

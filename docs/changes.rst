@@ -1,5 +1,19 @@
+.. _changes:
+
 Changes
 =======
+
+v4.0.0 (unreleased)
+-------------------
+
+- Concurrent prefetching across all multiplexers (:class:`~pescador.StochasticMux`,
+  :class:`~pescador.ShuffledMux`, :class:`~pescador.RoundRobinMux`, :class:`~pescador.ChainMux`)
+  via the ``buffer_size`` parameter.
+- Added :class:`~pescador.PrefetchStreamer` for standalone generator and streamer pipelines.
+- Modernized concurrency infrastructure using :py:mod:`asyncio.TaskGroup` and thread-safe bounded buffers.
+- Modernized packaging to PEP 517 / PEP 621 ``pyproject.toml`` and upgraded Sphinx documentation
+  to ``pydata-sphinx-theme``.
+- SPEC 0 compliance: minimum supported Python version is 3.11, NumPy >= 1.25.
 
 v3.0.0 (2024-03-12)
 -------------------

@@ -149,6 +149,7 @@ intersphinx_mapping = {'python': ('https://docs.python.org/3', None),
 html_theme = 'pydata_sphinx_theme'
 
 html_theme_options = {
+    "header_links_before_dropdown": 6,
     "icon_links": [
         {
             "name": "GitHub",
