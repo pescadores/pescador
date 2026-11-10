@@ -55,6 +55,15 @@ sphinx_gallery_conf = {
     'backreferences_dir': None,
 }
 
+# Mermaid configuration
+mermaid_height = 'auto'
+mermaid_init_config = {
+    'theme': 'default',
+    'themeVariables': {
+        'fontSize': '15px',
+    },
+}
+
 from glob import glob
 autosummary_generate = glob('*.rst')
 

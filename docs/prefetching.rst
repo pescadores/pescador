@@ -157,36 +157,33 @@ consumer threads to concurrent background producers:
 
 .. mermaid::
 
-   flowchart LR
-       subgraph Background["Background Daemon Thread (asyncio loop)"]
-           direction TB
-           subgraph TG["asyncio.TaskGroup"]
-               direction TB
-               W0["Worker 0 (Stream 0)"]
-               W1["Worker 1 (Stream 1)"]
-               Wdots["..."]
-               WA["Worker A-1 (Stream A-1)"]
-           end
+   flowchart TD
+       subgraph Producers["Background Daemon Thread (asyncio TaskGroup)"]
+           direction LR
+           W0["Stream Worker 0"]
+           W1["Stream Worker 1"]
+           Wdots["..."]
+           WA["Stream Worker A-1"]
        end
 
-       subgraph Buffer["HybridBuffer (Thread-Safe Reservoir)"]
-           direction TB
-           Lock["threading.Lock (mutex protection)"]
+       subgraph Buffer["HybridBuffer (Thread-Safe Elastic Reservoir)"]
+           direction LR
+           Event["asyncio.Event (space signal)"]
            Deque[("Bounded deque (capacity B)")]
-           Event["asyncio.Event (space available signal)"]
+           Lock["threading.Lock (mutex)"]
        end
 
-       subgraph Consumer["Consumer Thread (Main / Training)"]
-           direction TB
-           Pop["sync_get(): pop sample in under 1 μs"]
+       subgraph Consumer["Consumer Thread (Training Loop)"]
+           direction LR
+           Pop["sync_get(): instant pop (sub-μs)"]
            Loop["for sample in mux: train_step(sample)"]
        end
 
-       TG ==>|"await async_put(sample)"| Deque
+       W0 & W1 & WA ==>|"await async_put(sample)"| Deque
        Deque ==>|"fast mutex read"| Pop
        Pop --> Loop
        Pop -.->|"notify space (threadsafe)"| Event
-       Event -.->|"unblock worker"| TG
+       Event -.->|"unblock workers"| W0 & W1 & WA
 
 Hybrid Thread-Safe Buffer (``HybridBuffer``)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
