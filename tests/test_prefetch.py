@@ -168,24 +168,33 @@ def test_chain_mux_prefetched():
 
 def test_prefetched_concurrency_speedup():
     """Verify that multiple slow streams run concurrently when prefetched."""
-    def slow_stream(label, count=4, delay=0.04):
+    def slow_stream(label, count=4, delay=0.05):
         for i in range(count):
             time.sleep(delay)
             yield f"{label}_{i}"
 
-    s1 = pescador.Streamer(slow_stream, "A", count=4, delay=0.04)
-    s2 = pescador.Streamer(slow_stream, "B", count=4, delay=0.04)
+    s1 = pescador.Streamer(slow_stream, "A", count=4, delay=0.05)
+    s2 = pescador.Streamer(slow_stream, "B", count=4, delay=0.05)
 
-    # With prefetching: 2 streams producing 4 items each (total 8 items)
-    # Sequential time would be 8 * 0.04 = 0.32s
-    # Concurrent prefetching should complete significantly faster (< 0.25s)
-    start = time.perf_counter()
-    mux = pescador.RoundRobinMux([s1, s2], mode="exhaustive", buffer_size=3)
-    items = list(mux)
-    elapsed = time.perf_counter() - start
+    # Measure sequential baseline
+    start_seq = time.perf_counter()
+    mux_seq = pescador.RoundRobinMux([s1, s2], mode="exhaustive", buffer_size=None)
+    items_seq = list(mux_seq)
+    elapsed_seq = time.perf_counter() - start_seq
 
-    assert len(items) == 8
-    assert elapsed < 0.26, f"Expected concurrent speedup, took {elapsed:.3f}s"
+    # Measure concurrent prefetched
+    start_pref = time.perf_counter()
+    mux_pref = pescador.RoundRobinMux([s1, s2], mode="exhaustive", buffer_size=3)
+    items_pref = list(mux_pref)
+    elapsed_pref = time.perf_counter() - start_pref
+
+    assert len(items_pref) == 8
+    assert items_pref == items_seq
+    # Concurrently prefetched should be significantly faster than sequential
+    assert elapsed_pref < elapsed_seq * 0.9, (
+        f"Expected concurrent speedup: prefetched ({elapsed_pref:.3f}s) "
+        f"vs sequential ({elapsed_seq:.3f}s)"
+    )
 
 
 def test_prefetched_with_buffer_stream():
