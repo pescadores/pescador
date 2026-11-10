@@ -211,13 +211,14 @@ def test_prefetched_with_buffer_stream():
         assert b["X"].shape == (4, 1)
 
 
-def test_prefetched_with_zmq_stream():
-    def data_gen(val):
-        for i in range(10):
-            yield dict(X=np.array([val, i]))
+def _zmq_data_gen(val):
+    for i in range(10):
+        yield dict(X=np.array([val, i]))
 
-    s1 = pescador.Streamer(data_gen, 1)
-    s2 = pescador.Streamer(data_gen, 2)
+
+def test_prefetched_with_zmq_stream():
+    s1 = pescador.Streamer(_zmq_data_gen, 1)
+    s2 = pescador.Streamer(_zmq_data_gen, 2)
 
     mux = pescador.RoundRobinMux([s1, s2], mode="exhaustive", buffer_size=2)
     zmq_stream = pescador.ZMQStreamer(mux)
@@ -225,3 +226,22 @@ def test_prefetched_with_zmq_stream():
     items = list(zmq_stream)
     assert len(items) == 20
     assert all("X" in it for it in items)
+
+
+def test_prefetched_pickle_serialization():
+    import pickle
+
+    s1 = pescador.Streamer(_zmq_data_gen, 1)
+    s2 = pescador.Streamer(_zmq_data_gen, 2)
+    mux = pescador.RoundRobinMux([s1, s2], mode="exhaustive", buffer_size=2)
+
+    unpickled_mux = pickle.loads(pickle.dumps(mux))
+    assert unpickled_mux.buffer_size == 2
+    items = list(unpickled_mux)
+    assert len(items) == 20
+
+    ps = pescador.PrefetchStreamer(s1, buffer_size=3)
+    unpickled_ps = pickle.loads(pickle.dumps(ps))
+    assert unpickled_ps.buffer_size == 3
+    items_ps = list(unpickled_ps)
+    assert len(items_ps) == 10

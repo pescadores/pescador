@@ -145,6 +145,23 @@ class BaseMux(core.Streamer):
 
         return copy_result
 
+    def __getstate__(self):
+        """Prepare mux for pickling / multiprocessing serialization."""
+        state = self.__dict__.copy()
+        if state.get("rng") is np.random:
+            state["rng"] = None
+        state["_state_lock"] = None
+        state["bridge_"] = None
+        return state
+
+    def __setstate__(self, state):
+        """Restore mux from pickled state."""
+        if state.get("rng") is None:
+            state["rng"] = np.random
+        self.__dict__.update(state)
+        self._state_lock = threading.Lock()
+        self.bridge_ = None
+
     @property
     def is_activated_copy(self):
         """is_activated_copy is true if this object is a copy of the original Streamer

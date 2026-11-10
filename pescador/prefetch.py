@@ -415,6 +415,17 @@ class PrefetchStreamer(core.Streamer):
                 setattr(copy_result, k, copy.deepcopy(v, memo))
         return copy_result
 
+    def __getstate__(self):
+        """Prepare PrefetchStreamer for pickling / multiprocessing serialization."""
+        state = self.__dict__.copy()
+        state["bridge_"] = None
+        return state
+
+    def __setstate__(self, state):
+        """Restore PrefetchStreamer from pickled state."""
+        self.__dict__.update(state)
+        self.bridge_ = None
+
     def __enter__(self, *args, **kwargs):
         streamer_copy = super().__enter__(*args, **kwargs)
         if streamer_copy.is_activated_copy and streamer_copy.bridge_ is None:
