@@ -82,9 +82,11 @@ class HybridBuffer:
                 if len(self.queue) < self.maxsize:
                     self.queue.append(item)
                     self.has_item.notify()
-                    if len(self.queue) >= self.maxsize:
-                        self.has_space.clear()
                     return
+                # Buffer is full: clear has_space while holding self.lock so that
+                # await self.has_space.wait() will block until a consumer drains an item
+                # and signals has_space.set via call_soon_threadsafe.
+                self.has_space.clear()
             # Await space without holding the thread lock
             await self.has_space.wait()
 
@@ -120,8 +122,8 @@ class HybridBuffer:
                     raise TimeoutError(f"sync_get timed out after {timeout} seconds")
 
             item = self.queue.popleft()
-            # If the buffer was full and now has space, signal the event loop
-            if not self.has_space.is_set() and self.loop is not None and not self.loop.is_closed():
+            # If the loop is running, signal that space is now available
+            if self.loop is not None and not self.loop.is_closed():
                 self.loop.call_soon_threadsafe(self.has_space.set)
             return item
 
@@ -213,6 +215,11 @@ class TaskGroupPrefetchBridge:
     async def _slot_worker(self, slot_idx: int, buffer: HybridBuffer) -> None:
         """Worker task prefetching samples for a single active stream slot."""
         try:
+            consecutive_exhaustions = 0
+            n_streams_total = getattr(self.mux, "n_streams", None) or (
+                len(self.mux.streams_) if self.mux.streams_ else 10
+            )
+            max_consecutive = max(100, 10 * n_streams_total)
             while not self.stop_event.is_set():
                 with self.mux._state_lock:
                     stream = self.mux.streams_[slot_idx] if slot_idx < len(self.mux.streams_) else None
@@ -233,6 +240,7 @@ class TaskGroupPrefetchBridge:
                     raise
 
                 if item is _SENTINEL:
+                    consecutive_exhaustions += 1
                     with self.mux._state_lock:
                         old_stream = self.mux.streams_[slot_idx] if slot_idx < len(self.mux.streams_) else None
                         saved_weight = (
@@ -247,17 +255,22 @@ class TaskGroupPrefetchBridge:
                         if (
                             new_stream is None
                             or new_stream is old_stream
+                            or not self.mux._streamers_available()
                             or (hasattr(self.mux, "stream_weights_") and self.mux.stream_weights_[slot_idx] == 0.0)
+                            or consecutive_exhaustions >= max_consecutive
                         ):
-                            # Restore stream pointer and weight so consumer can drain buffered items
-                            if slot_idx < len(self.mux.streams_):
-                                self.mux.streams_[slot_idx] = old_stream
-                            if saved_weight is not None:
-                                import numpy as np
-                                self.mux.stream_weights_[slot_idx] = saved_weight
-                                self.mux.weight_norm_ = np.sum(self.mux.stream_weights_)
+                            # Restore stream pointer and weight if needed so consumer can drain buffered items
+                            if not buffer.is_empty():
+                                if slot_idx < len(self.mux.streams_):
+                                    self.mux.streams_[slot_idx] = old_stream
+                                if saved_weight is not None:
+                                    import numpy as np
+                                    self.mux.stream_weights_[slot_idx] = saved_weight
+                                    self.mux.weight_norm_ = np.sum(self.mux.stream_weights_)
                             break
                     continue
+
+                consecutive_exhaustions = 0
 
                 await buffer.async_put(item)
 
