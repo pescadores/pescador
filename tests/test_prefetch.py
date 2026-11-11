@@ -409,6 +409,16 @@ def test_stochastic_mux_prefetched_stream_replacement():
     assert len(items) == 8
 
 
+def test_stochastic_mux_prefetched_stream_replacement_multi_seed():
+    for seed in range(10):
+        streamers = [pescador.Streamer(_make_numbered_pair, i) for i in range(4)]
+        mux = pescador.StochasticMux(
+            streamers, n_active=2, rate=None, mode="exhaustive", buffer_size=2, random_state=seed
+        )
+        items = list(mux)
+        assert len(items) == 8
+
+
 def test_shuffled_mux_prefetched_empty():
     a = pescador.Streamer([])
     b = pescador.Streamer([])

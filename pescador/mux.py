@@ -552,6 +552,12 @@ class StochasticMux(BaseMux):
     def _next_sample_index(self):
         """Choose the next sample stream randomly"""
         with self._state_lock:
+            if self.weight_norm_ is None or self.weight_norm_ <= 0.0:
+                if self.bridge_ is not None:
+                    non_empty = [i for i, b in enumerate(self.bridge_.buffers) if not b.is_empty()]
+                    if non_empty:
+                        return self.rng.choice(non_empty)
+                raise StopIteration
             return self.rng.choice(
                 self.n_active, p=(self.stream_weights_ / self.weight_norm_)
             )
@@ -777,6 +783,12 @@ class ShuffledMux(BaseMux):
         conditioned on the stream weights.
         """
         with self._state_lock:
+            if self.weight_norm_ is None or self.weight_norm_ <= 0.0:
+                if self.bridge_ is not None:
+                    non_empty = [i for i, b in enumerate(self.bridge_.buffers) if not b.is_empty()]
+                    if non_empty:
+                        return self.rng.choice(non_empty)
+                raise StopIteration
             return self.rng.choice(
                 self.n_streams, p=(self.stream_weights_ / self.weight_norm_)
             )
@@ -930,6 +942,10 @@ class RoundRobinMux(BaseMux):
             while self.streams_[idx] is None:
                 checked += 1
                 if checked >= n_slots:
+                    if self.bridge_ is not None:
+                        non_empty = [i for i, b in enumerate(self.bridge_.buffers) if not b.is_empty()]
+                        if non_empty:
+                            return non_empty[0]
                     raise StopIteration
                 idx = self.active_index_
                 self.active_index_ = (self.active_index_ + 1) % n_slots
